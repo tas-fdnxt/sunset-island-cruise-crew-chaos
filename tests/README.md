@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. One hundred and twenty four checks across six files.
+The safety net. Run these before every deploy. One hundred and sixty three checks across seven files.
 
 ## Running them
 
@@ -13,6 +13,7 @@ From the repo root:
     node tests/test-remix.js
     node tests/test-story.js
     node tests/test-shop.js
+    node tests/test-profile.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -36,6 +37,9 @@ so the suites always test the real shipped code rather than a copy that can drif
   load, id 12 is rejected. The chocolate factory gift: nothing before three houses, lands on open ground never
   inside a house, counts as cargo, cannot be undone but can be erased, is never given twice, refused when cargo
   is full. Quests for both map to real stats and Story Time reports them once, never on a quiet day.
+- **test-profile.js** the captain profile carried in ?p= (nickname plus tap choices, nothing else). Roundtrip,
+  name sanitising, ten character cap, hostile and out of range bytes rejected, every dream quest maps to a real stat,
+  the dream quest comes first, grass is counted for the garden, and Story Time speaks in the chosen title.
 
 ## The rule
 
