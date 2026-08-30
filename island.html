@@ -57,6 +57,14 @@
     font-size:14px; font-variant-numeric:tabular-nums; letter-spacing:0.06em; white-space:nowrap; }
   #lapbar.on { display:flex; }
   #lapbest { color:#8FD8E8; font-size:12px; }
+  #lineage { position:fixed; top:calc(env(safe-area-inset-top,0px) + 54px); left:50%;
+    transform:translateX(-50%); display:none; background:rgba(42,27,61,0.9); color:#8FD8E8;
+    border:2px solid rgba(255,243,226,0.4); border-radius:10px; padding:4px 12px; font-weight:800;
+    font-size:11px; letter-spacing:0.05em; white-space:nowrap; max-width:92vw; overflow:hidden;
+    text-overflow:ellipsis; }
+  #lineage.on { display:block; }
+  #btn-remix { background:linear-gradient(180deg,#8FD8E8,#4E92B0); color:var(--ink); display:none; }
+  #btn-remix.on { display:flex; }
   #bubble::after { content:''; position:absolute; left:50%; bottom:-12px; margin-left:-8px;
     border:8px solid transparent; border-top-color:var(--ink); }
 </style>
@@ -68,6 +76,7 @@
   <div class="badge" id="pop" style="color:#8FD8E8">ISLANDERS 0</div>
   <div class="badge" id="cargo">CARGO 0 / 400</div>
 </div>
+<div id="lineage"></div>
 <div id="bottombar"></div>
 <div id="toast"></div>
 <div id="bubble"></div>
@@ -181,6 +190,32 @@ function fmtLap(ms) {
   const s = Math.floor(ms / 1000), t = Math.floor((ms % 1000) / 100);
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '.' + t;
 }
+function sanitizeName(s) {
+  return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim().slice(0, 10);
+}
+function parseHash(hash) {
+  if (!hash || hash.indexOf('#i=') !== 0) return null;
+  const segs = hash.slice(3).split('&');
+  const out = { enc: segs[0], t: 0, b: '', c: [] };
+  for (let i = 1; i < segs.length; i++) {
+    const s = segs[i];
+    try {
+      if (s.indexOf('t=') === 0) { const v = parseInt(s.slice(2), 10); if (v > 0 && v < 3600000) out.t = v; }
+      else if (s.indexOf('b=') === 0) out.b = sanitizeName(decodeURIComponent(s.slice(2)));
+      else if (s.indexOf('c=') === 0) out.c = s.slice(2).split(',').map(function (x) { return sanitizeName(decodeURIComponent(x)); }).filter(Boolean).slice(0, 3);
+    } catch (e) {}
+  }
+  return out;
+}
+function buildHash(enc, t, b, chain) {
+  let s = '#i=' + enc;
+  if (t > 0) s += '&t=' + Math.round(t);
+  const bn = sanitizeName(b);
+  if (bn) s += '&b=' + encodeURIComponent(bn);
+  const c = (chain || []).map(sanitizeName).filter(Boolean).slice(0, 3);
+  if (c.length) s += '&c=' + c.map(encodeURIComponent).join(',');
+  return s;
+}
 function houses(w) {
   const found = [];
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
@@ -199,7 +234,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, fmtLap };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, fmtLap, sanitizeName, parseHash, buildHash };
 }
 </script>
 <script>
@@ -211,9 +246,31 @@ if (typeof module !== 'undefined' && module.exports) {
   const ctx = cv.getContext('2d');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   let CREW = 'OLLIE';
+  let builder = '', chain = [];
   try { const q = new URLSearchParams(location.search).get('crew');
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); } } catch (e) {}
-  document.getElementById('title-badge').textContent = CREW + "'S ISLAND \u00B7 GAME 02";
+  function updateLineage() {
+    const own = !builder || builder === CREW;
+    document.getElementById('title-badge').textContent =
+      (own ? CREW : builder) + "'S ISLAND \u00B7 GAME 02";
+    const el = document.getElementById('lineage');
+    if (chain.length) { el.textContent = 'REMIXED FROM ' + chain.join(' \u2190 '); el.classList.add('on'); }
+    else el.classList.remove('on');
+    const rb = document.getElementById('btn-remix');
+    if (rb) {
+      rb.classList.toggle('on', !own);
+      const bar2 = document.getElementById('bottombar');
+      if (!own && bar2.firstChild !== rb) { bar2.insertBefore(rb, bar2.firstChild); bar2.scrollLeft = 0; }
+    }
+  }
+  function remix() {
+    if (!builder || builder === CREW) return;
+    chain = [builder].concat(chain).slice(0, 3);
+    builder = '';
+    updateLineage();
+    toast('REMIXED! This island is yours now, Captain ' + CREW + '.');
+    blip(660); setTimeout(function () { blip(880); }, 100); setTimeout(function () { blip(1180); }, 200);
+  }
 
   let W = 0, H = 0;
   const TW = 56, TH = 28, ZH = 22;
@@ -356,7 +413,12 @@ if (typeof module !== 'undefined' && module.exports) {
     let r;
     if (tool === -1) r = erase(world.ref, c.x, c.y);
     else r = place(world.ref, c.x, c.y, tool);
-    if (r.ok) { blip(tool === -1 ? 300 : 520 + r.z * 90); redrawWorld(); syncCargo(); popCheck(); }
+    if (r.ok) {
+      blip(tool === -1 ? 300 : 520 + r.z * 90);
+      if (tool === -1 && r.id === 6) toast('THAT WAS A DOOR! Your islander may move out.');
+      if (tool === -1 && r.id === 9) toast('THAT WAS YOUR FLAG! The race line is gone.');
+      redrawWorld(); syncCargo(); popCheck();
+    }
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
     else if (r.why === 'height') toast('MAX HEIGHT! Four blocks tall is the limit.');
   }
@@ -371,6 +433,7 @@ if (typeof module !== 'undefined' && module.exports) {
       if (val === 'undo') { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); popCheck(); } return; }
       if (val === 'share') { share(); return; }
       if (val === 'drive') { setDrive(true); blip(520); setTimeout(() => blip(700), 90); return; }
+      if (val === 'remix') { remix(); return; }
       tool = Number(val);
       document.querySelectorAll('.tool').forEach(t => t.classList.toggle('sel', t.dataset.val === String(val)));
       blip(600);
@@ -380,6 +443,7 @@ if (typeof module !== 'undefined' && module.exports) {
   mkTool('UNDO', null, 'undo').id = 'btn-undo';
   for (const t of ISLE.TYPES) if (t) mkTool(t.name, t.top, t.id);
   mkTool('ERASE', '#2A1B3D', -1);
+  mkTool('REMIX', '#8FD8E8', 'remix').id = 'btn-remix';
   mkTool('DRIVE', '#FF6E6C', 'drive').id = 'btn-drive';
   mkTool('SHARE', null, 'share').id = 'btn-share';
   document.querySelector('[data-val="3"]').classList.add('sel');
@@ -418,7 +482,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function shareUrl() {
     const p = new URLSearchParams(location.search).get('crew');
     return location.origin + location.pathname + (p ? '?crew=' + encodeURIComponent(p) : '')
-      + '#i=' + encode(world.ref) + (bestLap ? '&t=' + Math.round(bestLap) : '');
+      + buildHash(encode(world.ref), bestLap, builder || CREW, chain);
   }
   async function share() {
     const url = shareUrl();
@@ -433,14 +497,15 @@ if (typeof module !== 'undefined' && module.exports) {
   // boot: load island from the link if one is aboard
   function boot() {
     let w = null;
-    if (location.hash.startsWith('#i=')) {
-      const parts = location.hash.slice(3).split('&t=');
-      w = decode(parts[0]);
-      const g = parseInt(parts[1], 10);
-      if (w && g > 0 && g < 3600000) ghostLap = g;
+    const hp = parseHash(location.hash);
+    if (hp) {
+      w = decode(hp.enc);
+      if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; }
     }
     world.ref = w || makeWorld();
-    if (w) toast(ghostLap ? 'CHALLENGE! Beat the lap record of ' + fmtLap(ghostLap) : 'WELCOME ABOARD! This island travelled inside the link.');
+    updateLineage();
+    if (w) toast(builder && builder !== CREW ? 'WELCOME TO ' + builder + "'S ISLAND! Tap REMIX to make it yours."
+      : (ghostLap ? 'CHALLENGE! Beat the lap record of ' + fmtLap(ghostLap) : 'WELCOME ABOARD! This island travelled inside the link.'));
     fit();
     cam.zoom = Math.min(1, (W - 20) / off.width || 1);
     redrawWorld();
@@ -453,10 +518,10 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   addEventListener('hashchange', () => {
     if (!location.hash.startsWith('#i=')) return;
-    const parts = location.hash.slice(3).split('&t=');
-    const w = decode(parts[0]);
-    const g = parseInt(parts[1], 10);
-    if (w && g > 0 && g < 3600000) ghostLap = g;
+    const hp = parseHash(location.hash);
+    if (!hp) return;
+    const w = decode(hp.enc);
+    if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; updateLineage(); }
     if (w) { world.ref = w; redrawWorld(); syncCargo(); rebuildIslanders(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
   });
   // ISLANDERS: derived from houses, never stored. Curated names and phrases only.
@@ -657,7 +722,8 @@ if (typeof module !== 'undefined' && module.exports) {
     car, flags: () => flags(world.ref), fmtLap, setDrive: (b) => setDrive(b),
     isDriving: () => driving, steer: (v) => { car.steer = v; },
     lapInfo: () => ({ best: bestLap, ghost: ghostLap, started: !!lapStart, armed: lapArmed }),
-    forceBest: (ms) => { bestLap = ms; }, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
+    forceBest: (ms) => { bestLap = ms; },
+    remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
