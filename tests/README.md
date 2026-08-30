@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. Ninety checks across five files.
+The safety net. Run these before every deploy. One hundred and twenty four checks across six files.
 
 ## Running them
 
@@ -12,6 +12,7 @@ From the repo root:
     node tests/test-drive.js
     node tests/test-remix.js
     node tests/test-story.js
+    node tests/test-shop.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -31,6 +32,10 @@ so the suites always test the real shipped code rather than a copy that can drif
   the three deep credit chain, and the budget with a full chain and a record.
 - **test-story.js** world statistics, quest integrity (every quest must map to something the game can
   actually detect), chapter generation, quiet days still reading like a story, and hostile names.
+- **test-shop.js** the ARCADE and FACTORY blocks (ids 10 and 11). New ids survive the link, old links still
+  load, id 12 is rejected. The chocolate factory gift: nothing before three houses, lands on open ground never
+  inside a house, counts as cargo, cannot be undone but can be erased, is never given twice, refused when cargo
+  is full. Quests for both map to real stats and Story Time reports them once, never on a quiet day.
 
 ## The rule
 
