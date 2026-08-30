@@ -96,6 +96,16 @@
   #s-reward-name { font-size: clamp(18px, 3.4vh, 22px); font-weight: 900; margin: 2px 0; }
   #s-reward-blurb { font-size: 13px; font-style: italic; }
   #reward-canvas { display: block; margin: 4px auto; }
+  .crewline { font-weight: 900; color: var(--green); letter-spacing: 0.08em; margin: -8px 0 12px;
+    font-size: clamp(13px, 3.4vw, 17px); }
+  .card.cert { border-color: #C9A227;
+    box-shadow: 0 0 0 4px var(--yellow) inset, 0 16px 0 rgba(20,8,30,0.4), 0 24px 60px rgba(20,8,30,0.5); }
+  .certline { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dusk);
+    font-weight: 800; margin-top: 4px; }
+  #cert-name { font-size: clamp(24px, 6.5vw, 36px); font-weight: 900; color: var(--ink); line-height: 1.1; }
+  #cert-rank { display: inline-block; background: var(--yellow); border: 3px solid var(--ink);
+    border-radius: 12px; padding: 5px 16px; font-weight: 900; margin: 8px 0 2px;
+    font-size: clamp(14px, 3.6vw, 18px); }
 </style>
 </head>
 <body>
@@ -122,6 +132,7 @@
   <div class="panel open" id="menu"><div class="card">
     <h1>SUNSET ISLAND</h1>
     <div class="sub">Cruise Crew Chaos</div>
+    <div id="crew-line" class="crewline"></div>
     <button class="btn-big" id="btn-start">Start Practice</button>
     <div class="keys">Touch: drag anywhere to steer, tap THROW to toss<br>Keys: <kbd>WASD</kbd>/<kbd>arrows</kbd> move &nbsp; <kbd>space</kbd> throw &nbsp; <kbd>P</kbd> pause &nbsp; <kbd>R</kbd> restart &nbsp; <kbd>M</kbd> sound</div>
     <div class="btn-row">
@@ -136,6 +147,7 @@
       <b>1.</b> Walk into a bag to grab it (or just shove it along).<br>
       <b>2.</b> Haul it to the green <b>Safe Zone</b> at the top of the deck.<br>
       <b>3.</b> Keep bags away from the two <b>drains</b> &mdash; anything that goes down a drain is fine, but it is also gone.<br><br>
+      Watch for the <b>seagull</b>! It swoops in and drags bags toward the drains. Run up and bonk it to scare it off.<br><br>
       Quick back-to-back rescues build a <b>combo</b>. Snatching a bag from right beside a drain earns a <b>close call bonus</b>. Every rescue raises the <b>chaos level</b> (the strip along the top): the deck tilts harder, wind gusts arrive, and waves start sweeping across. You cannot lose. You can only get funnier.
     </div>
     <div class="fine">This prototype does not require an account and does not collect personal information. Nothing is stored or transmitted &mdash; closing the tab erases everything. Internal test build, not a public service.</div>
@@ -155,9 +167,12 @@
     </div>
   </div></div>
 
-  <div class="panel" id="summary"><div class="card">
-    <h1 style="font-size:clamp(26px,7vw,38px)">ROUND COMPLETE</h1>
-    <div class="sub">the deck survives</div>
+  <div class="panel" id="summary"><div class="card cert">
+    <h1 style="font-size:clamp(24px,6.5vw,34px)">CAPTAIN'S CERTIFICATE</h1>
+    <div class="certline">This certifies that</div>
+    <div id="cert-name"></div>
+    <div id="cert-rank"></div>
+    <div class="certline" style="margin-bottom:6px">for outstanding luggage heroics</div>
     <div class="stats">
       <div class="stat"><div class="lbl">Final score</div><div class="val" id="s-score">0</div></div>
       <div class="stat"><div class="lbl">Luggage rescued</div><div class="val" id="s-rescued">0</div></div>
@@ -323,11 +338,32 @@ class GameCore {
   }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { GameCore, makeRng, CFG, REWARDS, LUGGAGE_TYPES };
+// Deterministic seagull director: schedules gull raids. Headless-testable.
+// First raid never before 20s. One raid at a time. Min 12s gap between raids.
+class SeagullDirector {
+  constructor(seed) {
+    this.rng = makeRng((seed ^ 0x5EA6) >>> 0);
+    this.active = false;
+    this.nextAt = 20 + this.rng() * 6;
+  }
+  tick(elapsed) {
+    if (!this.active && elapsed >= this.nextAt) {
+      this.active = true;
+      return { type: 'gullSpawn', side: this.rng() < 0.5 ? -1 : 1, pick: this.rng() };
+    }
+    return null;
+  }
+  done(elapsed) {
+    this.active = false;
+    this.nextAt = elapsed + 12 + this.rng() * 6;
+  }
 }
 
-/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v2
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { GameCore, SeagullDirector, makeRng, CFG, REWARDS, LUGGAGE_TYPES };
+}
+
+/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v3
    Full-viewport responsive canvas. Canvas 2D + procedural Web Audio.
    No network, no storage, no dependencies. */
 'use strict';
@@ -337,6 +373,13 @@ if (typeof module !== 'undefined' && module.exports) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+
+  // crew name from URL only: nothing stored, nothing transmitted
+  let CREW = 'CAPTAIN';
+  try {
+    const q = new URLSearchParams(location.search).get('crew');
+    if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); }
+  } catch (e) {}
 
   // ---------- session state (memory only, wiped on refresh) ----------
   const S = {
@@ -348,6 +391,7 @@ if (typeof module !== 'undefined' && module.exports) {
     devPanel: false,
     menuStarts: 0,
     restarts: 0,
+    finaleShown: false,
   };
 
   // ---------- responsive layout: everything derives from the live viewport ----------
@@ -392,6 +436,7 @@ if (typeof module !== 'undefined' && module.exports) {
   let core = null;
   let player = null, luggage = null, particles, floaties, gust, wave, callout, carried;
   let shake = 0, seedUsed = 0, smoke = [];
+  let gull = null, director = null, fireworks = [], fwParts = [], lastFw = 0;
 
   // ---------- audio: procedural Web Audio only ----------
   let AC = null;
@@ -432,6 +477,8 @@ if (typeof module !== 'undefined' && module.exports) {
     wavefx: () => noiseBurst(0.9, 0.1, 250),
     tick:   () => tone(880, 880, 0.05, 'square', 0.05),
     end:    () => { tone(784, 784, 0.12, 'square', 0.07); setTimeout(() => tone(659, 523, 0.3, 'square', 0.07), 130); },
+    squawk: () => { tone(1250, 620, 0.12, 'sawtooth', 0.06); setTimeout(() => tone(1400, 700, 0.1, 'sawtooth', 0.05), 110); },
+    boom:   () => { noiseBurst(0.25, 0.09, 200); tone(220, 90, 0.3, 'triangle', 0.05); },
   };
 
   // ---------- input: keyboard + floating virtual joystick ----------
@@ -489,12 +536,17 @@ if (typeof module !== 'undefined' && module.exports) {
     player = { x: W / 2, y: DECK.y + DECK.h * 0.55, vx: 0, vy: 0, face: 1, bob: 0 };
     luggage = []; particles = []; floaties = []; smoke = [];
     gust = null; wave = null; carried = null; joy = null;
+    gull = null; director = new SeagullDirector(seedUsed); fireworks = []; fwParts = [];
+    S.finaleShown = false;
     callout = { text: 'GRAB LUGGAGE — HAUL IT TO THE GREEN ZONE!', t: 6 };
     spawnLuggage('duffel', 0.5, 0.35, 0.3);
     S.scene = 'play';
     showPanel(null);
     lastTickSecond = -1;
     last = performance.now();
+  }
+  function rankFor(sc) {
+    return sc >= 400 ? 'RANK: FLEET ADMIRAL' : sc >= 300 ? 'RANK: SHIP CAPTAIN' : sc >= 200 ? 'RANK: FIRST MATE' : sc >= 100 ? 'RANK: LUGGAGE WRANGLER' : 'RANK: DECK SWAB';
   }
   function endRound() {
     SFX.end();
@@ -504,6 +556,8 @@ if (typeof module !== 'undefined' && module.exports) {
     $('s-rescued').textContent = sum.rescued;
     $('s-combo').textContent = 'x' + Math.max(1, sum.bestCombo);
     $('s-chaos').textContent = sum.chaos.toFixed(1) + ' / 10';
+    $('cert-name').textContent = 'CAPTAIN ' + CREW;
+    $('cert-rank').textContent = rankFor(sum.score);
     $('s-reward-name').textContent = sum.reward.name;
     $('s-reward-blurb').textContent = sum.reward.blurb;
     drawRewardIcon(sum.reward.id);
@@ -528,6 +582,15 @@ if (typeof module !== 'undefined' && module.exports) {
       wob: rv * 6.28, nearDrainAt: -99, squash: 0,
     });
   }
+  function gullHolds(L) { return gull && gull.state === 'drag' && gull.target === L; }
+  function spawnGull(ev) {
+    const free = luggage.filter(L => L !== carried);
+    if (!free.length) { director.done(core.elapsed); return; }
+    const target = free[Math.floor(ev.pick * free.length) % free.length];
+    gull = { x: ev.side < 0 ? -40 * s : W + 40 * s, y: DECK.y + 30 * s, state: 'swoop', target, flap: 0 };
+    addCallout('SEAGULL RAID! BONK IT!', 1.6);
+    SFX.squawk();
+  }
   function doThrow() {
     if (!carried) return;
     carried.vx = player.face * 240 * s + player.vx * 0.6;
@@ -546,8 +609,10 @@ if (typeof module !== 'undefined' && module.exports) {
       else if (e.type === 'wave') { wave = { fromLeft: e.fromLeft, t: e.duration, x: e.fromLeft ? DECK.x - 60 * s : DECK.x + DECK.w + 60 * s }; SFX.wavefx(); addCallout('WAVE SWEEP!', 1.4); }
       else if (e.type === 'roundEnd') { endRound(); return; }
     }
+    if (director) { const ge = director.tick(core.elapsed); if (ge) spawnGull(ge); }
     const sec = Math.ceil(core.timeLeft);
     if (sec <= 5 && sec > 0 && sec !== lastTickSecond) { lastTickSecond = sec; SFX.tick(); }
+    if (sec === 10 && !S.finaleShown) { S.finaleShown = true; addCallout('GRAND FINALE!', 1.6); }
 
     // player movement: keys or joystick
     let ax = 0, ay = 0;
@@ -597,6 +662,8 @@ if (typeof module !== 'undefined' && module.exports) {
       if (carried === L) {
         L.x += (player.x - L.x) * Math.min(1, dt * 14);
         L.y += (player.y - 34 * s - L.y) * Math.min(1, dt * 14);
+      } else if (gullHolds(L)) {
+        // gull steers this bag; drain and rescue checks below still apply
       } else {
         L.vx += Math.sin(tilt) * 300 * s * dt;
         L.wob += dt * 4;
@@ -642,6 +709,37 @@ if (typeof module !== 'undefined' && module.exports) {
         pop(L.x, L.y, ['#3FA96B', '#FFD447', '#FF6E6C', '#FFF3E2'], 16);
         floaties.push({ x: L.x, y: L.y, vy: -90 * s, t: 1.2, text: '+' + r.pts + (wasNear ? ' CLOSE CALL!' : ''), c: '#FFD447' });
         if (r.combo > 1) floaties.push({ x: L.x, y: L.y + 22 * s, vy: -70 * s, t: 1.2, text: 'COMBO x' + r.combo, c: '#FF9E5E' });
+      }
+    }
+
+    // seagull behavior
+    if (gull) {
+      gull.flap += dt * 16;
+      const T = gull.target;
+      if (gull.state === 'swoop') {
+        if (!T || carried === T || !luggage.includes(T)) gull.state = 'flee';
+        else {
+          const dx = T.x - gull.x, dy = (T.y - 10 * s) - gull.y, d = Math.hypot(dx, dy) || 1;
+          gull.x += dx / d * 195 * s * dt; gull.y += dy / d * 195 * s * dt;
+          if (d < 20 * s) { gull.state = 'drag'; SFX.squawk(); }
+        }
+      } else if (gull.state === 'drag') {
+        if (!luggage.includes(T) || carried === T) { gull.state = 'flee'; }
+        else {
+          let ND = DRAINS[0], best = 1e9;
+          for (const D of DRAINS) { const dd = Math.hypot(T.x - D.x, T.y - D.y); if (dd < best) { best = dd; ND = D; } }
+          const dx = ND.x - gull.x, dy = (ND.y - 14 * s) - gull.y, d = Math.hypot(dx, dy) || 1;
+          gull.x += dx / d * 72 * s * dt; gull.y += dy / d * 72 * s * dt;
+          T.x = gull.x; T.y = gull.y + 12 * s; T.vx = 0; T.vy = 0;
+          if (Math.hypot(player.x - gull.x, player.y - gull.y) < 56 * s) {
+            gull.state = 'flee'; SFX.squawk(); shakeIt(3);
+            pop(gull.x, gull.y, ['#FFF3E2', '#D8D8D8', '#FF6E6C'], 14);
+            floaties.push({ x: gull.x, y: gull.y - 20 * s, vy: -120 * s, t: 1.4, text: 'BONK!', c: '#FFD447' });
+          }
+        }
+      } else {
+        gull.x += (gull.x > W / 2 ? 260 : -260) * s * dt; gull.y -= 200 * s * dt;
+        if (gull.y < -60 || gull.x < -80 || gull.x > W + 80) { gull = null; director.done(core.elapsed); }
       }
     }
 
@@ -810,6 +908,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
     if (luggage) for (const L of luggage) drawLuggage(L);
     if (S.scene !== 'menu' && player) drawPlayer();
+    if (gull) drawGull();
     if (particles) for (const p of particles) {
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
       ctx.fillStyle = p.c; ctx.fillRect(-3.5 * s, -2.5 * s, 7 * s, 5 * s); ctx.restore();
@@ -845,6 +944,37 @@ if (typeof module !== 'undefined' && module.exports) {
       const d = Math.hypot(dx, dy) || 1, cl = Math.min(d, 44 * s);
       ctx.fillStyle = 'rgba(255,243,226,0.85)';
       ctx.beginPath(); ctx.arc(joy.ox + dx / d * cl, joy.oy + dy / d * cl, 20 * s, 0, 6.29); ctx.fill();
+    }
+
+    // finale + certificate fireworks (screen space, above everything but vignette)
+    const fwOn = !S.reducedMotion && ((S.scene === 'play' && core && core.timeLeft <= 10) || S.scene === 'summary');
+    const fdt = Math.min(0.05, (now - lastFw) / 1000) || 0.016; lastFw = now;
+    if (fwOn && fireworks.length < 6 && Math.random() < fdt * 1.8) {
+      fireworks.push({ x: W * (0.12 + Math.random() * 0.76), y: H * 0.9, vy: -(320 + Math.random() * 140) * s, by: HORIZON * (0.4 + Math.random() * 0.9) });
+    }
+    for (let i = fireworks.length - 1; i >= 0; i--) {
+      const f = fireworks[i]; f.y += f.vy * fdt;
+      ctx.fillStyle = '#FFF3E2'; ctx.fillRect(f.x - 1.5, f.y, 3, 8);
+      if (f.y <= f.by) {
+        fireworks.splice(i, 1); SFX.boom();
+        const cols2 = ['#FFD447', '#FF6E6C', '#3FA96B', '#8FD8E8', '#FFB067'];
+        for (let k = 0; k < 26; k++) {
+          const a = Math.random() * 6.28, sp2 = (70 + Math.random() * 190) * s;
+          fwParts.push({ x: f.x, y: f.y, vx: Math.cos(a) * sp2, vy: Math.sin(a) * sp2, t: 0.7 + Math.random() * 0.5, c: cols2[k % cols2.length] });
+        }
+      }
+    }
+    for (let i = fwParts.length - 1; i >= 0; i--) {
+      const p = fwParts[i]; p.x += p.vx * fdt; p.y += p.vy * fdt; p.vy += 160 * s * fdt; p.t -= fdt;
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.t));
+      ctx.fillStyle = p.c; ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+      if (p.t <= 0) fwParts.splice(i, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    // golden hour tint in the final seconds
+    if (!S.reducedMotion && S.scene === 'play' && core && core.timeLeft <= 10) {
+      ctx.fillStyle = 'rgba(255,190,80,0.10)'; ctx.fillRect(0, 0, W, H);
     }
 
     // vignette
@@ -893,6 +1023,21 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.fillStyle = '#2A1B3D';
     const ex = Math.max(-2.5, Math.min(2.5, L.vx / (60 * s))) * s;
     ctx.beginPath(); ctx.arc(-8 * s + ex, -6 * s, 2.6 * s, 0, 6.29); ctx.arc(8 * s + ex, -6 * s, 2.6 * s, 0, 6.29); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGull() {
+    const g = gull;
+    ctx.save(); ctx.translate(g.x, g.y);
+    const fl = S.reducedMotion ? 0 : Math.sin(g.flap) * 8 * s;
+    ctx.fillStyle = 'rgba(30,15,5,0.2)'; ctx.beginPath(); ctx.ellipse(0, 26 * s, 14 * s, 4 * s, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#D8D8D8';
+    ctx.beginPath(); ctx.ellipse(-14 * s, -4 * s - fl, 13 * s, 5 * s, -0.5, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(14 * s, -4 * s - fl, 13 * s, 5 * s, 0.5, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#FFF3E2'; ctx.beginPath(); ctx.ellipse(0, 0, 13 * s, 9 * s, 0, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(9 * s, -8 * s, 6 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#FFB067'; ctx.beginPath(); ctx.moveTo(14 * s, -8 * s); ctx.lineTo(22 * s, -6 * s); ctx.lineTo(14 * s, -4 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2A1B3D'; ctx.beginPath(); ctx.arc(10 * s, -9 * s, 1.6 * s, 0, 6.29); ctx.fill();
     ctx.restore();
   }
 
@@ -950,6 +1095,7 @@ if (typeof module !== 'undefined' && module.exports) {
         ' | t ' + core.elapsed.toFixed(1) + 's | rescued ' + core.rescued +
         ' | missed ' + core.missed + ' | score ' + core.score +
         ' | best combo ' + core.bestCombo + ' | chaos ' + core.chaos.toFixed(2) +
+        ' | gull ' + (gull ? gull.state : 'none') +
         ' | starts ' + S.menuStarts + ' | restarts ' + S.restarts;
     }
   }
@@ -1007,6 +1153,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
   layout();
   setMuted(false); setRM(S.reducedMotion);
+  $('crew-line').textContent = 'STARRING CAPTAIN ' + CREW;
   showPanel('menu');
   requestAnimationFrame(frame);
 })();
