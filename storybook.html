@@ -175,9 +175,9 @@
     { icon:'\uD83D\uDCE3', quote:'Share it with your friends and show it!',
       what:'A golden CHALLENGE A FRIEND button sends your game to anyone you choose.',
       look:'On your certificate after every round. Sibella first?' },
-    { finale:true, icon:'\uD83D\uDCDC', title:"CAPTAIN'S ORDERS", kicker:'what we build next',
-      what:'Some of your ideas were SO big they need their own adventure. The Captain decides what gets built next:',
-      orders:['\uD83C\uDFE0 Building your own houses','\uD83D\uDD79\uFE0F Arcade machines \u2014 pinball and the claw','\uD83C\uDF6B A chocolate factory on board'],
+    { finale:true, icon:'\uD83D\uDCDC', title:"CAPTAIN'S ORDERS", kicker:'every one of them built',
+      what:'Some of your ideas were SO big they needed a whole island of their own. Game 02 is that island, and your orders are done:',
+      orders:['\u2705 Your own houses. Build walls with a DOOR and somebody moves in and talks to you.','\u2705 Arcade machines. Build one, then drive past it for 20 points.','\u2705 A chocolate factory. Build three houses and it opens all by itself.'],
       btn:'BOARD YOUR SHIP' },
   ];
 
@@ -196,9 +196,9 @@
         '<div class="bigicon">' + c.icon + '</div>' +
         '<h1>' + c.title + '</h1><div class="kicker">' + c.kicker + '</div>' +
         '<div class="reveal-what">' + c.what + '</div>' +
-        (c.orders ? '<div class="orders"><span class="t">The list so far</span><br>' + c.orders.join('<br>') + '</div>' : '') +
+        (c.orders ? '<div class="orders"><span class="t">Orders completed</span><br>' + c.orders.join('<br>') + '</div>' : '') +
         (c.finale
-          ? '<a class="board" href="' + GAME_URL + '">' + c.btn + ' \u{1F6F3}\uFE0F</a><div class="dedic">Built for Captain Ollie and First Mate Sibella by Uncle Tabs</div>'
+          ? '<a class="board" href="island.html?crew=OLLIE">GO TO YOUR ISLAND \u{1F3DD}\uFE0F</a><a class="board" href="' + GAME_URL + '" style="margin-top:8px">' + c.btn + ' \u{1F6F3}\uFE0F</a><div class="dedic">Built for Captain Ollie and First Mate Sibella by Uncle Tabs</div>'
           : '<button class="next" id="go">' + c.btn + ' \u2192</button>');
     } else if (!revealed) {
       inner = '<div class="eyebrow">PAGE ' + idx + ' \u00B7 YOU SAID\u2026</div>' +
