@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2A1B3D">
+<title>Sunset Island</title>
+<meta name="description" content="Tell us your name and a few favourites, and Sunset Island becomes yours. A cruise ship rescue, an island you build, and your whole world in one link. No app, no account, no ads.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sunset Island">
+<meta property="og:title" content="Sunset Island">
+<meta property="og:description" content="Pick your name, your colour, your ride and your dream build, then set sail. No app, no account, no ads, nothing saved about you.">
+<meta property="og:url" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/captain.html">
+<meta property="og:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-arcade.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sunset Island">
+<meta name="twitter:description" content="Pick your name, your colour, your ride and your dream build, then set sail.">
+<meta name="twitter:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-arcade.png">
+<style>
+  :root { --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067; --yellow:#FFD447; --sky:#8FD8E8; --dusk:#5C3A6E; --you:#FFD447; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { min-height:100dvh; background:linear-gradient(180deg,#FFC078 0%,#FF8A70 38%,#C75B82 72%,#5C3A6E 100%);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow-x:hidden;
+    padding:calc(env(safe-area-inset-top,0px) + 22px) 16px calc(env(safe-area-inset-bottom,0px) + 28px); }
+  #sun { position:fixed; top:12%; right:-40px; width:150px; height:150px; border-radius:50%; background:#FFE49E; opacity:0.75; z-index:0; }
+  #sea { position:fixed; left:0; right:0; bottom:0; height:26%; z-index:0; background:linear-gradient(180deg,#C25E77,#3A6E82 55%,#1F4E5F); }
+  .wrap { position:relative; z-index:1; max-width:520px; margin:0 auto; }
+  h1 { color:var(--cream); font-size:clamp(28px,8.5vw,42px); font-weight:900; letter-spacing:0.03em; text-align:center;
+    text-shadow:0 4px 0 rgba(42,27,61,0.55); line-height:1.05; overflow-wrap:anywhere; }
+  .sub { text-align:center; color:var(--yellow); font-weight:800; font-size:12px; letter-spacing:0.18em; margin-top:8px; text-shadow:0 2px 0 rgba(42,27,61,0.5); }
+  .card { display:block; text-decoration:none; margin-top:16px; padding:18px 18px 16px; background:rgba(255,243,226,0.97);
+    border:4px solid var(--ink); border-radius:22px; box-shadow:0 7px 0 rgba(20,8,30,0.5); }
+  a.card:active { transform:translateY(5px); box-shadow:0 2px 0 rgba(20,8,30,0.5); }
+  .tag { display:inline-block; font-size:10px; font-weight:900; letter-spacing:0.14em; color:var(--cream); background:var(--ink); border-radius:999px; padding:4px 10px; }
+  .card h2 { color:var(--ink); font-size:23px; font-weight:900; margin:9px 0 5px; }
+  .card p { color:#5a4a63; font-size:14px; font-weight:600; line-height:1.4; }
+  .go { display:inline-block; margin-top:12px; background:var(--you); color:var(--ink); border:3px solid var(--ink); border-radius:12px;
+    padding:8px 16px; font-weight:900; font-size:14px; letter-spacing:0.06em; }
+  .foot { text-align:center; color:var(--cream); font-size:12px; font-weight:700; margin-top:22px; opacity:0.9; text-shadow:0 2px 0 rgba(42,27,61,0.45); line-height:1.6; }
+  .foot button { background:none; border:none; color:var(--yellow); font-weight:900; font-size:12px; text-decoration:underline; cursor:pointer; }
+  /* the Q and A */
+  #ask { display:none; } #ask.on { display:block; }
+  #hub { display:none; } #hub.on { display:block; }
+  .q { color:var(--ink); font-size:clamp(20px,5.6vw,26px); font-weight:900; line-height:1.15; margin-bottom:12px; }
+  .step { font-size:11px; font-weight:900; letter-spacing:0.16em; color:var(--dusk); margin-bottom:6px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid.three { grid-template-columns:1fr 1fr 1fr; }
+  .opt { border:3px solid var(--ink); border-radius:16px; background:#fff; color:var(--ink); font-weight:900; font-size:15px;
+    padding:14px 10px; text-align:center; cursor:pointer; box-shadow:0 4px 0 rgba(20,8,30,0.35); line-height:1.15; min-height:74px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .opt .ic { font-size:30px; line-height:1; }
+  .opt:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.35); }
+  .opt.sel { background:var(--yellow); }
+  .swatch { width:100%; height:38px; border-radius:10px; border:2px solid var(--ink); }
+  #name { width:100%; font-size:26px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; padding:14px; border:3px solid var(--ink);
+    border-radius:14px; background:#fff; color:var(--ink); text-align:center; }
+  .next { width:100%; margin-top:12px; padding:14px; border:3px solid var(--ink); border-radius:14px; background:var(--yellow); color:var(--ink);
+    font-weight:900; font-size:17px; letter-spacing:0.06em; cursor:pointer; box-shadow:0 5px 0 rgba(20,8,30,0.4); }
+  .next:disabled { opacity:0.4; box-shadow:none; }
+  .back { background:none; border:none; color:var(--dusk); font-weight:800; font-size:13px; margin-top:10px; cursor:pointer; text-decoration:underline; }
+  .hint { color:#5a4a63; font-size:12px; font-weight:600; margin-top:8px; line-height:1.4; }
+  #dots { display:flex; gap:5px; justify-content:center; margin-bottom:10px; }
+  #dots i { width:8px; height:8px; border-radius:50%; background:rgba(42,27,61,0.2); display:block; } #dots i.on { background:var(--coral); }
+  /* voyage book */
+  #book { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; background:rgba(28,16,44,0.92); padding:14px; }
+  #book.on { display:flex; }
+  #bookcard { width:100%; max-width:460px; max-height:94dvh; overflow:auto; padding:18px; background:linear-gradient(180deg,#2A1B3D,#5C3A6E);
+    border:4px solid var(--cream); border-radius:22px; box-shadow:0 8px 0 rgba(10,4,18,0.6); }
+  #bookhead { color:var(--yellow); font-size:11px; font-weight:900; letter-spacing:0.22em; text-align:center; }
+  #bookcard h3 { color:var(--cream); font-size:20px; font-weight:900; margin:10px 0 12px; text-align:center; }
+  #bookbody p { color:var(--cream); font-size:17px; font-weight:600; line-height:1.55; margin-bottom:11px; }
+  #booknav { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; }
+  .bnav { padding:9px 14px; border:3px solid var(--ink); border-radius:12px; background:var(--peach); color:var(--ink); font-weight:900; font-size:13px; cursor:pointer; }
+  .bnav:disabled { opacity:0.35; }
+  #bdots { display:flex; gap:5px; } #bdots i { width:8px; height:8px; border-radius:50%; background:rgba(255,243,226,0.3); display:block; } #bdots i.on { background:var(--yellow); }
+  #bclose { width:100%; margin-top:10px; padding:12px; border:3px solid var(--ink); border-radius:14px; background:var(--yellow); color:var(--ink); font-weight:900; font-size:16px; letter-spacing:0.06em; cursor:pointer; }
+  #grownup { display:none; margin-top:14px; background:var(--sky); border:3px solid var(--ink); border-radius:16px; padding:12px 14px; color:var(--ink); font-weight:800; font-size:14px; line-height:1.4; }
+  #grownup.on { display:block; }
+  #linkbox { display:none; margin-top:10px; } #linkbox.on { display:block; }
+  #linkbox input { width:100%; font-size:12px; padding:10px; border:2px solid var(--ink); border-radius:10px; background:#fff; color:var(--ink); }
+</style>
+</head>
+<body>
+<div id="sun"></div><div id="sea"></div>
+<div class="wrap">
+  <h1 id="title">SUNSET ISLAND</h1>
+  <div class="sub" id="subline">YOUR VOYAGE STARTS HERE</div>
+
+  <div id="ask">
+    <div class="card">
+      <div id="dots"></div>
+      <div id="qbox"></div>
+    </div>
+  </div>
+
+  <div id="hub">
+    <div id="grownup">Your grown-up made this voyage just for you. Everything here already knows your name.</div>
+
+    <a class="card" href="#" id="link-voyage">
+      <span class="tag">YOUR VOYAGE</span>
+      <h2 id="voyage-h">Read what is waiting for you</h2>
+      <p id="voyage-p"></p>
+      <span class="go">READ IT &rarr;</span>
+    </a>
+
+    <a class="card" href="index.html" id="link-game1">
+      <span class="tag">GAME 01</span>
+      <h2>Cruise Crew Chaos</h2>
+      <p>Catch the falling luggage on a tilting ship deck. Bonk the seagulls, grab the chocolate bar, hit 1000 and become a Knight Legend.</p>
+      <span class="go">PLAY &rarr;</span>
+    </a>
+
+    <a class="card" href="island.html" id="link-island">
+      <span class="tag">GAME 02</span>
+      <h2>Your Island</h2>
+      <p>Build houses and people move in and talk to you. Drive your ride, race a lap, open a factory. Then send your whole island to anyone in one link.</p>
+      <span class="go">BUILD &rarr;</span>
+    </a>
+
+    <div class="card" id="maker">
+      <span class="tag">FOR GROWN-UPS</span>
+      <h2>Send this voyage to someone</h2>
+      <p>This link already holds the name and choices above. Send it and the game opens ready for them. Nothing is stored anywhere except inside the link itself.</p>
+      <div id="linkbox"><input id="linkfield" readonly></div>
+      <button class="go" id="copy" style="cursor:pointer">COPY THE LINK</button>
+    </div>
+
+    <div class="foot">No accounts, no ads, nothing saved about you.<br><button id="redo">Change captain</button></div>
+  </div>
+</div>
+
+<div id="book">
+  <div id="bookcard">
+    <div id="bookhead">YOUR VOYAGE</div>
+    <h3 id="booktitle"></h3>
+    <div id="bookbody"></div>
+    <div id="booknav"><button class="bnav" id="bprev">BACK</button><div id="bdots"></div><button class="bnav" id="bnext">NEXT</button></div>
+    <button id="bclose">BOARD YOUR SHIP</button>
+  </div>
+</div>
+
+<script>
+/* Captain profile codec. Kept identical to island.html so one link works everywhere. */
+'use strict';
+const PROFILE = {
+  VER: 1,
+  TITLES: ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT'],
+  COLOURS: [
+    { name: 'CORAL', hex: '#FF6E6C' }, { name: 'SUNSET', hex: '#FFB067' }, { name: 'SUNSHINE', hex: '#FFD447' },
+    { name: 'PALM', hex: '#3FA96B' }, { name: 'SKY', hex: '#8FD8E8' }, { name: 'OCEAN', hex: '#2F7F9A' },
+    { name: 'PURPLE', hex: '#8C5BC9' }, { name: 'PINK', hex: '#FF7EB6' },
+  ],
+  RIDES: ['RED ROCKET', 'SAND BUGGY', 'SEA CRUISER'],
+  DREAMS: ['CASTLE', 'ZOO', 'RACETRACK', 'BAKERY', 'ROCKET BASE', 'SECRET HIDEOUT', 'FLOWER GARDEN'],
+  DREAM_TELL: ['build a castle tower four blocks tall', 'build three houses so the zoo animals have homes', 'plant a racing flag and drive the very first lap of the racetrack',
+    'open a factory so the bakery has an oven', 'build a launch tower four blocks tall', 'build walls with a door so there is somewhere to hide', 'lay down ten grass blocks for the garden'],
+  AGES: ['5 TO 6', '7 TO 8', '9 PLUS'],
+};
+function sanitizeName(s) { return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim().slice(0, 10); }
+function buildProfile(o) {
+  const nm = sanitizeName(o.name); if (!nm) return '';
+  const clamp = (v, n) => Math.max(0, Math.min(n - 1, parseInt(v, 10) || 0));
+  const b = [PROFILE.VER, o.grownup ? 1 : 0, clamp(o.title, 7), clamp(o.colour, 8), clamp(o.ride, 3), clamp(o.dream, 7), clamp(o.age, 3), 0, 0];
+  for (let i = 0; i < nm.length; i++) b.push(nm.charCodeAt(i));
+  let bin = ''; for (let i = 0; i < b.length; i++) bin += String.fromCharCode(b[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function parseProfile(str) {
+  if (!str || typeof str !== 'string' || str.length > 40) return null;
+  let raw;
+  try { const t = atob(str.replace(/-/g, '+').replace(/_/g, '/')); raw = []; for (let i = 0; i < t.length; i++) raw.push(t.charCodeAt(i)); } catch (e) { return null; }
+  if (raw.length < 10 || raw[0] !== PROFILE.VER) return null;
+  const p = { grownup: raw[1] === 1, title: raw[2], colour: raw[3], ride: raw[4], dream: raw[5], age: raw[6] };
+  if (raw[1] > 1 || p.title >= 7 || p.colour >= 8 || p.ride >= 3 || p.dream >= 7 || p.age >= 3) return null;
+  let nm = ''; for (let i = 9; i < raw.length; i++) nm += String.fromCharCode(raw[i]);
+  p.name = sanitizeName(nm); if (!p.name || p.name !== nm) return null;
+  return p;
+}
+function cap(s) { return s.charAt(0) + s.slice(1).toLowerCase(); }
+
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const KEY = 'captain-profile-v1';
+  let ans = { grownup: false, name: '', title: 0, colour: 0, ride: 0, dream: 0, age: 0 };
+  let enc = '', pro = null, step = 0;
+
+  const STEPS = [
+    { key: 'grownup', q: 'Who is answering?', opts: [{ l: 'ME! I am the captain', ic: '\uD83E\uDDD2', v: false }, { l: 'A grown-up, making this for someone', ic: '\uD83D\uDC69\u200D\uD83D\uDC67', v: true }] },
+    { key: 'name', q: 'What should the island call you?', input: true, hint: 'Just a first name or a nickname. Letters and numbers, up to ten. This is the only thing you ever type.' },
+    { key: 'title', q: 'And you are a...', opts: [['Captain', '\u2693'], ['Pirate', '\uD83C\uDFF4\u200D\u2620\uFE0F'], ['Princess', '\uD83D\uDC51'], ['Explorer', '\uD83E\uDDED'], ['Mermaid', '\uD83E\uDDDC'], ['Knight', '\u2694\uFE0F'], ['Astronaut', '\uD83D\uDE80']].map((o, i) => ({ l: o[0], ic: o[1], v: i })) },
+    { key: 'colour', q: 'Your favourite colour?', colours: true },
+    { key: 'ride', q: 'Pick your ride', opts: [['Red Rocket', '\uD83C\uDFCE\uFE0F'], ['Sand Buggy', '\uD83D\uDEFA'], ['Sea Cruiser', '\uD83D\uDE9A']].map((o, i) => ({ l: o[0], ic: o[1], v: i })) },
+    { key: 'dream', q: 'What do you dream of building?', opts: [['Castle', '\uD83C\uDFF0'], ['Zoo', '\uD83E\uDD81'], ['Racetrack', '\uD83C\uDFC1'], ['Bakery', '\uD83E\uDDC1'], ['Rocket base', '\uD83D\uDE80'], ['Secret hideout', '\uD83E\uDD2B'], ['Flower garden', '\uD83C\uDF3B']].map((o, i) => ({ l: o[0], ic: o[1], v: i })) },
+    { key: 'age', q: 'How old is the captain?', opts: [['5 to 6', '\uD83C\uDF31'], ['7 to 8', '\uD83C\uDF3F'], ['9 plus', '\uD83C\uDF34']].map((o, i) => ({ l: o[0], ic: o[1], v: i })), three: true },
+  ];
+
+  function renderStep() {
+    const st = STEPS[step];
+    $('dots').innerHTML = STEPS.map((x, i) => '<i class="' + (i === step ? 'on' : '') + '"></i>').join('');
+    let h = '<div class="step">QUESTION ' + (step + 1) + ' OF ' + STEPS.length + '</div><div class="q"></div>';
+    if (st.input) h += '<input id="name" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="YOUR NAME"><div class="hint">' + st.hint + '</div><button class="next" id="next" disabled>NEXT</button>';
+    else if (st.colours) h += '<div class="grid" id="opts">' + PROFILE.COLOURS.map((c, i) => '<button class="opt" data-v="' + i + '"><span class="swatch" style="background:' + c.hex + '"></span>' + cap(c.name) + '</button>').join('') + '</div>';
+    else h += '<div class="grid' + (st.three ? ' three' : '') + '" id="opts">' + st.opts.map((o, i) => '<button class="opt" data-i="' + i + '"><span class="ic">' + o.ic + '</span>' + o.l + '</button>').join('') + '</div>';
+    if (step > 0) h += '<button class="back" id="back">Back</button>';
+    $('qbox').innerHTML = h;
+    $('qbox').querySelector('.q').textContent = st.q;
+    if (st.input) {
+      const inp = $('name'); inp.value = ans.name;
+      inp.addEventListener('input', function () { const v = sanitizeName(inp.value); $('next').disabled = !v; });
+      $('next').disabled = !sanitizeName(inp.value);
+      $('next').addEventListener('click', function () { ans.name = sanitizeName(inp.value); if (ans.name) go(1); });
+      setTimeout(function () { inp.focus(); }, 80);
+    } else {
+      $('qbox').querySelectorAll('.opt').forEach(function (b) {
+        b.addEventListener('click', function () {
+          const v = st.colours ? Number(b.dataset.v) : st.opts[Number(b.dataset.i)].v;
+          ans[st.key] = v;
+          b.classList.add('sel');
+          setTimeout(function () { go(1); }, 160);
+        });
+      });
+    }
+    const bk = $('back'); if (bk) bk.addEventListener('click', function () { go(-1); });
+  }
+  function go(d) {
+    step += d;
+    if (step >= STEPS.length) { finish(); return; }
+    if (step < 0) step = 0;
+    renderStep();
+  }
+  function finish() {
+    enc = buildProfile(ans);
+    if (!enc) { step = 1; renderStep(); return; }
+    try { localStorage.setItem(KEY, enc); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + '?p=' + enc); } catch (e) {}
+    pro = parseProfile(enc);
+    showHub(true);
+  }
+
+  function voyagePages() {
+    const nm = cap(pro.name), t = cap(PROFILE.TITLES[pro.title]), col = cap(PROFILE.COLOURS[pro.colour].name);
+    const ride = PROFILE.RIDES[pro.ride].split(' ').map(cap).join(' '), dream = PROFILE.DREAMS[pro.dream].toLowerCase();
+    const young = pro.age === 0;
+    const p1 = [t + ' ' + nm + ', this is Sunset Island, and it is yours.',
+      'You chose ' + col.toLowerCase() + ', the ' + ride + ', and a dream of building a ' + dream + '.',
+      young ? 'Two games are waiting. Here is what happens in each one.' : 'Two games are waiting, and everything in them already knows your name. Here is what happens in each one.'];
+    const p2 = ['First, the ship. Luggage falls on a tilting deck and you catch it before it slides away.',
+      'A seagull comes to steal it. You bonk the seagull.',
+      young ? 'Get 1000 points and you become a Knight Legend.' : 'Rescue the giant chocolate bar for 20 points. Reach 1000 and you earn the top rank on the whole island: Knight Legend.'];
+    const p3 = ['Then, your island. Tap the sand and blocks appear. Build walls with a door and somebody moves in and talks to you.',
+      'Your ' + ride + ' is parked there in ' + col.toLowerCase() + '. Build a ramp one block high and drive at it to fly.',
+      'Tonight, when you tap the moon, the island will write your story and give you your first quest: to ' + PROFILE.DREAM_TELL[pro.dream] + '.',
+      'When you are ready, tap SHARE and your whole island fits inside one link. Off you go, ' + t + '.'];
+    return [{ title: 'WELCOME ABOARD', lines: p1 }, { title: 'GAME 01: THE SHIP', lines: p2 }, { title: 'GAME 02: YOUR ISLAND', lines: p3 }];
+  }
+  let pages = [], pi = 0;
+  function renderBook() {
+    const pg = pages[pi];
+    $('booktitle').textContent = pg.title;
+    $('bookbody').innerHTML = pg.lines.map(function (l) { const d = document.createElement('p'); d.textContent = l; return d.outerHTML; }).join('');
+    $('bdots').innerHTML = pages.map((x, i) => '<i class="' + (i === pi ? 'on' : '') + '"></i>').join('');
+    $('bprev').disabled = pi === 0; $('bnext').disabled = pi === pages.length - 1;
+  }
+  function openBook() { pages = voyagePages(); pi = 0; renderBook(); $('book').classList.add('on'); }
+  $('bclose').addEventListener('click', function () { $('book').classList.remove('on'); });
+  $('bnext').addEventListener('click', function () { if (pi < pages.length - 1) { pi++; renderBook(); } });
+  $('bprev').addEventListener('click', function () { if (pi > 0) { pi--; renderBook(); } });
+  $('link-voyage').addEventListener('click', function (e) { e.preventDefault(); openBook(); });
+
+  function showHub(fresh) {
+    const nm = pro.name, t = PROFILE.TITLES[pro.title], hex = PROFILE.COLOURS[pro.colour].hex;
+    document.documentElement.style.setProperty('--you', hex);
+    $('title').textContent = t + ' ' + nm + "'S ISLAND";
+    $('subline').textContent = 'A VOYAGE MADE FOR ' + nm;
+    $('voyage-p').textContent = 'Three pages about the ' + PROFILE.DREAMS[pro.dream].toLowerCase() + ' you will build, the ' + PROFILE.RIDES[pro.ride].split(' ').map(cap).join(' ').toLowerCase() + ' you will drive, and how to send your island to a friend.';
+    const qs = '?crew=' + encodeURIComponent(nm) + '&p=' + enc;
+    $('link-game1').href = 'index.html' + qs;
+    $('link-island').href = 'island.html' + qs;
+    $('grownup').classList.toggle('on', pro.grownup);
+    $('linkfield').value = location.origin + location.pathname + '?p=' + enc;
+    $('ask').classList.remove('on'); $('hub').classList.add('on');
+    if (fresh) setTimeout(openBook, 500);
+  }
+  $('copy').addEventListener('click', async function () {
+    const url = $('linkfield').value; $('linkbox').classList.add('on');
+    try { if (navigator.share) { await navigator.share({ title: 'Sunset Island', text: 'A voyage made for ' + cap(pro.name), url: url }); return; } } catch (e) {}
+    try { await navigator.clipboard.writeText(url); $('copy').textContent = 'COPIED!'; setTimeout(function () { $('copy').textContent = 'COPY THE LINK'; }, 1800); } catch (e) {}
+  });
+  $('redo').addEventListener('click', function () {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    pro = null; enc = ''; step = 0; ans = { grownup: false, name: '', title: 0, colour: 0, ride: 0, dream: 0, age: 0 };
+    $('hub').classList.remove('on'); $('ask').classList.add('on');
+    $('title').textContent = 'SUNSET ISLAND'; $('subline').textContent = 'YOUR VOYAGE STARTS HERE';
+    document.documentElement.style.setProperty('--you', '#FFD447');
+    renderStep();
+  });
+
+  // boot: a profile in the link wins, then the one saved on this device, then the questions
+  let fromLink = null;
+  try { fromLink = new URLSearchParams(location.search).get('p'); } catch (e) {}
+  let saved = null; try { saved = localStorage.getItem(KEY); } catch (e) {}
+  pro = parseProfile(fromLink); if (pro) { enc = fromLink; try { localStorage.setItem(KEY, enc); } catch (e) {} }
+  if (!pro) { pro = parseProfile(saved); if (pro) enc = saved; }
+  if (pro) showHub(false); else { $('ask').classList.add('on'); renderStep(); }
+
+  window.__CAPTAIN = { buildProfile, parseProfile, PROFILE, profile: () => pro, enc: () => enc, answers: () => ans, step: () => step, pages: voyagePages, openBook };
+})();
+</script>
+</body>
+</html>
