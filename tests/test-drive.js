@@ -14,7 +14,7 @@ ok('flag coords exact', JSON.stringify(flags(w2)) === JSON.stringify(flags(w)));
 let old = makeWorld();
 for (let x = 5; x < 12; x++) place(old, x, 5, 3);
 ok('pre-P4 link still valid', decode(encode(old)) !== null);
-ok('unknown block id rejected', decode(Buffer.from([1, 0, 5, 5, 10]).toString('base64')) === null);
+ok('unknown block id rejected', decode(Buffer.from([1, 0, 5, 5, ISLE.TYPES.length]).toString('base64')) === null);
 ok('fmt 42.1s', fmtLap(42100) === '0:42.1', fmtLap(42100));
 ok('fmt 1m05.9', fmtLap(65900) === '1:05.9', fmtLap(65900));
 ok('fmt zero is blank', fmtLap(0) === '');
