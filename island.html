@@ -49,6 +49,7 @@
   .dbtn { flex:1 1 0; max-width:120px; height:78px; border-radius:18px; border:3px solid var(--ink);
     background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); font-weight:900;
     font-size:22px; box-shadow:0 5px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
+  #d-car { font-size:11px; background:linear-gradient(180deg,#8FD8E8,#4E92B0); letter-spacing:0.04em; }
   #d-exit { font-size:11px; background:linear-gradient(180deg,var(--peach),var(--coral)); letter-spacing:0.04em; }
   .dbtn:active { transform:translateY(4px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
   #lapbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 54px); left:50%; transform:translateX(-50%);
@@ -92,6 +93,29 @@
   #bdots { display:flex; gap:5px; }
   #bdots i { width:8px; height:8px; border-radius:50%; background:rgba(42,27,61,0.25); display:block; }
   #bdots i.on { background:var(--coral); }
+  #btn-story { position:fixed; right:10px; top:calc(env(safe-area-inset-top,0px) + 104px); z-index:6;
+    width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--dusk);
+    color:var(--cream); font-size:22px; font-weight:900; box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; }
+  #btn-story:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #quest { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 86px);
+    z-index:5; display:none; background:rgba(42,27,61,0.92); color:var(--yellow); border:2px solid rgba(255,243,226,0.5);
+    border-radius:999px; padding:7px 15px; font-weight:900; font-size:12px; max-width:90vw; text-align:center; }
+  #quest.on { display:block; }
+  #story { position:fixed; inset:0; z-index:21; display:none; align-items:center; justify-content:center;
+    background:rgba(28,16,44,0.92); padding:14px; }
+  #story.on { display:flex; }
+  #storycard { width:100%; max-width:460px; max-height:94dvh; overflow:auto; padding:18px;
+    background:linear-gradient(180deg,#2A1B3D,#5C3A6E); border:4px solid var(--cream); border-radius:22px;
+    box-shadow:0 8px 0 rgba(10,4,18,0.6); }
+  #storyhead { color:var(--yellow); font-size:11px; font-weight:900; letter-spacing:0.22em; text-align:center; }
+  #storycard h3 { color:var(--cream); font-size:20px; font-weight:900; margin:10px 0 12px; text-align:center; }
+  #storybody p { color:var(--cream); font-size:17px; font-weight:600; line-height:1.55; margin-bottom:11px; }
+  #storynav { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; }
+  #sdots { display:flex; gap:5px; }
+  #sdots i { width:8px; height:8px; border-radius:50%; background:rgba(255,243,226,0.3); display:block; }
+  #sdots i.on { background:var(--yellow); }
+  #sclose { width:100%; margin-top:10px; padding:12px; border:3px solid var(--ink); border-radius:14px;
+    background:var(--yellow); color:var(--ink); font-weight:900; font-size:16px; letter-spacing:0.06em; cursor:pointer; }
   #bclose { width:100%; margin-top:10px; padding:12px; border:3px solid var(--ink); border-radius:14px;
     background:var(--yellow); color:var(--ink); font-weight:900; font-size:16px; letter-spacing:0.06em; cursor:pointer; }
   #bubble::after { content:''; position:absolute; left:50%; bottom:-12px; margin-left:-8px;
@@ -107,6 +131,21 @@
 </div>
 <div id="lineage"></div>
 <button id="btn-book" aria-label="How to play">?</button>
+<button id="btn-story" aria-label="Story time">&#9789;</button>
+<div id="quest"></div>
+<div id="story">
+  <div id="storycard">
+    <div id="storyhead">STORY TIME</div>
+    <h3 id="storytitle"></h3>
+    <div id="storybody"></div>
+    <div id="storynav">
+      <button class="bnav" id="sprev">BACK</button>
+      <div id="sdots"></div>
+      <button class="bnav" id="snext">NEXT</button>
+    </div>
+    <button id="sclose">GOODNIGHT</button>
+  </div>
+</div>
 <div id="book">
   <div id="bookcard">
     <canvas id="bookcanvas" width="560" height="300"></canvas>
@@ -126,6 +165,7 @@
 <div id="bubble"></div>
 <div id="drivebar">
   <button class="dbtn" id="d-left">&#9664;</button>
+  <button class="dbtn" id="d-car">CHANGE<br>CAR</button>
   <button class="dbtn" id="d-exit">STOP<br>DRIVING</button>
   <button class="dbtn" id="d-right">&#9654;</button>
 </div>
@@ -134,7 +174,7 @@
 /* CAPTAIN'S ISLAND core: world model + link codec. Pure logic, headless-testable. */
 'use strict';
 const ISLE = {
-  N: 48, ZMAX: 4, MAX_BLOCKS: 400, VER: 1,
+  N: 64, ZMAX: 4, MAX_BLOCKS: 400, VER: 1,
   AIR: 0,
   TYPES: [
     null,
@@ -260,6 +300,77 @@ function buildHash(enc, t, b, chain) {
   if (c.length) s += '&c=' + c.map(encodeURIComponent).join(',');
   return s;
 }
+function questTable() {
+  return [
+    { id: 'houses3', need: 'houses', n: 3, tell: 'build a third house so the island has a proper village',
+      done: 'The village grew to three houses.' },
+    { id: 'palms', need: 'palms', n: 4, tell: 'plant four palm trees so the beach has shade',
+      done: 'Four palms now shade the beach.' },
+    { id: 'flag', need: 'flags', n: 1, tell: 'plant a racing flag and drive the very first lap',
+      done: 'A racing flag went up.' },
+    { id: 'tall', need: 'tallest', n: 4, tell: 'build a lighthouse four blocks tall, the tallest thing on the island',
+      done: 'A tower rose four blocks high.' },
+    { id: 'houses6', need: 'houses', n: 6, tell: 'grow the village to six houses so everyone has a neighbour',
+      done: 'Six houses stood in a row.' },
+  ];
+}
+function worldStats(w) {
+  const st = { blocks: w.count, houses: houses(w).length, flags: flags(w).length, palms: 0, tallest: 0 };
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
+    const t = topZ(w, x, y);
+    if (t + 1 > st.tallest) st.tallest = t + 1;
+    for (let z = 0; z < ISLE.ZMAX; z++) if (w.cols[idx(x, y, z)] === 8) st.palms++;
+  }
+  return st;
+}
+function pickQuest(stats, lastId) {
+  const t = questTable();
+  for (let i = 0; i < t.length; i++) {
+    const q = t[i];
+    if (q.id === lastId) continue;
+    if ((stats[q.need] || 0) < q.n) return q;
+  }
+  return t[t.length - 1];
+}
+function questMet(q, stats) { return q ? (stats[q.need] || 0) >= q.n : false; }
+function chapter(o) {
+  const name = sanitizeName(o.name) || 'CAPTAIN';
+  const cap = name.charAt(0) + name.slice(1).toLowerCase();
+  const s = o.stats || {}, prev = o.prevStats || {};
+  const built = Math.max(0, (s.blocks || 0) - (prev.blocks || 0));
+  const newHouses = Math.max(0, (s.houses || 0) - (prev.houses || 0));
+  const page1 = [];
+  page1.push('Captain ' + cap + ' woke up on Sunset Island, where the sea is pink at dinner time.');
+  if (built > 0) page1.push('Today ' + cap + ' carried ' + built + ' block' + (built === 1 ? '' : 's') + ' up the beach.');
+  if (newHouses > 0) page1.push('By the time the sun went orange, ' + newHouses + ' new house' + (newHouses === 1 ? ' stood' : 's stood') + ' where there had been only sand.');
+  else if (built > 0) page1.push('The island looked a little more like home than it did yesterday.');
+  else page1.push('Today was a looking day, and looking days count too.');
+  if (o.newIslanders && o.newIslanders.length) {
+    page1.push(o.newIslanders.join(' and ') + ' moved in, and knocked on the door to say hello.');
+  }
+  if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
+  if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
+  const page2 = [];
+  const L = o.learned || [];
+  if (L.length) {
+    page2.push('And ' + cap + ' worked something out today.');
+    L.slice(0, 2).forEach(function (x) { page2.push(x); });
+  } else {
+    page2.push(cap + ' is still working out how the island fits together, and that is exactly how islands get built.');
+  }
+  const page3 = [];
+  if (o.lastQuestDone) page3.push('The thing ' + cap + ' set out to do got done. ' + o.lastQuestDone);
+  if (o.quest) {
+    page3.push('Tonight the island is quiet.');
+    page3.push('Tomorrow, Captain ' + cap + ' is going to ' + o.quest.tell + '.');
+    page3.push('Sleep well, Captain. The island will wait.');
+  }
+  return [
+    { title: 'WHAT ' + name + ' DID', lines: page1 },
+    { title: 'WHAT ' + name + ' WORKED OUT', lines: page2 },
+    { title: 'WHAT HAPPENS NEXT', lines: page3 },
+  ];
+}
 function houses(w) {
   const found = [];
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
@@ -278,7 +389,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, fmtLap, sanitizeName, parseHash, buildHash };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter };
 }
 </script>
 <script>
@@ -314,11 +425,12 @@ if (typeof module !== 'undefined' && module.exports) {
     updateLineage();
     toast('REMIXED! This island is yours now, Captain ' + CREW + '.');
     saveNow();
+    noteLearned('You can start with somebody else\u2019s island and make it your own, and their name stays on it because they built it first.');
     blip(660); setTimeout(function () { blip(880); }, 100); setTimeout(function () { blip(1180); }, 200);
   }
 
   let W = 0, H = 0;
-  const TW = 56, TH = 28, ZH = 22;
+  const TW = 44, TH = 22, ZH = 18;
   let cam = { x: 0, y: 0, zoom: 1 };
   const world = { ref: null };
 
@@ -494,10 +606,14 @@ if (typeof module !== 'undefined' && module.exports) {
   document.querySelector('[data-val="3"]').classList.add('sel');
 
   function popCheck() {
+    try { refreshQuest(); } catch (e) {}
     const before = islanders.length, after = rebuildIslanders();
     if (after > before) {
       const nw = islanders[after - 1];
       toast(nw.name + ' MOVED IN! Tap them to say hi.');
+      noteIslander(nw.name);
+      sayPersonal('house');
+      noteLearned('A house needs walls all the way round and a door to get in, and then somebody comes to live in it.');
       blip(660); setTimeout(() => blip(880), 110); setTimeout(() => blip(1100), 220);
     }
   }
@@ -530,6 +646,7 @@ if (typeof module !== 'undefined' && module.exports) {
       + buildHash(encode(world.ref), bestLap, builder || CREW, chain);
   }
   async function share() {
+    sayPersonal('share');
     const url = shareUrl();
     try {
       const msg = bestLap ? 'Come to my island! Beat my lap: ' + fmtLap(bestLap) : 'Come and stand on my island! I built it myself.';
@@ -550,7 +667,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let restored = false;
     if (!w) {
       const sv = loadSave();
-      if (sv && sv.w.count > 0) { w = sv.w; bestLap = sv.t; chain = sv.c; restored = true; }
+      if (sv && sv.w.count > 0) { w = sv.w; bestLap = sv.t; chain = sv.c; carIdx = sv.car || 0; restored = true; }
     }
     world.ref = w || makeWorld();
     updateLineage();
@@ -569,6 +686,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let seen = null;
     try { seen = localStorage.getItem('captains-island-seen-v1'); } catch (e) {}
     if (!seen) setTimeout(function () { openBook(0); }, 700);
+    refreshQuest();
   }
   addEventListener('hashchange', () => {
     if (!location.hash.startsWith('#i=')) return;
@@ -671,7 +789,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!canSave()) return false;
     try {
       localStorage.setItem(SAVEKEY, JSON.stringify({
-        v: 1, crew: CREW, i: encode(world.ref), t: Math.round(bestLap) || 0, c: chain, at: Date.now()
+        v: 1, crew: CREW, i: encode(world.ref), t: Math.round(bestLap) || 0, c: chain, car: carIdx, at: Date.now()
       }));
       return true;
     } catch (e) { return false; }
@@ -685,13 +803,39 @@ if (typeof module !== 'undefined' && module.exports) {
       if (!s || s.v !== 1 || typeof s.i !== 'string') return null;
       const w = decode(s.i);
       if (!w) return null;
-      return { w: w, t: s.t > 0 ? s.t : 0, c: Array.isArray(s.c) ? s.c.slice(0, 3) : [] };
+      return { w: w, t: s.t > 0 ? s.t : 0, c: Array.isArray(s.c) ? s.c.slice(0, 3) : [], car: (s.car >= 0 && s.car < 3) ? s.car : 0 };
     } catch (e) { return null; }
   }
 
+  // ===== HIS OWN WORDS: only for the child this was built for. Generic for everyone else. =====
+  const PERSONAL = {
+    OLLIE: {
+      car: 'Remember you said you wanted a Ferrari, Ollie? Here it is, in Sunset Island red.',
+      house: 'Remember you said you wanted to build houses? This whole street is yours.',
+      race: 'You said the fast car should race. Now it does, and only you hold the record.',
+      share: 'You said your friends should play it too. Now your island fits inside one link.',
+    },
+  };
+  let saidAlready = {};
+  function sayPersonal(key) {
+    const set = PERSONAL[CREW];
+    if (!set || !set[key] || saidAlready[key]) return false;
+    saidAlready[key] = true;
+    setTimeout(function () { toast(set[key]); }, 900);
+    return true;
+  }
+
+  // ===== HIS GARAGE =====
+  const CARS = [
+    { name: 'RED ROCKET', body: '#FF6E6C', trim: '#8FD8E8', shape: 'sports' },
+    { name: 'SAND BUGGY', body: '#FFD447', trim: '#FFB067', shape: 'buggy' },
+    { name: 'SEA CRUISER', body: '#8FD8E8', trim: '#FFF3E2', shape: 'truck' },
+  ];
+  let carIdx = 0;
+
   // ===== P4 DRIVING: the buggy, ramps, and lap times that travel in the link =====
   let driving = false;
-  const car = { x: 24, y: 24, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
+  const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
   let lapStart = 0, lapNow = 0, lapArmed = false, bestLap = 0, ghostLap = 0;
   function clearCell(x, y) {
     const cx = Math.floor(x), cy = Math.floor(y);
@@ -704,7 +848,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function spawnCar() {
     const f = flags(world.ref);
-    let sx = 24, sy = 24;
+    let sx = 32, sy = 32;
     if (f.length) { sx = f[0].x + 1; sy = f[0].y + 1; }
     for (let r = 0; r < 20; r++) {
       let ok = false;
@@ -732,7 +876,10 @@ if (typeof module !== 'undefined' && module.exports) {
     if (car.z > 0.05 || clearCell(car.x, ny)) car.y = ny; else { car.sp *= 0.35; car.h -= 0.5; }
     car.x = Math.max(0.5, Math.min(ISLE.N - 0.5, car.x));
     car.y = Math.max(0.5, Math.min(ISLE.N - 0.5, car.y));
-    if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) { car.vz = 3.6; blip(880); toast('BIG AIR!'); }
+    if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) {
+      car.vz = 3.6; blip(880); toast('BIG AIR!');
+      noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.');
+    }
     const tcx = W / 2 - isoX(car.x, car.y) * cam.zoom;
     const tcy = H * 0.52 - (isoY(car.x, car.y, 0) + ZH) * cam.zoom;
     cam.x += (tcx - cam.x) * Math.min(1, 4.5 * dt);
@@ -744,7 +891,11 @@ if (typeof module !== 'undefined' && module.exports) {
       if (d < 1.6) {
         if (lapArmed && lapStart) {
           const t = performance.now() - lapStart;
-          if (!bestLap || t < bestLap) { bestLap = t; toast('NEW RECORD ' + fmtLap(t) + '! Share it.'); }
+          if (!bestLap || t < bestLap) {
+            bestLap = t; toast('NEW RECORD ' + fmtLap(t) + '! Share it.');
+            noteLearned('Going round the flag the short way makes the number smaller, and a smaller number is faster.');
+            sayPersonal('race');
+          }
           else toast('LAP ' + fmtLap(t));
           blip(900); setTimeout(() => blip(1150), 100);
           lapStart = performance.now(); lapArmed = false;
@@ -763,15 +914,27 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.fillStyle = 'rgba(42,27,61,0.3)';
     ctx.beginPath(); ctx.ellipse(sx, isoY(car.x, car.y, 0) * cam.zoom + cam.y + ZH * cam.zoom + 2 * s, 12 * s, 5 * s, 0, 0, 6.29); ctx.fill();
     ctx.save(); ctx.translate(sx, sy - 10 * s); ctx.scale(s, s);
+    const C = CARS[carIdx];
     ctx.fillStyle = '#2A1B3D';
     ctx.beginPath(); ctx.ellipse(-7, 6, 4, 3, 0, 0, 6.29); ctx.ellipse(7, 6, 4, 3, 0, 0, 6.29); ctx.fill();
-    ctx.fillStyle = '#FF6E6C';
-    ctx.beginPath(); ctx.roundRect(-14, -6, 28, 13, 5); ctx.fill();
-    ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#8FD8E8';
-    ctx.beginPath(); ctx.roundRect(-7, -13, 14, 9, 3); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 2;
+    ctx.fillStyle = C.body;
+    if (C.shape === 'sports') {
+      ctx.beginPath(); ctx.roundRect(-16, -4, 32, 11, 5); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(-6, -12, 13, 9, 3); ctx.fillStyle = C.trim; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.body; ctx.beginPath(); ctx.roundRect(13, -11, 5, 7, 2); ctx.fill(); ctx.stroke();
+    } else if (C.shape === 'buggy') {
+      ctx.beginPath(); ctx.roundRect(-14, -6, 28, 13, 5); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(-7, -14, 14, 10, 3); ctx.fillStyle = C.trim; ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#2A1B3D'; ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(-11, -20);
+      ctx.moveTo(8, -14); ctx.lineTo(11, -20); ctx.moveTo(-11, -20); ctx.lineTo(11, -20); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.roundRect(-16, -7, 20, 14, 4); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(4, -3, 13, 10, 3); ctx.fillStyle = C.trim; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.body; ctx.beginPath(); ctx.roundRect(-13, -15, 12, 9, 3); ctx.fill(); ctx.stroke();
+    }
     ctx.fillStyle = '#FFD447';
-    ctx.beginPath(); ctx.arc(-11, -1, 2.2, 0, 6.29); ctx.arc(11, -1, 2.2, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(-12, -1, 2.2, 0, 6.29); ctx.arc(12, -1, 2.2, 0, 6.29); ctx.fill();
     ctx.restore();
   }
   function setDrive(on) {
@@ -797,6 +960,13 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   holdBtn('d-left', -1); holdBtn('d-right', 1);
   document.getElementById('d-exit').addEventListener('click', () => { setDrive(false); blip(400); });
+  document.getElementById('d-car').addEventListener('click', function () {
+    carIdx = (carIdx + 1) % CARS.length;
+    toast('YOUR CAR: ' + CARS[carIdx].name);
+    blip(620); setTimeout(function () { blip(820); }, 90);
+    saveNow();
+    if (carIdx === 0) sayPersonal('car');
+  });
 
   // ===== HOW TO PLAY: cards drawn live by the game itself, so they can never go stale =====
   const QKEY = 'captains-island-answers-v1';
@@ -933,13 +1103,85 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('bnext').addEventListener('click', function () { if (bookIdx < CARDS.length - 1) { bookIdx++; renderCard(); bookT0 = performance.now(); blip(660); } });
   document.getElementById('bprev').addEventListener('click', function () { if (bookIdx > 0) { bookIdx--; renderCard(); bookT0 = performance.now(); blip(560); } });
 
+  // ===== STORY TIME: a living chronicle of his island, built from what he actually did =====
+  const JKEY = 'captains-island-journal-v1';
+  function loadJournal() {
+    try {
+      const j = JSON.parse(localStorage.getItem(JKEY));
+      if (j && j.v === 1) return j;
+    } catch (e) {}
+    return { v: 1, prevStats: {}, newIslanders: [], learned: [], quest: null, lastQuestDone: '', chapters: 0 };
+  }
+  function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); } catch (e) {} }
+  let journal = loadJournal();
+  function noteIslander(nm) {
+    if (journal.newIslanders.indexOf(nm) === -1) { journal.newIslanders.push(nm); saveJournal(journal); }
+  }
+  function noteLearned(line) {
+    if (journal.learned.indexOf(line) === -1) { journal.learned.push(line); saveJournal(journal); }
+  }
+  function refreshQuest() {
+    const st = worldStats(world.ref);
+    if (journal.quest && questMet(journal.quest, st)) {
+      journal.lastQuestDone = journal.quest.done;
+      journal.quest = null;
+      saveJournal(journal);
+      blip(700); setTimeout(function () { blip(950); }, 110);
+      setTimeout(function () { toast('QUEST DONE! Read it tonight at story time.'); }, 1500);
+    }
+    const q = document.getElementById('quest');
+    if (journal.quest) { q.textContent = 'TONIGHT\u2019S QUEST: ' + journal.quest.tell.toUpperCase(); q.classList.add('on'); }
+    else q.classList.remove('on');
+  }
+  let storyPages = [], storyIdx = 0;
+  function openStory() {
+    const st = worldStats(world.ref);
+    const lastId = journal.quest ? journal.quest.id : null;
+    const q = journal.quest || pickQuest(st, lastId);
+    storyPages = chapter({
+      name: CREW, stats: st, prevStats: journal.prevStats || {},
+      newIslanders: journal.newIslanders, learned: journal.learned,
+      bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
+      quest: q, lastQuestDone: journal.lastQuestDone,
+    });
+    journal.quest = q;
+    journal.prevStats = st;
+    journal.newIslanders = [];
+    journal.learned = [];
+    journal.lastQuestDone = '';
+    journal.chapters = (journal.chapters || 0) + 1;
+    saveJournal(journal);
+    storyIdx = 0;
+    renderStory();
+    document.getElementById('story').classList.add('on');
+    refreshQuest();
+  }
+  function renderStory() {
+    const p = storyPages[storyIdx];
+    document.getElementById('storytitle').textContent = 'CHAPTER ' + (journal.chapters || 1) + ' \u00B7 ' + p.title;
+    document.getElementById('storybody').innerHTML = p.lines.map(function (l) {
+      const d = document.createElement('p'); d.textContent = l; return d.outerHTML;
+    }).join('');
+    document.getElementById('sdots').innerHTML = storyPages.map(function (x, i) {
+      return '<i class="' + (i === storyIdx ? 'on' : '') + '"></i>'; }).join('');
+    document.getElementById('sprev').disabled = storyIdx === 0;
+    document.getElementById('snext').disabled = storyIdx === storyPages.length - 1;
+  }
+  document.getElementById('btn-story').addEventListener('click', function () { openStory(); blip(520); setTimeout(function () { blip(680); }, 110); });
+  document.getElementById('sclose').addEventListener('click', function () { document.getElementById('story').classList.remove('on'); blip(400); });
+  document.getElementById('snext').addEventListener('click', function () { if (storyIdx < storyPages.length - 1) { storyIdx++; renderStory(); blip(640); } });
+  document.getElementById('sprev').addEventListener('click', function () { if (storyIdx > 0) { storyIdx--; renderStory(); blip(560); } });
+
   window.__ISLAND = { world, islandersRef: () => islanders, houses: () => houses(world.ref), popCheck,
     car, flags: () => flags(world.ref), fmtLap, setDrive: (b) => setDrive(b),
     isDriving: () => driving, steer: (v) => { car.steer = v; },
     lapInfo: () => ({ best: bestLap, ghost: ghostLap, started: !!lapStart, armed: lapArmed }),
     forceBest: (ms) => { bestLap = ms; },
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
-    saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
+    saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
+    openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
+    cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
+    worldStats: () => worldStats(world.ref), noteLearned, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
