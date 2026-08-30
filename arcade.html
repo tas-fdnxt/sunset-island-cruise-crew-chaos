@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2A1B3D">
+<title>Ollie's Arcade</title>
+<meta name="description" content="Three things built for Captain Ollie: a storybook of his own ideas, a cruise ship rescue game, and an island he builds himself.">
+<style>
+  :root { --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067;
+    --yellow:#FFD447; --sky:#8FD8E8; --dusk:#5C3A6E; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { min-height:100dvh; background:linear-gradient(180deg,#FFC078 0%,#FF8A70 38%,#C75B82 72%,#5C3A6E 100%);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow-x:hidden;
+    padding:calc(env(safe-area-inset-top,0px) + 22px) 16px calc(env(safe-area-inset-bottom,0px) + 28px); }
+  #sun { position:fixed; top:12%; right:-40px; width:150px; height:150px; border-radius:50%;
+    background:#FFE49E; opacity:0.75; z-index:0; }
+  #sea { position:fixed; left:0; right:0; bottom:0; height:26%; z-index:0;
+    background:linear-gradient(180deg,#C25E77,#3A6E82 55%,#1F4E5F); }
+  .wrap { position:relative; z-index:1; max-width:520px; margin:0 auto; }
+  h1 { color:var(--cream); font-size:clamp(30px,9vw,44px); font-weight:900; letter-spacing:0.03em;
+    text-align:center; text-shadow:0 4px 0 rgba(42,27,61,0.55); line-height:1.05; }
+  .sub { text-align:center; color:var(--yellow); font-weight:800; font-size:12px; letter-spacing:0.18em;
+    margin-top:8px; text-shadow:0 2px 0 rgba(42,27,61,0.5); }
+  .card { display:block; text-decoration:none; margin-top:16px; padding:18px 18px 16px;
+    background:rgba(255,243,226,0.97); border:4px solid var(--ink); border-radius:22px;
+    box-shadow:0 7px 0 rgba(20,8,30,0.5); transition:transform 0.1s, box-shadow 0.1s; }
+  .card:active { transform:translateY(5px); box-shadow:0 2px 0 rgba(20,8,30,0.5); }
+  .tag { display:inline-block; font-size:10px; font-weight:900; letter-spacing:0.14em; color:var(--cream);
+    background:var(--ink); border-radius:999px; padding:4px 10px; }
+  .card h2 { color:var(--ink); font-size:23px; font-weight:900; margin:9px 0 5px; letter-spacing:0.01em; }
+  .card p { color:#5a4a63; font-size:14px; font-weight:600; line-height:1.4; }
+  .go { display:inline-block; margin-top:12px; background:var(--yellow); color:var(--ink);
+    border:3px solid var(--ink); border-radius:12px; padding:8px 16px; font-weight:900; font-size:14px;
+    letter-spacing:0.06em; }
+  .c1 .go { background:var(--sky); } .c2 .go { background:var(--peach); }
+  .foot { text-align:center; color:var(--cream); font-size:12px; font-weight:700; margin-top:22px;
+    opacity:0.9; text-shadow:0 2px 0 rgba(42,27,61,0.45); line-height:1.6; }
+</style>
+</head>
+<body>
+<div id="sun"></div><div id="sea"></div>
+<div class="wrap">
+  <h1>OLLIE'S ARCADE</h1>
+  <div class="sub">BUILT BY UNCLE TABS</div>
+
+  <a class="card c1" href="storybook.html" id="link-story">
+    <span class="tag">THE STORY</span>
+    <h2>Captain Ollie's Storybook</h2>
+    <p>Every idea Ollie said in the car, turned into a real page. Tap through and find them all in the games.</p>
+    <span class="go">READ IT &rarr;</span>
+  </a>
+
+  <a class="card c2" href="index.html?crew=OLLIE" id="link-game1">
+    <span class="tag">GAME 01</span>
+    <h2>Cruise Crew Chaos</h2>
+    <p>Catch the falling luggage on a tilting ship deck. Bonk the seagulls, grab the chocolate bar, hit 1000 and become a Knight Legend.</p>
+    <span class="go">PLAY &rarr;</span>
+  </a>
+
+  <a class="card" href="island.html?crew=OLLIE" id="link-island">
+    <span class="tag">GAME 02</span>
+    <h2>Captain's Island</h2>
+    <p>Build houses and people move in and talk to you. Plant a flag, jump in the buggy, race a lap. Then send your whole island to anyone in one link.</p>
+    <span class="go">BUILD &rarr;</span>
+  </a>
+
+  <div class="foot">For Captain Ollie and First Mate Sibella.<br>No ads, no accounts, nothing saved about you.</div>
+</div>
+</body>
+</html>
