@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2A1B3D">
 <title>Sunset Island: Cruise Crew Chaos</title>
+<meta name="description" content="A 75-second cruise-deck rescue. Grab the runaway luggage, dodge the seagull, earn your Captain's Certificate. No ads, no downloads, no data collected. Just play.">
+<meta property="og:title" content="Sunset Island: Cruise Crew Chaos">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/">
+<meta property="og:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:description" content="A 75-second cruise-deck rescue. Grab the luggage, bonk the seagull, earn your Captain's Certificate. No ads. No downloads. Just play.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sunset Island">
 <style>
   :root {
     --ink: #2A1B3D; --cream: #FFF3E2; --coral: #FF6E6C; --peach: #FFB067;
@@ -196,6 +211,7 @@
       <div id="s-reward-blurb"></div>
     </div>
     <button class="btn-big" id="btn-again">Play Again</button>
+    <button class="btn-big" id="btn-share" style="background:#FFD447;color:#2A1B3D">Challenge a Friend</button>
     <div class="btn-row"><button id="btn-deck">Back to Deck</button></div>
   </div></div>
 <script>
@@ -377,7 +393,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { GameCore, SeagullDirector, makeRng, CFG, REWARDS, LUGGAGE_TYPES };
 }
 
-/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v5
+/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v6
    Full-viewport responsive canvas. Canvas 2D + procedural Web Audio.
    No network, no storage, no dependencies. */
 'use strict';
@@ -1243,6 +1259,26 @@ if (typeof module !== 'undefined' && module.exports) {
   function tutSkipShow(on) { const el = $('tut-skip'); if (el) el.style.display = on ? 'block' : 'none'; }
   $('tut-skip').addEventListener('click', () => { if (core) core.tutorial = false; S.tutorialDone = true; TUT = null; tutSkipShow(false); SFX.click(); addCallout('GRAB LUGGAGE — HAUL IT TO THE GREEN ZONE!', 1.8); });
   $('btn-start').addEventListener('click', () => { audio(); startRound(); });
+  function shareUrl() {
+    const p = new URLSearchParams(location.search).get('crew');
+    const u = location.origin + location.pathname;
+    return p ? u + '?crew=' + encodeURIComponent(p) : u;
+  }
+  $('btn-share').addEventListener('click', async () => {
+    SFX.click();
+    const url = shareUrl();
+    const payload = { title: 'Sunset Island: Cruise Crew Chaos', text: 'Beat my crew on Sunset Island! 75 seconds of deck chaos.', url };
+    try {
+      if (navigator.share) { await navigator.share(payload); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        $('btn-share').textContent = 'Link Copied!';
+        setTimeout(() => { $('btn-share').textContent = 'Challenge a Friend'; }, 1600);
+        return;
+      }
+      $('btn-share').textContent = url;
+    } catch (e) { /* user cancelled share sheet: fine */ }
+  });
   $('btn-again').addEventListener('click', () => { audio(); startRound(); });
   $('btn-deck').addEventListener('click', () => { SFX.click(); S.scene = 'menu'; showPanel('menu'); });
   $('btn-resume').addEventListener('click', () => setPaused(false));
@@ -1271,6 +1307,13 @@ if (typeof module !== 'undefined' && module.exports) {
   showPanel('menu');
   requestAnimationFrame(frame);
 })();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* offline layer optional; game runs regardless */ });
+  });
+}
 </script>
 </body>
 </html>
