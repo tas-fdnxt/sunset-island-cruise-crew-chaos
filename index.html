@@ -155,11 +155,11 @@
   </div>
 
   <div class="panel open" id="menu"><div class="card">
-    <div class="arcade-line">OLLIE&#39;S ARCADE &middot; GAME 01</div>
+    <div class="arcade-line" id="arcade-line">OLLIE&#39;S ARCADE &middot; GAME 01</div>
     <h1>SUNSET ISLAND</h1>
     <div class="sub">Cruise Crew Chaos</div>
     <div id="crew-line" class="crewline"></div>
-    <div class="dedication">Built for Captain Ollie and First Mate Sibella by Uncle Tabs</div>
+    <div class="dedication" id="dedication">Built for Captain Ollie and First Mate Sibella by Uncle Tabs</div>
     <div class="btn-row" style="margin-bottom:4px">
       <button id="btn-ship-sunset" class="shipbtn sel">&#127749; Sunset Island</button>
       <button id="btn-ship-storm" class="shipbtn">&#9928;&#65039; Storm Night</button>
@@ -418,6 +418,24 @@ if (typeof module !== 'undefined' && module.exports) {
     const q = new URLSearchParams(location.search).get('crew');
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); }
   } catch (e) {}
+  // Captain profile from ?p= (nickname plus tap choices, nothing else). Same codec as island.html.
+  const P_TITLES = ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT'];
+  function parseProfile(str) {
+    if (!str || str.length > 40) return null;
+    let raw;
+    try { const t = atob(str.replace(/-/g, '+').replace(/_/g, '/')); raw = []; for (let i = 0; i < t.length; i++) raw.push(t.charCodeAt(i)); } catch (e) { return null; }
+    if (raw.length < 10 || raw[0] !== 1 || raw[1] > 1 || raw[2] >= P_TITLES.length || raw[3] >= 8 || raw[4] >= 3 || raw[5] >= 7 || raw[6] >= 3) return null;
+    let nm = ''; for (let i = 9; i < raw.length; i++) nm += String.fromCharCode(raw[i]);
+    const clean = nm.toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim().slice(0, 10);
+    if (!clean || clean !== nm) return null;
+    return { name: clean, title: P_TITLES[raw[2]], grownup: raw[1] === 1 };
+  }
+  let PRO = null;
+  try { PRO = parseProfile(new URLSearchParams(location.search).get('p')); } catch (e) { PRO = null; }
+  if (PRO) CREW = PRO.name;
+  const TITLE = PRO ? PRO.title : 'CAPTAIN';
+  // Owner switch: the family lines show only on the family's own links. Everyone else gets the crew edition.
+  const OWNER = !PRO && (CREW === 'OLLIE' || CREW === 'SIBELLA');
 
   // ---------- ship themes ----------
   const THEMES = {
@@ -612,10 +630,10 @@ if (typeof module !== 'undefined' && module.exports) {
     $('s-rescued').textContent = sum.rescued;
     $('s-combo').textContent = 'x' + Math.max(1, sum.bestCombo);
     $('s-chaos').textContent = sum.chaos.toFixed(1) + ' / 10';
-    $('cert-name').textContent = 'CAPTAIN ' + CREW;
-    $('cert-owner').textContent = (CREW === 'OLLIE') ? 'also known as Sibella\u2019s brother \u2022 also known as nephew of Uncle Tabs \u2022 this island was built for you, Captain'
-      : (CREW === 'SIBELLA') ? 'First Mate of Sunset Island \u2022 also known as Ollie\u2019s sister \u2022 this island sails for you too'
-      : '';
+    $('cert-name').textContent = TITLE + ' ' + CREW;
+    $('cert-owner').textContent = (OWNER && CREW === 'OLLIE') ? 'also known as Sibella\u2019s brother \u2022 also known as nephew of Uncle Tabs \u2022 this island was built for you, Captain'
+      : (OWNER && CREW === 'SIBELLA') ? 'First Mate of Sunset Island \u2022 also known as Ollie\u2019s sister \u2022 this island sails for you too'
+      : (PRO ? 'of Sunset Island \u2022 this voyage was made for you' : '');
     $('cert-rank').textContent = rankFor(sum.score);
     $('s-reward-name').textContent = sum.reward.name;
     $('s-reward-blurb').textContent = sum.reward.blurb;
@@ -1361,7 +1379,11 @@ if (typeof module !== 'undefined' && module.exports) {
 
   layout();
   setMuted(false); setRM(S.reducedMotion);
-  $('crew-line').textContent = 'STARRING CAPTAIN ' + CREW;
+  $('crew-line').textContent = 'STARRING ' + TITLE + ' ' + CREW;
+  if (!OWNER) {
+    $('arcade-line').textContent = (PRO ? CREW + "'S ARCADE" : 'SUNSET ISLAND ARCADE') + ' \u00B7 GAME 01';
+    $('dedication').textContent = PRO ? 'Built for ' + TITLE.charAt(0) + TITLE.slice(1).toLowerCase() + ' ' + CREW.charAt(0) + CREW.slice(1).toLowerCase() + ' by the Sunset Island crew' : 'Built by the Sunset Island crew';
+  }
   showPanel('menu');
   requestAnimationFrame(frame);
 })();
