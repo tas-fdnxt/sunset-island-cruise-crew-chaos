@@ -107,10 +107,14 @@
     border-radius: 12px; padding: 5px 16px; font-weight: 900; margin: 8px 0 2px;
     font-size: clamp(14px, 3.6vw, 18px); }
   .shipbtn.sel { background: var(--yellow); }
+  #tut-skip { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); right: 12px; z-index: 40; display: none;
+    font: 700 12px system-ui, sans-serif; color: #FFF3E2; background: rgba(42,27,61,0.55);
+    border: 1.5px solid rgba(255,243,226,0.65); padding: 7px 13px; border-radius: 999px; letter-spacing: 0.06em; cursor: pointer; }
 </style>
 </head>
 <body>
   <canvas id="game" aria-label="Sunset Island: Cruise Crew Chaos game area"></canvas>
+  <div id="tut-skip" role="button" aria-label="Skip tutorial">SKIP &#9654;</div>
 
   <div id="hud">
     <div id="chaos-strip"><div id="hud-chaos-fill"></div></div>
@@ -252,12 +256,14 @@ class GameCore {
     this.nextSpawnAt = 1.2;
     this.nextGustAt = CFG.gust.firstAt + this.rng() * 4;
     this.nextWaveAt = Infinity;
+    this.tutorial = false;  // v5: frozen-clock teaching mode until first rescue
     this.events = []; // consumable event queue for the presentation layer
   }
 
   // Advance simulation clock. Returns array of events emitted this tick.
   tick(dt, luggageOnDeck) {
     if (this.over) return [];
+    if (this.tutorial) return [];  // v5: clock and all scheduled chaos frozen during tutorial
     this.elapsed += dt;
     this.timeLeft = Math.max(0, CFG.roundSeconds - this.elapsed);
     const out = [];
@@ -310,6 +316,8 @@ class GameCore {
 
   rescueTyped(luggageType, nearDrain) {
     if (this.over) return null;
+    const wasTut = this.tutorial;
+    if (wasTut) this.tutorial = false;  // v5: first rescue graduates the player
     const quick = this.elapsed - this.lastRescueAt <= CFG.comboWindow;
     this.combo = quick ? this.combo + 1 : 1;
     this.bestCombo = Math.max(this.bestCombo, this.combo);
@@ -319,8 +327,8 @@ class GameCore {
     if (nearDrain) pts += CFG.nearDrainBonus;
     this.score += pts;
     this.rescued += 1;
-    this.chaos = Math.min(CFG.chaosMax, this.chaos + CFG.chaosPerRescue);
-    return { pts, combo: this.combo, nearDrain, chaos: this.chaos };
+    if (!wasTut) this.chaos = Math.min(CFG.chaosMax, this.chaos + CFG.chaosPerRescue);
+    return { pts, combo: this.combo, nearDrain, chaos: this.chaos, tutorialDone: wasTut };
   }
 
   // Luggage reached a drain. No score penalty — comedy, not punishment.
@@ -369,7 +377,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { GameCore, SeagullDirector, makeRng, CFG, REWARDS, LUGGAGE_TYPES };
 }
 
-/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v4
+/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v5
    Full-viewport responsive canvas. Canvas 2D + procedural Web Audio.
    No network, no storage, no dependencies. */
 'use strict';
@@ -393,6 +401,7 @@ if (typeof module !== 'undefined' && module.exports) {
     storm: { sky: ['#2E3D6E', '#25305A', '#1B2444', '#131A34'], sea: ['#41537A', '#243650', '#131F2E'], cel: '#E9EAF4', glow: '200,210,255', moon: true, cloud: 'rgba(105,115,150,0.85)', island: 'rgba(12,10,30,0.8)', spark: 'rgba(170,190,255,0.4)', plankA: '#9A6B3E', plankB: '#845527', hull: '#D9D3C6', hull2: '#BFB8A8', tint: 'rgba(150,180,255,0.10)' },
   };
   let theme = THEMES.sunset;
+  let TUT = null;         // v5: { phase: 'grab'|'carry'|'done', t }
 
   // ---------- session state (memory only, wiped on refresh) ----------
   const S = {
@@ -406,6 +415,7 @@ if (typeof module !== 'undefined' && module.exports) {
     restarts: 0,
     finaleShown: false,
     ship: 'sunset',
+    tutorialDone: false,   // v5: tutorial runs once per session
   };
 
   // ---------- responsive layout: everything derives from the live viewport ----------
@@ -558,8 +568,10 @@ if (typeof module !== 'undefined' && module.exports) {
     theme = THEMES[S.ship] || THEMES.sunset;
     rain = []; bolt = { t: 5 + Math.random() * 5, flash: 0 };
     if (theme.moon) for (let i = 0; i < 70; i++) rain.push({ x: Math.random() * W, y: Math.random() * H, l: (8 + Math.random() * 10), v: (420 + Math.random() * 240) });
-    callout = { text: 'GRAB LUGGAGE — HAUL IT TO THE GREEN ZONE!', t: 6 };
+    callout = S.tutorialDone ? { text: 'GRAB LUGGAGE — HAUL IT TO THE GREEN ZONE!', t: 6 } : null;
     spawnLuggage('duffel', 0.5, 0.35, 0.3);
+    if (!S.tutorialDone) { core.tutorial = true; TUT = { phase: 'grab', t: 0 }; } else { TUT = null; }
+    tutSkipShow(!!TUT);
     S.scene = 'play';
     showPanel(null);
     lastTickSecond = -1;
@@ -629,7 +641,12 @@ if (typeof module !== 'undefined' && module.exports) {
       else if (e.type === 'wave') { wave = { fromLeft: e.fromLeft, t: e.duration, x: e.fromLeft ? DECK.x - 60 * s : DECK.x + DECK.w + 60 * s }; SFX.wavefx(); addCallout('WAVE SWEEP!', 1.4); }
       else if (e.type === 'roundEnd') { endRound(); return; }
     }
-    if (director) { const ge = director.tick(core.elapsed); if (ge) spawnGull(ge); }
+    if (director && !core.tutorial) { const ge = director.tick(core.elapsed); if (ge) spawnGull(ge); }
+    if (TUT) {
+      TUT.t += dt;
+      if (TUT.phase === 'grab' && carried) { TUT.phase = 'carry'; TUT.t = 0; }
+      else if (TUT.phase === 'done' && TUT.t > 1.6) { TUT = null; tutSkipShow(false); }
+    }
     const sec = Math.ceil(core.timeLeft);
     if (sec <= 5 && sec > 0 && sec !== lastTickSecond) { lastTickSecond = sec; SFX.tick(); }
     if (sec === 10 && !S.finaleShown) { S.finaleShown = true; addCallout('GRAND FINALE!', 1.6); }
@@ -707,12 +724,12 @@ if (typeof module !== 'undefined' && module.exports) {
         if (L.y < DECK.y + 14 * s) { L.y = DECK.y + 14 * s; L.vy = Math.abs(L.vy) * 0.8; L.squash = 1; }
         if (L.y > DECK.y + DECK.h - 14 * s) { L.y = DECK.y + DECK.h - 14 * s; L.vy = -Math.abs(L.vy) * 0.8; L.squash = 1; }
         const pdx = L.x - player.x, pdy = L.y - player.y, pd = Math.hypot(pdx, pdy);
-        if (pd < 40 * s && pd > 0.01) { L.vx += (pdx / pd) * 1320 * s * dt; L.vy += (pdy / pd) * 1320 * s * dt; }
+        if (!core.tutorial && pd < 40 * s && pd > 0.01) { L.vx += (pdx / pd) * 1320 * s * dt; L.vy += (pdy / pd) * 1320 * s * dt; }
         if (!carried && pd < 26 * s) { carried = L; SFX.pickup(); buzz(10); pop(L.x, L.y, ['#FFD447'], 6); }
       }
       L.squash = Math.max(0, L.squash - dt * 5);
 
-      for (const D of DRAINS) {
+      for (const D of (core.tutorial ? [] : DRAINS)) {
         const dd = Math.hypot(L.x - D.x, L.y - D.y);
         if (dd < CFG.nearDrainRadius * s) L.nearDrainAt = core.elapsed;
         if (dd < D.r * 0.7 && carried !== L) {
@@ -737,6 +754,11 @@ if (typeof module !== 'undefined' && module.exports) {
         pop(L.x, L.y, ['#3FA96B', '#FFD447', '#FF6E6C', '#FFF3E2'], 16);
         floaties.push({ x: L.x, y: L.y, vy: -90 * s, t: 1.2, text: '+' + r.pts + (wasNear ? ' CLOSE CALL!' : ''), c: '#FFD447' });
         if (r.combo > 1) floaties.push({ x: L.x, y: L.y + 22 * s, vy: -70 * s, t: 1.2, text: 'COMBO x' + r.combo, c: '#FF9E5E' });
+        if (r.tutorialDone) {
+          TUT = { phase: 'done', t: 0 }; S.tutorialDone = true; tutSkipShow(false);
+          addCallout('NOW SAVE THEM ALL!', 2.0); SFX.bonus(); buzz(30);
+          pop(L.x, L.y, ['#FFD447', '#3FA96B', '#FF6E6C', '#FFF3E2'], 26);
+        }
       }
     }
 
@@ -1018,6 +1040,8 @@ if (typeof module !== 'undefined' && module.exports) {
     vg.addColorStop(0, 'rgba(20,8,30,0)'); vg.addColorStop(1, 'rgba(20,8,30,0.28)');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
+    if (TUT && S.scene === 'play') drawTutorial(now);
+
     // callout banner
     if (callout && S.scene === 'play') {
       ctx.font = '900 ' + Math.round(Math.min(22 * s, W / 22)) + 'px system-ui, sans-serif'; ctx.textAlign = 'center';
@@ -1059,6 +1083,50 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.fillStyle = '#2A1B3D';
     const ex = Math.max(-2.5, Math.min(2.5, L.vx / (60 * s))) * s;
     ctx.beginPath(); ctx.arc(-8 * s + ex, -6 * s, 2.6 * s, 0, 6.29); ctx.arc(8 * s + ex, -6 * s, 2.6 * s, 0, 6.29); ctx.fill();
+    ctx.restore();
+  }
+
+  // v5: self-teaching layer for young players. Drawn in-world, cel style. No reading required:
+  // a bouncing golden arrow plus a pulsing ring do the teaching; two giant words back it up.
+  function drawTutorial(now) {
+    const pulse = S.reducedMotion ? 0 : Math.sin(now * 0.006);
+    const bob = pulse * 10 * s;
+    let tx = null, ty = null, label = '';
+    if (TUT.phase === 'grab') {
+      const L = carried || luggage[0];
+      if (L) { tx = L.x; ty = L.y; }
+      label = 'GRAB THE BAG!';
+    } else if (TUT.phase === 'carry') {
+      tx = SAFE.x + SAFE.w / 2; ty = SAFE.y + SAFE.h / 2;
+      label = 'TAKE IT HERE!';
+    } else {
+      const k = Math.min(1, TUT.t / 0.35);
+      ctx.save(); ctx.translate(W / 2, H * 0.4); ctx.scale(k, k);
+      ctx.font = '900 ' + Math.round(44 * s) + 'px system-ui, sans-serif'; ctx.textAlign = 'center';
+      ctx.lineWidth = 8 * s; ctx.strokeStyle = 'rgba(42,27,61,0.9)'; ctx.strokeText('YOU DID IT!', 0, 0);
+      ctx.fillStyle = '#FFD447'; ctx.fillText('YOU DID IT!', 0, 0);
+      ctx.restore();
+      return;
+    }
+    if (tx !== null) {
+      ctx.save();
+      const rr2 = (26 + (S.reducedMotion ? 0 : (pulse + 1) * 7)) * s;
+      ctx.strokeStyle = '#FFD447'; ctx.lineWidth = 5 * s; ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.arc(tx, ty, rr2, 0, 6.29); ctx.stroke();
+      ctx.globalAlpha = 1;
+      const ay = ty - 58 * s + bob;
+      ctx.fillStyle = '#FFD447'; ctx.strokeStyle = 'rgba(42,27,61,0.9)'; ctx.lineWidth = 3 * s;
+      ctx.beginPath();
+      ctx.moveTo(tx, ay + 22 * s); ctx.lineTo(tx - 15 * s, ay); ctx.lineTo(tx - 6 * s, ay);
+      ctx.lineTo(tx - 6 * s, ay - 18 * s); ctx.lineTo(tx + 6 * s, ay - 18 * s); ctx.lineTo(tx + 6 * s, ay);
+      ctx.lineTo(tx + 15 * s, ay); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.font = '900 ' + Math.round(30 * s) + 'px system-ui, sans-serif'; ctx.textAlign = 'center';
+    const ly = DECK.y - 34 * s;
+    ctx.lineWidth = 7 * s; ctx.strokeStyle = 'rgba(42,27,61,0.9)'; ctx.strokeText(label, W / 2, ly, W - 40);
+    ctx.fillStyle = '#FFF3E2'; ctx.fillText(label, W / 2, ly, W - 40);
     ctx.restore();
   }
 
@@ -1172,6 +1240,8 @@ if (typeof module !== 'undefined' && module.exports) {
   }
 
   // ---------- wire buttons ----------
+  function tutSkipShow(on) { const el = $('tut-skip'); if (el) el.style.display = on ? 'block' : 'none'; }
+  $('tut-skip').addEventListener('click', () => { if (core) core.tutorial = false; S.tutorialDone = true; TUT = null; tutSkipShow(false); SFX.click(); addCallout('GRAB LUGGAGE — HAUL IT TO THE GREEN ZONE!', 1.8); });
   $('btn-start').addEventListener('click', () => { audio(); startRound(); });
   $('btn-again').addEventListener('click', () => { audio(); startRound(); });
   $('btn-deck').addEventListener('click', () => { SFX.click(); S.scene = 'menu'; showPanel('menu'); });
