@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2A1B3D">
+<title>Captain Ollie's Storybook</title>
+<meta name="description" content="A storybook for Captain Ollie: everything you asked for, built into your game.">
+<style>
+  :root {
+    --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067;
+    --yellow:#FFD447; --green:#3FA96B; --dusk:#5C3A6E; --sky1:#FFC078; --sky2:#FF8A70; --sky3:#C75B82; --sky4:#8C4A78;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 34%,var(--sky3) 62%,var(--sky4) 100%); }
+  /* painted world behind the book */
+  .sun { position:fixed; top:9vh; right:12vw; width:110px; height:110px; border-radius:50%;
+    background:#FFE49E; box-shadow:0 0 90px 46px rgba(255,228,158,0.55); animation:breathe 5s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+  .cloud { position:fixed; background:rgba(255,243,226,0.85); border-radius:999px; animation:drift linear infinite; }
+  .cloud::before,.cloud::after { content:""; position:absolute; background:inherit; border-radius:50%; }
+  .c1 { top:7vh; left:-140px; width:120px; height:34px; animation-duration:52s; }
+  .c1::before { width:52px; height:52px; top:-24px; left:18px; } .c1::after { width:38px; height:38px; top:-16px; left:62px; }
+  .c2 { top:17vh; left:-220px; width:90px; height:26px; animation-duration:74s; animation-delay:-30s; }
+  .c2::before { width:40px; height:40px; top:-18px; left:14px; } .c2::after { width:28px; height:28px; top:-11px; left:48px; }
+  @keyframes drift { from{transform:translateX(0)} to{transform:translateX(130vw)} }
+  .seaband { position:fixed; left:0; right:0; bottom:0; height:26vh;
+    background:linear-gradient(180deg,#C25E77,#3A6E82 55%,#1F4E5F); }
+  .wavecrest { position:fixed; left:0; right:0; bottom:calc(26vh - 10px); height:22px; opacity:0.9;
+    background:radial-gradient(circle at 10px -6px, transparent 12px, rgba(255,243,226,0.5) 13px, transparent 15px) repeat-x;
+    background-size:40px 22px; animation:lap 4s ease-in-out infinite alternate; }
+  @keyframes lap { from{transform:translateX(0)} to{transform:translateX(-40px)} }
+  .whale { position:fixed; bottom:13vh; left:-160px; font-size:64px; animation:swim 26s linear infinite;
+    filter:drop-shadow(0 4px 0 rgba(20,8,30,0.3)); }
+  @keyframes swim { 0%{transform:translateX(0) scaleX(1)} 48%{transform:translateX(58vw) scaleX(1)}
+    50%{transform:translateX(58vw) scaleX(1) translateY(-16px)} 100%{transform:translateX(120vw) scaleX(1)} }
+
+  /* the book */
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    padding:max(12px, env(safe-area-inset-top)) 14px max(12px, env(safe-area-inset-bottom)); }
+  .page { background:linear-gradient(180deg,#FFF7E9,#FFEFD8); border:5px solid var(--ink); border-radius:28px;
+    width:min(100%,520px); max-height:min(92dvh,760px); overflow-y:auto; padding:clamp(18px,3.4vh,30px) clamp(16px,4vw,30px);
+    text-align:center; color:var(--ink); position:relative;
+    box-shadow:0 14px 0 rgba(20,8,30,0.4), 0 22px 54px rgba(20,8,30,0.5);
+    animation:arrive 0.45s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes arrive { from{transform:translateY(26px) scale(0.94); opacity:0} to{transform:none; opacity:1} }
+  .eyebrow { display:inline-block; background:var(--ink); color:var(--yellow); font-weight:900;
+    font-size:clamp(10px,1.6vh,13px); letter-spacing:2.5px; padding:5px 14px; border-radius:999px; margin-bottom:10px; }
+  h1 { font-size:clamp(30px,7.4vw,46px); font-weight:900; line-height:1.03; color:var(--coral);
+    text-shadow:2.5px 2.5px 0 var(--yellow), 5px 5px 0 rgba(42,27,61,0.14); }
+  .kicker { font-weight:900; letter-spacing:0.24em; text-transform:uppercase; color:var(--dusk);
+    font-size:clamp(11px,2.6vw,15px); margin:8px 0 14px; }
+  .bigicon { font-size:clamp(54px,11vh,84px); line-height:1.15; margin:6px 0 2px;
+    filter:drop-shadow(0 5px 0 rgba(42,27,61,0.22)); animation:bob 2.6s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-9px) rotate(2deg)} }
+  .bubble { position:relative; background:var(--cream); border:4px solid var(--ink); border-radius:22px;
+    padding:16px 18px; margin:12px 4px 20px; font-size:clamp(19px,4.6vw,26px); font-weight:900; line-height:1.3; }
+  .bubble::after { content:""; position:absolute; left:44px; bottom:-16px; width:26px; height:26px;
+    background:var(--cream); border-right:4px solid var(--ink); border-bottom:4px solid var(--ink);
+    transform:rotate(45deg) skew(8deg,8deg); border-radius:0 0 7px 0; }
+  .whosaid { text-align:left; margin:2px 0 0 30px; font-weight:900; color:var(--dusk);
+    font-size:clamp(12px,2.8vw,15px); letter-spacing:0.06em; }
+  .ask { font-weight:900; font-size:clamp(15px,3.4vw,19px); color:var(--dusk); margin:14px 0 10px; }
+  button { font:inherit; font-weight:900; cursor:pointer; border:4px solid var(--ink); border-radius:18px;
+    min-height:56px; padding:12px 20px; background:var(--cream); color:var(--ink);
+    box-shadow:0 6px 0 var(--ink); transition:transform 0.08s, box-shadow 0.08s; }
+  button:active { transform:translateY(5px); box-shadow:0 1px 0 var(--ink); }
+  .choices { display:flex; gap:12px; justify-content:center; margin-top:6px; }
+  .choices button { flex:1; max-width:220px; font-size:clamp(17px,4vw,21px); }
+  .yes { background:linear-gradient(180deg,#4CBF7C,#37955F); color:var(--cream); text-shadow:0 2px 0 rgba(20,8,30,0.3); }
+  .kinda { background:var(--yellow); }
+  .stamp { display:inline-block; background:var(--green); color:var(--cream); font-weight:900; border:4px solid var(--ink);
+    border-radius:16px; padding:10px 20px; font-size:clamp(18px,4.6vw,25px); letter-spacing:0.04em;
+    transform:rotate(-3deg); margin:8px 0 12px; box-shadow:0 5px 0 rgba(20,8,30,0.4);
+    animation:slam 0.35s cubic-bezier(.2,2.2,.4,1); text-shadow:0 2px 0 rgba(20,8,30,0.3); }
+  @keyframes slam { from{transform:rotate(-3deg) scale(2.1); opacity:0} to{transform:rotate(-3deg) scale(1); opacity:1} }
+  .reveal-what { font-size:clamp(17px,4vw,22px); font-weight:800; line-height:1.4; margin:4px 2px 14px; }
+  .look { background:var(--ink); color:var(--cream); border-radius:16px; padding:12px 16px; text-align:left;
+    font-size:clamp(14px,3.3vw,17px); font-weight:700; line-height:1.5; margin-bottom:16px; }
+  .look b { color:var(--yellow); }
+  .look .spy { display:block; font-size:11px; letter-spacing:0.2em; color:var(--peach); font-weight:900; margin-bottom:4px; }
+  .next { width:100%; font-size:clamp(18px,4.2vw,22px); background:linear-gradient(180deg,var(--peach),var(--coral));
+    color:var(--ink); }
+  .board { width:100%; font-size:clamp(19px,4.6vw,24px); background:linear-gradient(180deg,#4CBF7C,#37955F);
+    color:var(--cream); text-shadow:0 2px 0 rgba(20,8,30,0.3); display:block; text-decoration:none;
+    border:4px solid var(--ink); border-radius:18px; padding:16px; box-shadow:0 6px 0 var(--ink); }
+  .board:active { transform:translateY(5px); box-shadow:0 1px 0 var(--ink); }
+  .orders { text-align:left; background:rgba(92,58,110,0.1); border:3px dashed var(--dusk); border-radius:16px;
+    padding:14px 16px; margin:12px 0 16px; font-weight:800; font-size:clamp(14px,3.4vw,17px); line-height:1.7; }
+  .orders .t { font-weight:900; letter-spacing:0.16em; text-transform:uppercase; color:var(--dusk); font-size:12px; }
+  #dots { position:fixed; left:0; right:0; bottom:max(10px, env(safe-area-inset-bottom)); display:flex;
+    gap:7px; justify-content:center; pointer-events:none; }
+  #dots i { width:10px; height:10px; border-radius:50%; background:rgba(255,243,226,0.45);
+    border:2px solid rgba(42,27,61,0.5); }
+  #dots i.on { background:var(--yellow); transform:scale(1.25); }
+  #confetti { position:fixed; inset:0; pointer-events:none; }
+  .dedic { font-size:clamp(12px,2.6vw,14px); color:var(--dusk); font-weight:700; font-style:italic; margin-top:12px; }
+  @media (prefers-reduced-motion: reduce) { .bigicon,.sun,.cloud,.whale,.wavecrest{animation:none} }
+</style>
+</head>
+<body>
+  <div class="sun"></div>
+  <div class="cloud c1"></div><div class="cloud c2"></div>
+  <div class="seaband"></div><div class="wavecrest"></div>
+  <div class="whale">&#128051;</div>
+  <canvas id="confetti"></canvas>
+  <div id="stage"></div>
+  <div id="dots"></div>
+<script>
+'use strict';
+(function () {
+  // ---------- tiny procedural audio, same recipe as the game ----------
+  let AC = null;
+  function audio() { if (!AC) { try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){AC=null;} }
+    if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+  function tone(f0,f1,dur,type,vol){ const ac=audio(); if(!ac) return;
+    const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'square';
+    o.frequency.setValueAtTime(f0,ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30,f1),ac.currentTime+dur);
+    g.gain.setValueAtTime(vol||0.07,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+dur);
+    o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+dur+0.02); }
+  const S_page = () => tone(660,660,0.06,'square',0.05);
+  const S_yes  = () => { tone(523,523,0.07,'square',0.07); setTimeout(()=>tone(659,659,0.07,'square',0.07),70);
+                         setTimeout(()=>tone(784,1046,0.14,'square',0.08),140); };
+
+  // ---------- confetti ----------
+  const cv = document.getElementById('confetti'), cx = cv.getContext('2d');
+  let parts = [];
+  function fit(){ cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio;
+    cx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+  addEventListener('resize', fit); fit();
+  const COLS = ['#FFD447','#FF6E6C','#3FA96B','#8FD8E8','#FFB067','#FFF3E2'];
+  function burst(n){ for (let i=0;i<n;i++){ const a=Math.random()*6.28, sp=140+Math.random()*260;
+    parts.push({ x:innerWidth/2, y:innerHeight*0.34, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-140,
+      rot:Math.random()*6.28, vr:(Math.random()-0.5)*12, t:1.1+Math.random()*0.7, c:COLS[i%COLS.length] }); } }
+  let lastT = performance.now();
+  (function loop(now){ const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    cx.clearRect(0,0,innerWidth,innerHeight);
+    for (let i=parts.length-1;i>=0;i--){ const p=parts[i];
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=420*dt; p.rot+=p.vr*dt; p.t-=dt;
+      cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,p.t)); cx.translate(p.x,p.y); cx.rotate(p.rot);
+      cx.fillStyle=p.c; cx.fillRect(-4,-3,8,6); cx.restore();
+      if (p.t<=0) parts.splice(i,1); }
+    requestAnimationFrame(loop); })(performance.now());
+
+  // ---------- the story ----------
+  const GAME_URL = 'https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/?crew=OLLIE';
+  const CARDS = [
+    { cover:true, icon:'\uD83D\uDCD6', title:"CAPTAIN OLLIE'S STORYBOOK", kicker:'a true story',
+      what:'One day in the car, a boy named Ollie told his Uncle Tabs exactly what a great game needs. Uncle Tabs was listening to EVERY word. Ready to see what happened?',
+      btn:'OPEN THE BOOK' },
+    { icon:'\u2B07\uFE0F', quote:'A little arrow that\u2019s pointing something!',
+      what:'A big golden arrow that points right at your first bag and teaches you how to play. No reading needed.',
+      look:'It bounces over the very first bag the moment your game starts.' },
+    { icon:'\uD83E\uDD85', quote:'There\u2019s bad guys!',
+      what:'A sneaky seagull raids the deck and drags your luggage to the drains. You run up and BONK it!',
+      look:'About 20 seconds into a round it swoops in screeching. Show it who\u2019s Captain.' },
+    { icon:'\uD83E\uDE99', quote:'You get coins!',
+      what:'Every single rescue makes golden coins burst into the air.',
+      look:'Save any bag in the green zone and watch the coins fly.' },
+    { icon:'\uD83C\uDF6B', quote:'If you fight, you get 20 points!',
+      what:'The giant chocolate-bar trunk scores 20 points. And when the seagull tries to drag it away, the fight is ON.',
+      look:'The biggest bag on deck, with chocolate squares and a golden clasp. Bonk the gull to keep it.' },
+    { icon:'\uD83D\uDEF3\uFE0F', quote:'You can choose one... a Ferrari!',
+      what:'You choose your ride! Two ships: golden Sunset Island, or spooky Storm Night with rain and lightning.',
+      look:'Two buttons on the title screen. Tap one before you start.' },
+    { icon:'\u2694\uFE0F', quote:'They get 1000 points! (like the knights in Willow)',
+      what:'Score 1000 and you earn the top rank in the whole game: KNIGHT LEGEND, 1000 CLUB.',
+      look:'It gets stamped on your Captain\u2019s Certificate. Nobody has done it yet. You could be first.' },
+    { icon:'\uD83D\uDC33', quote:'You can make whales and stuff!',
+      what:'A real whale swims through the sunset sea behind your ship and blows its spout.',
+      look:'Watch the ocean while you play. Patience, Captain \u2014 it surfaces on its own time.' },
+    { icon:'\uD83D\uDCE3', quote:'Share it with your friends and show it!',
+      what:'A golden CHALLENGE A FRIEND button sends your game to anyone you choose.',
+      look:'On your certificate after every round. Sibella first?' },
+    { finale:true, icon:'\uD83D\uDCDC', title:"CAPTAIN'S ORDERS", kicker:'what we build next',
+      what:'Some of your ideas were SO big they need their own adventure. The Captain decides what gets built next:',
+      orders:['\uD83C\uDFE0 Building your own houses','\uD83D\uDD79\uFE0F Arcade machines \u2014 pinball and the claw','\uD83C\uDF6B A chocolate factory on board'],
+      btn:'BOARD YOUR SHIP' },
+  ];
+
+  const stage = document.getElementById('stage');
+  const dots = document.getElementById('dots');
+  CARDS.forEach(() => dots.appendChild(document.createElement('i')));
+  let idx = 0;
+
+  function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+  function render(revealed) {
+    const c = CARDS[idx];
+    [...dots.children].forEach((d,i)=>d.classList.toggle('on', i===idx));
+    let inner = '';
+    if (c.cover || c.finale) {
+      inner = '<div class="eyebrow">' + (c.cover ? 'OLLIE\u2019S ARCADE \u00B7 GAME 01' : 'TOP SECRET \u00B7 CAPTAIN ONLY') + '</div>' +
+        '<div class="bigicon">' + c.icon + '</div>' +
+        '<h1>' + c.title + '</h1><div class="kicker">' + c.kicker + '</div>' +
+        '<div class="reveal-what">' + c.what + '</div>' +
+        (c.orders ? '<div class="orders"><span class="t">The list so far</span><br>' + c.orders.join('<br>') + '</div>' : '') +
+        (c.finale
+          ? '<a class="board" href="' + GAME_URL + '">' + c.btn + ' \u{1F6F3}\uFE0F</a><div class="dedic">Built for Captain Ollie and First Mate Sibella by Uncle Tabs</div>'
+          : '<button class="next" id="go">' + c.btn + ' \u2192</button>');
+    } else if (!revealed) {
+      inner = '<div class="eyebrow">PAGE ' + idx + ' \u00B7 YOU SAID\u2026</div>' +
+        '<div class="bigicon">' + c.icon + '</div>' +
+        '<div class="bubble">\u201C' + esc(c.quote) + '\u201D</div>' +
+        '<div class="whosaid">\u2014 Captain Ollie, in the car</div>' +
+        '<div class="ask">Do you remember saying that?</div>' +
+        '<div class="choices"><button class="yes" id="yes">YES!</button><button class="kinda" id="kinda">Kind of!</button></div>';
+    } else {
+      inner = '<div class="eyebrow">PAGE ' + idx + ' \u00B7 WELL GUESS WHAT\u2026</div>' +
+        '<div class="bigicon">' + c.icon + '</div>' +
+        '<div class="stamp">IT\u2019S IN YOUR GAME!</div>' +
+        '<div class="reveal-what">' + c.what + '</div>' +
+        '<div class="look"><span class="spy">WHERE TO SPY IT</span>' + c.look + '</div>' +
+        '<button class="next" id="go">' + (idx === CARDS.length - 2 ? 'ONE MORE THING \u2192' : 'NEXT PAGE \u2192') + '</button>';
+    }
+    stage.innerHTML = '<div class="page">' + inner + '</div>';
+    const yes = document.getElementById('yes'), kinda = document.getElementById('kinda'), go = document.getElementById('go');
+    if (yes) yes.addEventListener('click', () => { S_yes(); burst(46); render(true); });
+    if (kinda) kinda.addEventListener('click', () => { S_yes(); burst(30); render(true); });
+    if (go) go.addEventListener('click', () => { S_page(); idx = Math.min(CARDS.length - 1, idx + 1); render(false); });
+  }
+
+  // swipe back support (forward stays on the buttons so reveals aren't skipped)
+  let sx = null;
+  addEventListener('pointerdown', e => { sx = e.clientX; });
+  addEventListener('pointerup', e => {
+    if (sx === null) return;
+    const dx = e.clientX - sx; sx = null;
+    if (dx > 70 && idx > 0) { S_page(); idx--; render(false); }
+  });
+
+  render(false);
+})();
+</script>
+</body>
+</html>
