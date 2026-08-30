@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2A1B3D">
+<title>Captain's Island</title>
+<meta name="description" content="Build your own island. Houses, paths, palms. Then share the whole island inside a single link. No account, no ads, nothing stored.">
+<style>
+  :root { --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067;
+    --yellow:#FFD447; --green:#3FA96B; --dusk:#5C3A6E; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; background:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
+  #topbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 10px); left:10px; right:10px;
+    display:flex; justify-content:space-between; align-items:center; gap:8px; pointer-events:none; }
+  .badge { background:rgba(42,27,61,0.92); color:var(--cream); border:2px solid rgba(255,243,226,0.55);
+    border-radius:12px; padding:6px 12px; font-weight:900; font-size:clamp(10px,2.8vw,12px); letter-spacing:0.06em;
+    box-shadow:0 3px 0 rgba(20,8,30,0.45); white-space:nowrap; }
+  #cargo { color:var(--yellow); font-variant-numeric:tabular-nums; }
+  #cargo.full { color:var(--coral); }
+  #bottombar { position:fixed; left:0; right:0; bottom:0; padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 8px);
+    display:flex; gap:6px; overflow-x:auto; background:linear-gradient(180deg, rgba(42,27,61,0) , rgba(42,27,61,0.85) 30%); }
+  .tool { flex:0 0 auto; width:58px; height:64px; border-radius:14px; border:3px solid rgba(255,243,226,0.5);
+    background:rgba(42,27,61,0.92); color:var(--cream); font-weight:900; font-size:10px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.04em; }
+  .tool:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  .tool.sel { border-color:var(--yellow); background:var(--dusk); }
+  .tool .sw { width:26px; height:26px; border-radius:6px; border:2px solid var(--ink); }
+  #btn-share { background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); }
+  #btn-undo  { background:linear-gradient(180deg,var(--peach),var(--coral)); color:var(--ink); }
+  #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 92px);
+    background:rgba(42,27,61,0.94); color:var(--yellow); font-weight:900; font-size:13px;
+    padding:9px 16px; border-radius:999px; border:2px solid rgba(255,243,226,0.5); opacity:0;
+    transition:opacity 0.25s; pointer-events:none; max-width:86vw; text-align:center; }
+  #toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<canvas id="world"></canvas>
+<div id="topbar">
+  <div class="badge" id="title-badge">OLLIE'S ISLAND &middot; GAME 02</div>
+  <div class="badge" id="cargo">CARGO 0 / 400</div>
+</div>
+<div id="bottombar"></div>
+<div id="toast"></div>
+<script>
+/* CAPTAIN'S ISLAND core: world model + link codec. Pure logic, headless-testable. */
+'use strict';
+const ISLE = {
+  N: 48, ZMAX: 4, MAX_BLOCKS: 400, VER: 1,
+  AIR: 0,
+  TYPES: [
+    null,
+    { id:1, name:'GRASS',  top:'#3FA96B', side:'#2F8354', side2:'#37955F' },
+    { id:2, name:'SAND',   top:'#FFE49E', side:'#D8B970', side2:'#E8C97E' },
+    { id:3, name:'WOOD',   top:'#C9834E', side:'#96602F', side2:'#B06E3C' },
+    { id:4, name:'BRICK',  top:'#FF6E6C', side:'#C74744', side2:'#D95552' },
+    { id:5, name:'WINDOW', top:'#8FD8E8', side:'#4E92B0', side2:'#5FA8C8' },
+    { id:6, name:'DOOR',   top:'#5C3A6E', side:'#3E2650', side2:'#4A2E58' },
+    { id:7, name:'ROOF',   top:'#C75B82', side:'#94405E', side2:'#A84568' },
+    { id:8, name:'PALM',   top:'#3FA96B', side:'#96602F', side2:'#B06E3C' },
+  ],
+};
+function makeWorld() {
+  return { cols: new Uint8Array(ISLE.N * ISLE.N * ISLE.ZMAX), count: 0, undo: [] };
+}
+function idx(x, y, z) { return (y * ISLE.N + x) * ISLE.ZMAX + z; }
+function inBounds(x, y) { return x >= 0 && y >= 0 && x < ISLE.N && y < ISLE.N; }
+function topZ(w, x, y) {
+  for (let z = ISLE.ZMAX - 1; z >= 0; z--) if (w.cols[idx(x, y, z)]) return z;
+  return -1;
+}
+function place(w, x, y, id) {
+  if (!inBounds(x, y) || id < 1 || id >= ISLE.TYPES.length) return { ok:false, why:'bounds' };
+  const t = topZ(w, x, y);
+  if (t >= ISLE.ZMAX - 1) return { ok:false, why:'height' };
+  if (w.count >= ISLE.MAX_BLOCKS) return { ok:false, why:'cargo' };
+  const z = t + 1;
+  w.cols[idx(x, y, z)] = id;
+  w.count++;
+  w.undo.push({ op:'place', x, y, z });
+  if (w.undo.length > 500) w.undo.shift();
+  return { ok:true, x, y, z, id };
+}
+function erase(w, x, y) {
+  if (!inBounds(x, y)) return { ok:false, why:'bounds' };
+  const t = topZ(w, x, y);
+  if (t < 0) return { ok:false, why:'empty' };
+  const id = w.cols[idx(x, y, t)];
+  w.cols[idx(x, y, t)] = 0;
+  w.count--;
+  w.undo.push({ op:'erase', x, y, z:t, id });
+  if (w.undo.length > 500) w.undo.shift();
+  return { ok:true, x, y, z:t, id };
+}
+function undo(w) {
+  const u = w.undo.pop();
+  if (!u) return { ok:false };
+  if (u.op === 'place') { w.cols[idx(u.x, u.y, u.z)] = 0; w.count--; }
+  else { w.cols[idx(u.x, u.y, u.z)] = u.id; w.count++; }
+  return { ok:true, undone:u };
+}
+/* Codec: 3 bytes per block: x(6b)+y(2b hi) | y(4b lo)+z(2b)+id(2b hi) | id(2b lo)+spare.
+   Simpler and safer: x(1 byte), y(1 byte), z<<4|id (1 byte). 400*3=1200 bytes.
+   base64url of 1200+2 header bytes = 1604 chars worst case, deterministically under budget. */
+function encode(w) {
+  const blocks = [];
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++)
+    for (let z = 0; z < ISLE.ZMAX; z++) { const v = w.cols[idx(x, y, z)]; if (v) blocks.push([x, y, z, v]); }
+  const buf = new Uint8Array(2 + blocks.length * 3);
+  buf[0] = ISLE.VER; buf[1] = 0;
+  blocks.forEach((b, i) => { const o = 2 + i * 3; buf[o] = b[0]; buf[o+1] = b[1]; buf[o+2] = (b[2] << 4) | b[3]; });
+  let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  const b64 = (typeof btoa !== 'undefined' ? btoa(bin) : Buffer.from(buf).toString('base64'));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decode(str) {
+  let raw;
+  try {
+    const b64 = String(str).replace(/-/g, '+').replace(/_/g, '/');
+    if (typeof atob !== 'undefined') { const s = atob(b64); raw = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) raw[i] = s.charCodeAt(i); }
+    else raw = new Uint8Array(Buffer.from(b64, 'base64'));
+  } catch (e) { return null; }
+  if (raw.length < 2 || raw[0] !== ISLE.VER) return null;
+  if ((raw.length - 2) % 3 !== 0) return null;
+  const w = makeWorld();
+  for (let o = 2; o < raw.length; o += 3) {
+    const x = raw[o], y = raw[o+1], z = raw[o+2] >> 4, id = raw[o+2] & 15;
+    if (!inBounds(x, y) || z >= ISLE.ZMAX || id < 1 || id >= ISLE.TYPES.length) return null;
+    if (w.cols[idx(x, y, z)]) return null;
+    w.cols[idx(x, y, z)] = id; w.count++;
+    if (w.count > ISLE.MAX_BLOCKS) return null;
+  }
+  return w;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds };
+}
+</script>
+<script>
+/* Presentation: isometric cel renderer, offscreen-cached, tap to build, drag to pan. */
+'use strict';
+(function () {
+  if (typeof document === 'undefined') return;
+  const cv = document.getElementById('world');
+  const ctx = cv.getContext('2d');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  let CREW = 'OLLIE';
+  try { const q = new URLSearchParams(location.search).get('crew');
+    if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); } } catch (e) {}
+  document.getElementById('title-badge').textContent = CREW + "'S ISLAND \u00B7 GAME 02";
+
+  let W = 0, H = 0;
+  const TW = 56, TH = 28, ZH = 22;
+  let cam = { x: 0, y: 0, zoom: 1 };
+  const world = { ref: null };
+
+  const off = document.createElement('canvas');
+  const octx = off.getContext('2d');
+  const ORIGIN = { x: ISLE.N * TW / 2 + TW, y: TH * 2 };
+  function isoX(x, y) { return ORIGIN.x + (x - y) * TW / 2; }
+  function isoY(x, y, z) { return ORIGIN.y + (x + y) * TH / 2 - z * ZH; }
+
+  function fit() {
+    W = innerWidth; H = innerHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener('resize', fit);
+  addEventListener('orientationchange', () => setTimeout(fit, 60));
+
+  function diamond(g, cx, cy, fill, stroke) {
+    g.beginPath();
+    g.moveTo(cx, cy - TH / 2); g.lineTo(cx + TW / 2, cy); g.lineTo(cx, cy + TH / 2); g.lineTo(cx - TW / 2, cy);
+    g.closePath(); g.fillStyle = fill; g.fill();
+    if (stroke) { g.strokeStyle = stroke; g.lineWidth = 1.5; g.stroke(); }
+  }
+  function prism(g, x, y, z, t) {
+    const cx = isoX(x, y), cy = isoY(x, y, z);
+    // left face
+    g.beginPath();
+    g.moveTo(cx - TW / 2, cy); g.lineTo(cx, cy + TH / 2); g.lineTo(cx, cy + TH / 2 + ZH); g.lineTo(cx - TW / 2, cy + ZH);
+    g.closePath(); g.fillStyle = t.side; g.fill();
+    // right face
+    g.beginPath();
+    g.moveTo(cx + TW / 2, cy); g.lineTo(cx, cy + TH / 2); g.lineTo(cx, cy + TH / 2 + ZH); g.lineTo(cx + TW / 2, cy + ZH);
+    g.closePath(); g.fillStyle = t.side2; g.fill();
+    diamond(g, cx, cy, t.top, 'rgba(42,27,61,0.55)');
+    if (t.id === 5) { // window: ink frame + shine
+      g.fillStyle = 'rgba(42,27,61,0.85)';
+      g.fillRect(cx - 12, cy + 4, 10, ZH - 6); g.fillRect(cx + 3, cy + 4, 10, ZH - 6);
+      g.fillStyle = 'rgba(255,255,255,0.55)';
+      g.fillRect(cx - 10, cy + 6, 3, ZH - 12); g.fillRect(cx + 5, cy + 6, 3, ZH - 12);
+    }
+    if (t.id === 6) { // door: handle
+      g.fillStyle = '#FFD447'; g.beginPath(); g.arc(cx + 8, cy + TH / 2 + ZH / 2, 2.6, 0, 6.29); g.fill();
+      g.strokeStyle = 'rgba(255,243,226,0.5)'; g.lineWidth = 2;
+      g.strokeRect(cx - TW / 4, cy + 3, TW / 2, ZH + TH / 2 - 6);
+    }
+    if (t.id === 8) { // palm: fronds above
+      const fy = cy - TH / 2 - 6;
+      g.fillStyle = '#2F8354';
+      for (let a = 0; a < 5; a++) {
+        g.save(); g.translate(cx, fy); g.rotate((a / 5) * 6.28);
+        g.beginPath(); g.ellipse(11, 0, 12, 4.5, 0, 0, 6.29); g.fill(); g.restore();
+      }
+      g.fillStyle = '#FFD447'; g.beginPath(); g.arc(cx - 3, fy + 3, 2.4, 0, 6.29); g.arc(cx + 4, fy + 2, 2.4, 0, 6.29); g.fill();
+    }
+  }
+  function redrawWorld() {
+    off.width = ISLE.N * TW + TW * 2; off.height = ISLE.N * TH + ZH * (ISLE.ZMAX + 2) + TH * 4;
+    octx.clearRect(0, 0, off.width, off.height);
+    const w = world.ref;
+    for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
+      diamond(octx, isoX(x, y), isoY(x, y, -1) + ZH, ((x + y) % 2 ? '#F5D98E' : '#FFE49E'), 'rgba(200,160,90,0.35)');
+    }
+    for (let s = 0; s < ISLE.N * 2 - 1; s++) {
+      for (let x = Math.max(0, s - ISLE.N + 1); x <= Math.min(s, ISLE.N - 1); x++) {
+        const y = s - x;
+        for (let z = 0; z < ISLE.ZMAX; z++) {
+          const v = w.cols[idx(x, y, z)];
+          if (v) prism(octx, x, y, z, ISLE.TYPES[v]);
+        }
+      }
+    }
+  }
+  let t0 = performance.now();
+  function frame(now) {
+    const t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, W, H);
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    ['#FFC078', '#FF8A70', '#C75B82', '#8C4A78'].forEach((c, i) => sky.addColorStop([0, 0.4, 0.75, 1][i], c));
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#FFE49E'; ctx.beginPath(); ctx.arc(W * 0.78, H * 0.16, 42, 0, 6.29); ctx.fill();
+    const sea = ctx.createLinearGradient(0, H * 0.3, 0, H);
+    ['#C25E77', '#3A6E82', '#1F4E5F'].forEach((c, i) => sea.addColorStop([0, 0.5, 1][i], c));
+    ctx.fillStyle = sea; ctx.fillRect(0, H * 0.3, W, H * 0.7);
+    ctx.strokeStyle = 'rgba(255,243,226,0.35)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      const wy = H * 0.36 + i * H * 0.1 + Math.sin(t * 1.3 + i) * 4;
+      ctx.beginPath(); ctx.moveTo(0, wy); ctx.quadraticCurveTo(W / 2, wy + 8, W, wy); ctx.stroke();
+    }
+    ctx.save();
+    ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom);
+    ctx.drawImage(off, 0, 0);
+    ctx.restore();
+    requestAnimationFrame(frame);
+  }
+
+  // input: tap builds, drag pans
+  let ptr = null, moved = false;
+  cv.addEventListener('pointerdown', (e) => { ptr = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y }; moved = false; });
+  cv.addEventListener('pointermove', (e) => {
+    if (!ptr) return;
+    const dx = e.clientX - ptr.x, dy = e.clientY - ptr.y;
+    if (Math.hypot(dx, dy) > 10) moved = true;
+    if (moved) { cam.x = ptr.cx + dx; cam.y = ptr.cy + dy; }
+  });
+  addEventListener('pointerup', (e) => {
+    if (ptr && !moved) tapAt(e.clientX, e.clientY);
+    ptr = null;
+  });
+  function cellAt(sx, sy) {
+    const wx = (sx - cam.x) / cam.zoom, wy = (sy - cam.y) / cam.zoom;
+    // invert base-level iso (z rendered at ground plane offset ZH)
+    const ax = wx - ORIGIN.x, ay = wy - (ORIGIN.y + ZH);
+    const fx = (ax / (TW / 2) + ay / (TH / 2)) / 2;
+    const fy = (ay / (TH / 2) - ax / (TW / 2)) / 2;
+    const x = Math.round(fx), y = Math.round(fy);
+    return inBounds(x, y) ? { x, y } : null;
+  }
+  let tool = 3; // wood first: house building starts with walls
+  function tapAt(sx, sy) {
+    const c = cellAt(sx, sy);
+    if (!c) return;
+    let r;
+    if (tool === -1) r = erase(world.ref, c.x, c.y);
+    else r = place(world.ref, c.x, c.y, tool);
+    if (r.ok) { blip(tool === -1 ? 300 : 520 + r.z * 90); redrawWorld(); syncCargo(); }
+    else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
+    else if (r.why === 'height') toast('MAX HEIGHT! Four blocks tall is the limit.');
+  }
+
+  // UI
+  const bar = document.getElementById('bottombar');
+  function mkTool(label, sw, val) {
+    const b = document.createElement('button');
+    b.className = 'tool'; b.dataset.val = val;
+    b.innerHTML = (sw ? '<span class="sw" style="background:' + sw + '"></span>' : '') + label;
+    b.addEventListener('click', () => {
+      if (val === 'undo') { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); } return; }
+      if (val === 'share') { share(); return; }
+      tool = Number(val);
+      document.querySelectorAll('.tool').forEach(t => t.classList.toggle('sel', t.dataset.val === String(val)));
+      blip(600);
+    });
+    bar.appendChild(b); return b;
+  }
+  mkTool('UNDO', null, 'undo').id = 'btn-undo';
+  for (const t of ISLE.TYPES) if (t) mkTool(t.name, t.top, t.id);
+  mkTool('ERASE', '#2A1B3D', -1);
+  mkTool('SHARE', null, 'share').id = 'btn-share';
+  document.querySelector('[data-val="3"]').classList.add('sel');
+
+  function syncCargo() {
+    const el = document.getElementById('cargo');
+    el.textContent = 'CARGO ' + world.ref.count + ' / ' + ISLE.MAX_BLOCKS;
+    el.classList.toggle('full', world.ref.count >= ISLE.MAX_BLOCKS);
+  }
+  let toastT = null;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200);
+  }
+  let AC = null;
+  function blip(f) {
+    try {
+      if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+      if (AC.state === 'suspended') AC.resume();
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.05, AC.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 0.08);
+      o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime + 0.1);
+    } catch (e) {}
+  }
+  function shareUrl() {
+    const p = new URLSearchParams(location.search).get('crew');
+    return location.origin + location.pathname + (p ? '?crew=' + encodeURIComponent(p) : '') + '#i=' + encode(world.ref);
+  }
+  async function share() {
+    const url = shareUrl();
+    try {
+      if (navigator.share) { await navigator.share({ title: "Captain's Island", text: 'Come and stand on my island! I built it myself.', url }); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); toast('ISLAND LINK COPIED! The whole island travels inside it.'); return; }
+      toast(url);
+    } catch (e) {}
+  }
+
+  // boot: load island from the link if one is aboard
+  function boot() {
+    let w = null;
+    if (location.hash.startsWith('#i=')) w = decode(location.hash.slice(3));
+    world.ref = w || makeWorld();
+    if (w) toast('WELCOME ABOARD! This island travelled inside the link.');
+    fit();
+    cam.zoom = Math.min(1, (W - 20) / off.width || 1);
+    redrawWorld();
+    cam.zoom = Math.max(0.45, Math.min(1.1, (W * 0.95) / off.width));
+    cam.x = (W - off.width * cam.zoom) / 2;
+    cam.y = Math.max(40, (H - off.height * cam.zoom) / 2 - 20);
+    syncCargo();
+    requestAnimationFrame(frame);
+  }
+  addEventListener('hashchange', () => {
+    if (!location.hash.startsWith('#i=')) return;
+    const w = decode(location.hash.slice(3));
+    if (w) { world.ref = w; redrawWorld(); syncCargo(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
+  });
+  window.__ISLAND = { world, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); } return r; },
+    erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); } return r; },
+    undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); } return r; },
+    encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
+  boot();
+})();
+</script>
+</body>
+</html>
