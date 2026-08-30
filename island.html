@@ -31,6 +31,7 @@
   .tool.sel { border-color:var(--yellow); background:var(--dusk); }
   .tool .sw { width:26px; height:26px; border-radius:6px; border:2px solid var(--ink); }
   #btn-share { background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); }
+  #btn-drive { background:linear-gradient(180deg,#FF8A70,var(--coral)); color:var(--cream); }
   #btn-undo  { background:linear-gradient(180deg,var(--peach),var(--coral)); color:var(--ink); }
   #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 92px);
     background:rgba(42,27,61,0.94); color:var(--yellow); font-weight:900; font-size:13px;
@@ -42,6 +43,20 @@
     box-shadow:0 4px 0 rgba(20,8,30,0.4); opacity:0; transform:scale(0.8); transition:all 0.18s;
     pointer-events:none; z-index:5; line-height:1.35; }
   #bubble.on { opacity:1; transform:scale(1); }
+  #drivebar { position:fixed; left:0; right:0; bottom:0; display:none; gap:10px; justify-content:center;
+    padding:10px 10px calc(env(safe-area-inset-bottom,0px) + 12px); }
+  #drivebar.on { display:flex; }
+  .dbtn { flex:1 1 0; max-width:120px; height:78px; border-radius:18px; border:3px solid var(--ink);
+    background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); font-weight:900;
+    font-size:22px; box-shadow:0 5px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
+  #d-exit { font-size:11px; background:linear-gradient(180deg,var(--peach),var(--coral)); letter-spacing:0.04em; }
+  .dbtn:active { transform:translateY(4px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #lapbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 54px); left:50%; transform:translateX(-50%);
+    display:none; gap:10px; align-items:center; background:rgba(42,27,61,0.92); color:var(--yellow);
+    border:2px solid rgba(255,243,226,0.5); border-radius:12px; padding:5px 14px; font-weight:900;
+    font-size:14px; font-variant-numeric:tabular-nums; letter-spacing:0.06em; white-space:nowrap; }
+  #lapbar.on { display:flex; }
+  #lapbest { color:#8FD8E8; font-size:12px; }
   #bubble::after { content:''; position:absolute; left:50%; bottom:-12px; margin-left:-8px;
     border:8px solid transparent; border-top-color:var(--ink); }
 </style>
@@ -56,6 +71,12 @@
 <div id="bottombar"></div>
 <div id="toast"></div>
 <div id="bubble"></div>
+<div id="drivebar">
+  <button class="dbtn" id="d-left">&#9664;</button>
+  <button class="dbtn" id="d-exit">STOP<br>DRIVING</button>
+  <button class="dbtn" id="d-right">&#9654;</button>
+</div>
+<div id="lapbar"><span id="laptime">0:00.0</span><span id="lapbest"></span></div>
 <script>
 /* CAPTAIN'S ISLAND core: world model + link codec. Pure logic, headless-testable. */
 'use strict';
@@ -72,6 +93,7 @@ const ISLE = {
     { id:6, name:'DOOR',   top:'#5C3A6E', side:'#3E2650', side2:'#4A2E58' },
     { id:7, name:'ROOF',   top:'#C75B82', side:'#94405E', side2:'#A84568' },
     { id:8, name:'PALM',   top:'#3FA96B', side:'#96602F', side2:'#B06E3C' },
+    { id:9, name:'FLAG',   top:'#FFF3E2', side:'#2A1B3D', side2:'#3E2650' },
   ],
 };
 function makeWorld() {
@@ -148,6 +170,17 @@ function decode(str) {
 }
 /* House detection: a DOOR with a real structure around it makes a home.
    Deterministic from world state, so islanders travel inside the share link for free. */
+function flags(w) {
+  const out = [];
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++)
+    for (let z = 0; z < ISLE.ZMAX; z++) if (w.cols[idx(x, y, z)] === 9) { out.push({ x, y }); break; }
+  return out;
+}
+function fmtLap(ms) {
+  if (!(ms > 0)) return '';
+  const s = Math.floor(ms / 1000), t = Math.floor((ms % 1000) / 100);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '.' + t;
+}
 function houses(w) {
   const found = [];
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
@@ -166,7 +199,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, fmtLap };
 }
 </script>
 <script>
@@ -229,6 +262,13 @@ if (typeof module !== 'undefined' && module.exports) {
       g.strokeStyle = 'rgba(255,243,226,0.5)'; g.lineWidth = 2;
       g.strokeRect(cx - TW / 4, cy + 3, TW / 2, ZH + TH / 2 - 6);
     }
+    if (t.id === 9) { // flag: checkered banner on a pole
+      g.fillStyle = '#2A1B3D'; g.fillRect(cx - 1.5, cy - 26, 3, 26);
+      for (let r = 0; r < 3; r++) for (let c2 = 0; c2 < 3; c2++) {
+        g.fillStyle = ((r + c2) % 2) ? '#2A1B3D' : '#FFF3E2';
+        g.fillRect(cx + 1.5 + c2 * 6, cy - 26 + r * 5, 6, 5);
+      }
+    }
     if (t.id === 8) { // palm: fronds above
       const fy = cy - TH / 2 - 6;
       g.fillStyle = '#2F8354';
@@ -279,6 +319,8 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.restore();
     stepIslanders(dt, t);
     drawIslanders(t);
+    stepCar(dt);
+    drawCar();
     requestAnimationFrame(frame);
   }
 
@@ -306,6 +348,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   let tool = 3; // wood first: house building starts with walls
   function tapAt(sx, sy) {
+    if (driving) return;
     const hit = islanderAt(sx, sy);
     if (hit) { chat(hit); return; }
     const c = cellAt(sx, sy);
@@ -327,6 +370,7 @@ if (typeof module !== 'undefined' && module.exports) {
     b.addEventListener('click', () => {
       if (val === 'undo') { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); popCheck(); } return; }
       if (val === 'share') { share(); return; }
+      if (val === 'drive') { setDrive(true); blip(520); setTimeout(() => blip(700), 90); return; }
       tool = Number(val);
       document.querySelectorAll('.tool').forEach(t => t.classList.toggle('sel', t.dataset.val === String(val)));
       blip(600);
@@ -336,6 +380,7 @@ if (typeof module !== 'undefined' && module.exports) {
   mkTool('UNDO', null, 'undo').id = 'btn-undo';
   for (const t of ISLE.TYPES) if (t) mkTool(t.name, t.top, t.id);
   mkTool('ERASE', '#2A1B3D', -1);
+  mkTool('DRIVE', '#FF6E6C', 'drive').id = 'btn-drive';
   mkTool('SHARE', null, 'share').id = 'btn-share';
   document.querySelector('[data-val="3"]').classList.add('sel');
 
@@ -372,12 +417,14 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function shareUrl() {
     const p = new URLSearchParams(location.search).get('crew');
-    return location.origin + location.pathname + (p ? '?crew=' + encodeURIComponent(p) : '') + '#i=' + encode(world.ref);
+    return location.origin + location.pathname + (p ? '?crew=' + encodeURIComponent(p) : '')
+      + '#i=' + encode(world.ref) + (bestLap ? '&t=' + Math.round(bestLap) : '');
   }
   async function share() {
     const url = shareUrl();
     try {
-      if (navigator.share) { await navigator.share({ title: "Captain's Island", text: 'Come and stand on my island! I built it myself.', url }); return; }
+      const msg = bestLap ? 'Come to my island! Beat my lap: ' + fmtLap(bestLap) : 'Come and stand on my island! I built it myself.';
+      if (navigator.share) { await navigator.share({ title: "Captain's Island", text: msg, url }); return; }
       if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); toast('ISLAND LINK COPIED! The whole island travels inside it.'); return; }
       toast(url);
     } catch (e) {}
@@ -386,9 +433,14 @@ if (typeof module !== 'undefined' && module.exports) {
   // boot: load island from the link if one is aboard
   function boot() {
     let w = null;
-    if (location.hash.startsWith('#i=')) w = decode(location.hash.slice(3));
+    if (location.hash.startsWith('#i=')) {
+      const parts = location.hash.slice(3).split('&t=');
+      w = decode(parts[0]);
+      const g = parseInt(parts[1], 10);
+      if (w && g > 0 && g < 3600000) ghostLap = g;
+    }
     world.ref = w || makeWorld();
-    if (w) toast('WELCOME ABOARD! This island travelled inside the link.');
+    if (w) toast(ghostLap ? 'CHALLENGE! Beat the lap record of ' + fmtLap(ghostLap) : 'WELCOME ABOARD! This island travelled inside the link.');
     fit();
     cam.zoom = Math.min(1, (W - 20) / off.width || 1);
     redrawWorld();
@@ -401,7 +453,10 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   addEventListener('hashchange', () => {
     if (!location.hash.startsWith('#i=')) return;
-    const w = decode(location.hash.slice(3));
+    const parts = location.hash.slice(3).split('&t=');
+    const w = decode(parts[0]);
+    const g = parseInt(parts[1], 10);
+    if (w && g > 0 && g < 3600000) ghostLap = g;
     if (w) { world.ref = w; redrawWorld(); syncCargo(); rebuildIslanders(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
   });
   // ISLANDERS: derived from houses, never stored. Curated names and phrases only.
@@ -455,7 +510,7 @@ if (typeof module !== 'undefined' && module.exports) {
     for (const p of islanders) {
       const wx = isoX(p.x, p.y), wy = isoY(p.x, p.y, 0) + ZH;
       const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y;
-      const bob = Math.sin(t * 5 + p.seed) * 2.2 * cam.zoom, s = cam.zoom;
+      const s = Math.max(cam.zoom, 0.8), bob = Math.sin(t * 5 + p.seed) * 2.2 * s;
       ctx.fillStyle = 'rgba(42,27,61,0.3)';
       ctx.beginPath(); ctx.ellipse(sx, sy + 2 * s, 9 * s, 4 * s, 0, 0, 6.29); ctx.fill();
       ctx.fillStyle = p.col;
@@ -489,7 +544,120 @@ if (typeof module !== 'undefined' && module.exports) {
     clearTimeout(bubbleT); bubbleT = setTimeout(() => el.classList.remove('on'), 3200);
   }
 
-  window.__ISLAND = { world, islandersRef: () => islanders, houses: () => houses(world.ref), popCheck, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
+  // ===== P4 DRIVING: the buggy, ramps, and lap times that travel in the link =====
+  let driving = false;
+  const car = { x: 24, y: 24, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
+  let lapStart = 0, lapNow = 0, lapArmed = false, bestLap = 0, ghostLap = 0;
+  function clearCell(x, y) {
+    const cx = Math.floor(x), cy = Math.floor(y);
+    if (!inBounds(cx, cy)) return false;
+    return topZ(world.ref, cx, cy) < 1;
+  }
+  function onRamp(x, y) {
+    const cx = Math.floor(x), cy = Math.floor(y);
+    return inBounds(cx, cy) && topZ(world.ref, cx, cy) === 0;
+  }
+  function spawnCar() {
+    const f = flags(world.ref);
+    let sx = 24, sy = 24;
+    if (f.length) { sx = f[0].x + 1; sy = f[0].y + 1; }
+    for (let r = 0; r < 20; r++) {
+      let ok = false;
+      for (let dy = -r; dy <= r && !ok; dy++) for (let dx = -r; dx <= r && !ok; dx++) {
+        const nx = sx + dx, ny = sy + dy;
+        if (inBounds(nx, ny) && topZ(world.ref, nx, ny) < 0) { car.x = nx + 0.5; car.y = ny + 0.5; ok = true; }
+      }
+      if (ok) break;
+    }
+    car.h = 0.8; car.sp = 0; car.z = 0; car.vz = 0; car.steer = 0;
+    lapStart = 0; lapNow = 0; lapArmed = false;
+  }
+  function stepCar(dt) {
+    if (!driving) return;
+    car.h += car.steer * 2.6 * dt;
+    car.sp += (3.4 - car.sp) * 1.6 * dt;
+    if (car.z > 0 || car.vz > 0) {
+      car.vz -= 9.5 * dt; car.z += car.vz * dt;
+      if (car.z <= 0) { car.z = 0; car.vz = 0; blip(320); }
+    }
+    const nx = car.x + Math.cos(car.h) * car.sp * dt;
+    const ny = car.y + Math.sin(car.h) * car.sp * dt;
+    const wasRamp = onRamp(car.x, car.y);
+    if (car.z > 0.05 || clearCell(nx, car.y)) car.x = nx; else { car.sp *= 0.35; car.h += 0.5; }
+    if (car.z > 0.05 || clearCell(car.x, ny)) car.y = ny; else { car.sp *= 0.35; car.h -= 0.5; }
+    car.x = Math.max(0.5, Math.min(ISLE.N - 0.5, car.x));
+    car.y = Math.max(0.5, Math.min(ISLE.N - 0.5, car.y));
+    if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) { car.vz = 3.6; blip(880); toast('BIG AIR!'); }
+    const tcx = W / 2 - isoX(car.x, car.y) * cam.zoom;
+    const tcy = H * 0.52 - (isoY(car.x, car.y, 0) + ZH) * cam.zoom;
+    cam.x += (tcx - cam.x) * Math.min(1, 4.5 * dt);
+    cam.y += (tcy - cam.y) * Math.min(1, 4.5 * dt);
+    const f = flags(world.ref);
+    if (f.length) {
+      const d = Math.min.apply(null, f.map(p => Math.hypot(p.x + 0.5 - car.x, p.y + 0.5 - car.y)));
+      if (d > 6) lapArmed = true;
+      if (d < 1.6) {
+        if (lapArmed && lapStart) {
+          const t = performance.now() - lapStart;
+          if (!bestLap || t < bestLap) { bestLap = t; toast('NEW RECORD ' + fmtLap(t) + '! Share it.'); }
+          else toast('LAP ' + fmtLap(t));
+          blip(900); setTimeout(() => blip(1150), 100);
+          lapStart = performance.now(); lapArmed = false;
+        } else if (!lapStart) { lapStart = performance.now(); toast('GO! Drive a lap.'); blip(700); }
+      }
+      lapNow = lapStart ? performance.now() - lapStart : 0;
+      document.getElementById('laptime').textContent = fmtLap(lapNow) || '0:00.0';
+      const lb = document.getElementById('lapbest');
+      lb.textContent = bestLap ? 'BEST ' + fmtLap(bestLap) : (ghostLap ? 'BEAT ' + fmtLap(ghostLap) : '');
+    }
+  }
+  function drawCar() {
+    if (!driving) return;
+    const wx = isoX(car.x, car.y), wy = isoY(car.x, car.y, 0) + ZH - car.z * ZH;
+    const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y, s = Math.max(cam.zoom, 0.95);
+    ctx.fillStyle = 'rgba(42,27,61,0.3)';
+    ctx.beginPath(); ctx.ellipse(sx, isoY(car.x, car.y, 0) * cam.zoom + cam.y + ZH * cam.zoom + 2 * s, 12 * s, 5 * s, 0, 0, 6.29); ctx.fill();
+    ctx.save(); ctx.translate(sx, sy - 10 * s); ctx.scale(s, s);
+    ctx.fillStyle = '#2A1B3D';
+    ctx.beginPath(); ctx.ellipse(-7, 6, 4, 3, 0, 0, 6.29); ctx.ellipse(7, 6, 4, 3, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#FF6E6C';
+    ctx.beginPath(); ctx.roundRect(-14, -6, 28, 13, 5); ctx.fill();
+    ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#8FD8E8';
+    ctx.beginPath(); ctx.roundRect(-7, -13, 14, 9, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FFD447';
+    ctx.beginPath(); ctx.arc(-11, -1, 2.2, 0, 6.29); ctx.arc(11, -1, 2.2, 0, 6.29); ctx.fill();
+    ctx.restore();
+  }
+  function setDrive(on) {
+    driving = on;
+    document.getElementById('drivebar').classList.toggle('on', on);
+    document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
+    document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
+    if (!on) {
+      cam.x = (W - off.width * cam.zoom) / 2;
+      cam.y = Math.max(40, (H - off.height * cam.zoom) / 2 - 20);
+    }
+    if (on) {
+      spawnCar();
+      toast(flags(world.ref).length ? 'DRIVE THROUGH YOUR FLAG TO START THE LAP!' : 'DRIVE! Build a FLAG to race a lap.');
+    }
+  }
+  function holdBtn(id, val) {
+    const b = document.getElementById(id);
+    const on = (e) => { e.preventDefault(); car.steer = val; };
+    const off2 = () => { if (car.steer === val) car.steer = 0; };
+    b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off2);
+    b.addEventListener('pointerleave', off2); b.addEventListener('pointercancel', off2);
+  }
+  holdBtn('d-left', -1); holdBtn('d-right', 1);
+  document.getElementById('d-exit').addEventListener('click', () => { setDrive(false); blip(400); });
+
+  window.__ISLAND = { world, islandersRef: () => islanders, houses: () => houses(world.ref), popCheck,
+    car, flags: () => flags(world.ref), fmtLap, setDrive: (b) => setDrive(b),
+    isDriving: () => driving, steer: (v) => { car.steer = v; },
+    lapInfo: () => ({ best: bestLap, ghost: ghostLap, started: !!lapStart, armed: lapArmed }),
+    forceBest: (ms) => { bestLap = ms; }, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
