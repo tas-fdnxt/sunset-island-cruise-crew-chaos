@@ -106,6 +106,7 @@
   #cert-rank { display: inline-block; background: var(--yellow); border: 3px solid var(--ink);
     border-radius: 12px; padding: 5px 16px; font-weight: 900; margin: 8px 0 2px;
     font-size: clamp(14px, 3.6vw, 18px); }
+  .shipbtn.sel { background: var(--yellow); }
 </style>
 </head>
 <body>
@@ -133,6 +134,10 @@
     <h1>SUNSET ISLAND</h1>
     <div class="sub">Cruise Crew Chaos</div>
     <div id="crew-line" class="crewline"></div>
+    <div class="btn-row" style="margin-bottom:4px">
+      <button id="btn-ship-sunset" class="shipbtn sel">&#127749; Sunset Island</button>
+      <button id="btn-ship-storm" class="shipbtn">&#9928;&#65039; Storm Night</button>
+    </div>
     <button class="btn-big" id="btn-start">Start Practice</button>
     <div class="keys">Touch: drag anywhere to steer, tap THROW to toss<br>Keys: <kbd>WASD</kbd>/<kbd>arrows</kbd> move &nbsp; <kbd>space</kbd> throw &nbsp; <kbd>P</kbd> pause &nbsp; <kbd>R</kbd> restart &nbsp; <kbd>M</kbd> sound</div>
     <div class="btn-row">
@@ -148,6 +153,7 @@
       <b>2.</b> Haul it to the green <b>Safe Zone</b> at the top of the deck.<br>
       <b>3.</b> Keep bags away from the two <b>drains</b> &mdash; anything that goes down a drain is fine, but it is also gone.<br><br>
       Watch for the <b>seagull</b>! It swoops in and drags bags toward the drains. Run up and bonk it to scare it off.<br><br>
+      Pick your ship on the title screen: classic sunset, or spooky Storm Night with rain and lightning!<br><br>
       Quick back-to-back rescues build a <b>combo</b>. Snatching a bag from right beside a drain earns a <b>close call bonus</b>. Every rescue raises the <b>chaos level</b> (the strip along the top): the deck tilts harder, wind gusts arrive, and waves start sweeping across. You cannot lose. You can only get funnier.
     </div>
     <div class="fine">This prototype does not require an account and does not collect personal information. Nothing is stored or transmitted &mdash; closing the tab erases everything. Internal test build, not a public service.</div>
@@ -363,7 +369,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { GameCore, SeagullDirector, makeRng, CFG, REWARDS, LUGGAGE_TYPES };
 }
 
-/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v3
+/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v4
    Full-viewport responsive canvas. Canvas 2D + procedural Web Audio.
    No network, no storage, no dependencies. */
 'use strict';
@@ -381,6 +387,13 @@ if (typeof module !== 'undefined' && module.exports) {
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); }
   } catch (e) {}
 
+  // ---------- ship themes ----------
+  const THEMES = {
+    sunset: { sky: ['#FFC078', '#FF8A70', '#C75B82', '#8C4A78'], sea: ['#C25E77', '#3A6E82', '#1F4E5F'], cel: '#FFE49E', glow: '255,228,158', moon: false, cloud: 'rgba(255,243,226,0.8)', island: 'rgba(60,32,64,0.55)', spark: 'rgba(255,210,140,0.55)', plankA: '#C9834E', plankB: '#B06E3C', hull: '#FFF3E2', hull2: '#E8D9BE', tint: 'rgba(255,190,80,0.10)' },
+    storm: { sky: ['#2E3D6E', '#25305A', '#1B2444', '#131A34'], sea: ['#41537A', '#243650', '#131F2E'], cel: '#E9EAF4', glow: '200,210,255', moon: true, cloud: 'rgba(105,115,150,0.85)', island: 'rgba(12,10,30,0.8)', spark: 'rgba(170,190,255,0.4)', plankA: '#9A6B3E', plankB: '#845527', hull: '#D9D3C6', hull2: '#BFB8A8', tint: 'rgba(150,180,255,0.10)' },
+  };
+  let theme = THEMES.sunset;
+
   // ---------- session state (memory only, wiped on refresh) ----------
   const S = {
     scene: 'menu',            // menu | play | paused | summary
@@ -392,6 +405,7 @@ if (typeof module !== 'undefined' && module.exports) {
     menuStarts: 0,
     restarts: 0,
     finaleShown: false,
+    ship: 'sunset',
   };
 
   // ---------- responsive layout: everything derives from the live viewport ----------
@@ -437,6 +451,7 @@ if (typeof module !== 'undefined' && module.exports) {
   let player = null, luggage = null, particles, floaties, gust, wave, callout, carried;
   let shake = 0, seedUsed = 0, smoke = [];
   let gull = null, director = null, fireworks = [], fwParts = [], lastFw = 0;
+  let rain = [], bolt = { t: 7, flash: 0 };
 
   // ---------- audio: procedural Web Audio only ----------
   let AC = null;
@@ -479,7 +494,9 @@ if (typeof module !== 'undefined' && module.exports) {
     end:    () => { tone(784, 784, 0.12, 'square', 0.07); setTimeout(() => tone(659, 523, 0.3, 'square', 0.07), 130); },
     squawk: () => { tone(1250, 620, 0.12, 'sawtooth', 0.06); setTimeout(() => tone(1400, 700, 0.1, 'sawtooth', 0.05), 110); },
     boom:   () => { noiseBurst(0.25, 0.09, 200); tone(220, 90, 0.3, 'triangle', 0.05); },
+    thunder:() => { noiseBurst(0.5, 0.12, 80); setTimeout(() => noiseBurst(0.35, 0.09, 60), 220); },
   };
+  function buzz(ms) { if (!S.reducedMotion && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 
   // ---------- input: keyboard + floating virtual joystick ----------
   const keys = {};
@@ -538,6 +555,9 @@ if (typeof module !== 'undefined' && module.exports) {
     gust = null; wave = null; carried = null; joy = null;
     gull = null; director = new SeagullDirector(seedUsed); fireworks = []; fwParts = [];
     S.finaleShown = false;
+    theme = THEMES[S.ship] || THEMES.sunset;
+    rain = []; bolt = { t: 5 + Math.random() * 5, flash: 0 };
+    if (theme.moon) for (let i = 0; i < 70; i++) rain.push({ x: Math.random() * W, y: Math.random() * H, l: (8 + Math.random() * 10), v: (420 + Math.random() * 240) });
     callout = { text: 'GRAB LUGGAGE — HAUL IT TO THE GREEN ZONE!', t: 6 };
     spawnLuggage('duffel', 0.5, 0.35, 0.3);
     S.scene = 'play';
@@ -647,6 +667,14 @@ if (typeof module !== 'undefined' && module.exports) {
       if (wave.t <= 0) wave = null;
     }
 
+    // storm weather
+    if (theme.moon) {
+      bolt.t -= dt;
+      if (bolt.t <= 0) { bolt.flash = 1; SFX.thunder(); shakeIt(2); bolt.t = 6 + Math.random() * 7; }
+      bolt.flash = Math.max(0, bolt.flash - dt * 2.2);
+      for (const r of rain) { r.y += r.v * dt; r.x += r.v * 0.22 * dt; if (r.y > H) { r.y = -12; r.x = Math.random() * W; } if (r.x > W) r.x -= W; }
+    }
+
     // funnel smoke
     if (!S.reducedMotion && Math.random() < dt * 3) {
       smoke.push({ x: DECK.x + DECK.w * 0.78 + 32 * s, y: DECK.y - 96 * s, r: (6 + Math.random() * 5) * s, t: 2.4, vx: 8 * s, vy: -22 * s });
@@ -680,7 +708,7 @@ if (typeof module !== 'undefined' && module.exports) {
         if (L.y > DECK.y + DECK.h - 14 * s) { L.y = DECK.y + DECK.h - 14 * s; L.vy = -Math.abs(L.vy) * 0.8; L.squash = 1; }
         const pdx = L.x - player.x, pdy = L.y - player.y, pd = Math.hypot(pdx, pdy);
         if (pd < 40 * s && pd > 0.01) { L.vx += (pdx / pd) * 1320 * s * dt; L.vy += (pdy / pd) * 1320 * s * dt; }
-        if (!carried && pd < 26 * s) { carried = L; SFX.pickup(); pop(L.x, L.y, ['#FFD447'], 6); }
+        if (!carried && pd < 26 * s) { carried = L; SFX.pickup(); buzz(10); pop(L.x, L.y, ['#FFD447'], 6); }
       }
       L.squash = Math.max(0, L.squash - dt * 5);
 
@@ -690,7 +718,7 @@ if (typeof module !== 'undefined' && module.exports) {
         if (dd < D.r * 0.7 && carried !== L) {
           luggage.splice(i, 1);
           core.miss();
-          SFX.miss();
+          SFX.miss(); buzz(15);
           shakeIt(5);
           pop(D.x, D.y, ['#8FD8E8', '#BFE9F5', '#FFF3E2'], 18);
           floaties.push({ x: D.x, y: D.y - 20 * s, vy: -140 * s, t: 1.6, text: 'BON VOYAGE!', c: '#FFF3E2' });
@@ -704,7 +732,7 @@ if (typeof module !== 'undefined' && module.exports) {
         if (carried === L) carried = null;
         luggage.splice(i, 1);
         const r = core.rescueTyped(L.type, wasNear);
-        SFX.rescue();
+        SFX.rescue(); buzz(30);
         if (wasNear) SFX.bonus();
         pop(L.x, L.y, ['#3FA96B', '#FFD447', '#FF6E6C', '#FFF3E2'], 16);
         floaties.push({ x: L.x, y: L.y, vy: -90 * s, t: 1.2, text: '+' + r.pts + (wasNear ? ' CLOSE CALL!' : ''), c: '#FFD447' });
@@ -732,7 +760,7 @@ if (typeof module !== 'undefined' && module.exports) {
           gull.x += dx / d * 72 * s * dt; gull.y += dy / d * 72 * s * dt;
           T.x = gull.x; T.y = gull.y + 12 * s; T.vx = 0; T.vy = 0;
           if (Math.hypot(player.x - gull.x, player.y - gull.y) < 56 * s) {
-            gull.state = 'flee'; SFX.squawk(); shakeIt(3);
+            gull.state = 'flee'; SFX.squawk(); buzz(40); shakeIt(3);
             pop(gull.x, gull.y, ['#FFF3E2', '#D8D8D8', '#FF6E6C'], 14);
             floaties.push({ x: gull.x, y: gull.y - 20 * s, vy: -120 * s, t: 1.4, text: 'BONK!', c: '#FFD447' });
           }
@@ -777,19 +805,20 @@ if (typeof module !== 'undefined' && module.exports) {
 
     // full-bleed sky
     const sky = ctx.createLinearGradient(0, 0, 0, DECK.y + 40);
-    sky.addColorStop(0, '#FFC078'); sky.addColorStop(0.45, '#FF8A70'); sky.addColorStop(0.8, '#C75B82'); sky.addColorStop(1, '#8C4A78');
+    for (let i = 0; i < 4; i++) sky.addColorStop([0, 0.45, 0.8, 1][i], theme.sky[i]);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, DECK.y + 40);
 
-    // sun + glow
+    // sun or moon + glow
     const sunX = W * 0.74, sunY = HORIZON * 0.55;
-    const glowR = (S.reducedMotion ? 74 : 74 + Math.sin(t * 1.2) * 6) * s;
+    const glowR = (S.reducedMotion || theme.moon ? 74 : 74 + Math.sin(t * 1.2) * 6) * s;
     const gl = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, glowR * 1.8);
-    gl.addColorStop(0, 'rgba(255,228,158,0.85)'); gl.addColorStop(1, 'rgba(255,228,158,0)');
+    gl.addColorStop(0, 'rgba(' + theme.glow + ',0.7)'); gl.addColorStop(1, 'rgba(' + theme.glow + ',0)');
     ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sunX, sunY, glowR * 1.8, 0, 6.29); ctx.fill();
-    ctx.fillStyle = '#FFE49E'; ctx.beginPath(); ctx.arc(sunX, sunY, 40 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = theme.cel; ctx.beginPath(); ctx.arc(sunX, sunY, 40 * s, 0, 6.29); ctx.fill();
+    if (theme.moon) { ctx.fillStyle = 'rgba(120,130,170,0.5)'; ctx.beginPath(); ctx.arc(sunX - 12 * s, sunY - 6 * s, 7 * s, 0, 6.29); ctx.arc(sunX + 9 * s, sunY + 10 * s, 5 * s, 0, 6.29); ctx.arc(sunX + 14 * s, sunY - 12 * s, 3.5 * s, 0, 6.29); ctx.fill(); }
 
     // clouds
-    ctx.fillStyle = 'rgba(255,243,226,0.8)';
+    ctx.fillStyle = theme.cloud;
     for (const c of clouds) {
       if (!S.reducedMotion) { c.x += c.sp * 0.016; if (c.x > W + 80) c.x = -80; }
       const cs = c.sc * s;
@@ -802,15 +831,15 @@ if (typeof module !== 'undefined' && module.exports) {
 
     // ocean band
     const sea = ctx.createLinearGradient(0, HORIZON, 0, DECK.y + 30);
-    sea.addColorStop(0, '#C25E77'); sea.addColorStop(0.5, '#3A6E82'); sea.addColorStop(1, '#1F4E5F');
+    for (let i = 0; i < 3; i++) sea.addColorStop([0, 0.5, 1][i], theme.sea[i]);
     ctx.fillStyle = sea; ctx.fillRect(0, HORIZON, W, DECK.y + 30 - HORIZON);
     // island silhouette
-    ctx.fillStyle = 'rgba(60,32,64,0.55)';
+    ctx.fillStyle = theme.island;
     ctx.beginPath(); ctx.ellipse(W * 0.16, HORIZON + 6, 70 * s, 14 * s, 0, Math.PI, 0); ctx.fill();
     ctx.beginPath(); ctx.moveTo(W * 0.16 - 8 * s, HORIZON - 6);
     ctx.quadraticCurveTo(W * 0.16, HORIZON - 26 * s, W * 0.16 + 10 * s, HORIZON - 4); ctx.fill();
     // sparkles
-    ctx.fillStyle = 'rgba(255,210,140,0.55)';
+    ctx.fillStyle = theme.spark;
     for (const sp of sparkles) {
       const a = S.reducedMotion ? 0.5 : (0.3 + 0.7 * Math.abs(Math.sin(t * 1.4 + sp.ph)));
       ctx.globalAlpha = a * 0.6;
@@ -839,14 +868,14 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.fillStyle = '#2A1B3D'; ctx.fillRect(fx - 4 * s, DECK.y - 94 * s, 68 * s, 9 * s);
 
     // hull
-    ctx.fillStyle = '#FFF3E2';
+    ctx.fillStyle = theme.hull;
     rr(DECK.x - 10 * s, DECK.y - 22 * s, DECK.w + 20 * s, DECK.h + 44 * s, 18 * s); ctx.fill();
-    ctx.fillStyle = '#E8D9BE';
+    ctx.fillStyle = theme.hull2;
     rr(DECK.x - 10 * s, DECK.y + DECK.h + 6 * s, DECK.w + 20 * s, 18 * s, 9 * s); ctx.fill();
     // planks
     const rows = Math.max(8, Math.round(DECK.h / (52 * s)));
     for (let i = 0; i < rows; i++) {
-      ctx.fillStyle = i % 2 ? '#C9834E' : '#B06E3C';
+      ctx.fillStyle = i % 2 ? theme.plankA : theme.plankB;
       ctx.fillRect(DECK.x, DECK.y + (DECK.h / rows) * i, DECK.w, DECK.h / rows + 1);
     }
     ctx.strokeStyle = 'rgba(60,30,10,0.22)'; ctx.lineWidth = 2;
@@ -946,6 +975,13 @@ if (typeof module !== 'undefined' && module.exports) {
       ctx.beginPath(); ctx.arc(joy.ox + dx / d * cl, joy.oy + dy / d * cl, 20 * s, 0, 6.29); ctx.fill();
     }
 
+    // rain + lightning (storm ship)
+    if (theme.moon && (S.scene === 'play' || S.scene === 'paused')) {
+      ctx.strokeStyle = 'rgba(180,200,255,0.45)'; ctx.lineWidth = 2;
+      for (const r of rain) { ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x - r.l * 0.25, r.y + r.l); ctx.stroke(); }
+      if (bolt.flash > 0.01) { ctx.fillStyle = 'rgba(240,245,255,' + (bolt.flash * 0.4).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
+    }
+
     // finale + certificate fireworks (screen space, above everything but vignette)
     const fwOn = !S.reducedMotion && ((S.scene === 'play' && core && core.timeLeft <= 10) || S.scene === 'summary');
     const fdt = Math.min(0.05, (now - lastFw) / 1000) || 0.016; lastFw = now;
@@ -974,7 +1010,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
     // golden hour tint in the final seconds
     if (!S.reducedMotion && S.scene === 'play' && core && core.timeLeft <= 10) {
-      ctx.fillStyle = 'rgba(255,190,80,0.10)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = theme.tint; ctx.fillRect(0, 0, W, H);
     }
 
     // vignette
@@ -1150,6 +1186,14 @@ if (typeof module !== 'undefined' && module.exports) {
   $('btn-seed').addEventListener('click', () => { S.fixedSeed = !S.fixedSeed; $('btn-seed').textContent = S.fixedSeed ? 'Seed: fixed (12345)' : 'Seed: random'; SFX.click(); });
   $('btn-dev').addEventListener('click', () => { S.devPanel = !S.devPanel; $('dev').classList.toggle('open', S.devPanel); $('btn-dev').textContent = S.devPanel ? 'Test panel: on' : 'Test panel: off'; SFX.click(); });
   $('btn-how').addEventListener('click', () => { $('how').classList.toggle('open'); SFX.click(); });
+  function pickShip(sh) {
+    S.ship = sh; theme = THEMES[sh];
+    $('btn-ship-sunset').classList.toggle('sel', sh === 'sunset');
+    $('btn-ship-storm').classList.toggle('sel', sh === 'storm');
+    SFX.click();
+  }
+  $('btn-ship-sunset').addEventListener('click', () => pickShip('sunset'));
+  $('btn-ship-storm').addEventListener('click', () => pickShip('storm'));
 
   layout();
   setMuted(false); setRM(S.reducedMotion);
