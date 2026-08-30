@@ -346,7 +346,64 @@ function buildHash(enc, t, b, chain) {
   if (c.length) s += '&c=' + c.map(encodeURIComponent).join(',');
   return s;
 }
-function questTable() {
+/* CAPTAIN PROFILE: who the game is for, carried in ?p= so no build is ever needed per child.
+   Nickname plus tap choices only. Nothing else is ever asked. */
+const PROFILE = {
+  VER: 1,
+  TITLES: ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT'],
+  COLOURS: [
+    { name: 'CORAL', hex: '#FF6E6C' }, { name: 'SUNSET', hex: '#FFB067' }, { name: 'SUNSHINE', hex: '#FFD447' },
+    { name: 'PALM', hex: '#3FA96B' }, { name: 'SKY', hex: '#8FD8E8' }, { name: 'OCEAN', hex: '#2F7F9A' },
+    { name: 'PURPLE', hex: '#8C5BC9' }, { name: 'PINK', hex: '#FF7EB6' },
+  ],
+  RIDES: ['RED ROCKET', 'SAND BUGGY', 'SEA CRUISER'],
+  DREAMS: [
+    { name: 'CASTLE', quest: { id: 'dream', need: 'tallest', n: 4, tell: 'build a castle tower four blocks tall', done: 'The castle tower rose four blocks high.' } },
+    { name: 'ZOO', quest: { id: 'dream', need: 'houses', n: 3, tell: 'build three houses so the zoo animals have homes', done: 'Three houses stood ready for the zoo.' } },
+    { name: 'RACETRACK', quest: { id: 'dream', need: 'flags', n: 1, tell: 'plant a racing flag and drive the very first lap of the racetrack', done: 'The racetrack got its flag.' } },
+    { name: 'BAKERY', quest: { id: 'dream', need: 'factories', n: 1, tell: 'open a factory so the bakery has an oven', done: 'The bakery oven was lit.' } },
+    { name: 'ROCKET BASE', quest: { id: 'dream', need: 'tallest', n: 4, tell: 'build a launch tower four blocks tall', done: 'The launch tower stood four blocks tall.' } },
+    { name: 'SECRET HIDEOUT', quest: { id: 'dream', need: 'houses', n: 1, tell: 'build walls with a door so there is somewhere to hide', done: 'The secret hideout got its door.' } },
+    { name: 'FLOWER GARDEN', quest: { id: 'dream', need: 'grass', n: 10, tell: 'lay down ten grass blocks for the garden', done: 'Ten grass blocks made a garden.' } },
+  ],
+  AGES: ['5 TO 6', '7 TO 8', '9 PLUS'],
+};
+function buildProfile(o) {
+  const nm = sanitizeName(o.name);
+  if (!nm) return '';
+  const clamp = (v, n) => Math.max(0, Math.min(n - 1, parseInt(v, 10) || 0));
+  const b = [PROFILE.VER, o.grownup ? 1 : 0, clamp(o.title, PROFILE.TITLES.length), clamp(o.colour, PROFILE.COLOURS.length),
+    clamp(o.ride, PROFILE.RIDES.length), clamp(o.dream, PROFILE.DREAMS.length), clamp(o.age, PROFILE.AGES.length), 0, 0];
+  for (let i = 0; i < nm.length; i++) b.push(nm.charCodeAt(i));
+  let bin = ''; for (let i = 0; i < b.length; i++) bin += String.fromCharCode(b[i]);
+  const b64 = (typeof btoa !== 'undefined' ? btoa(bin) : Buffer.from(bin, 'binary').toString('base64'));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function parseProfile(str) {
+  if (!str || typeof str !== 'string' || str.length > 40) return null;
+  let raw;
+  try {
+    const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    if (typeof atob !== 'undefined') { const t = atob(b64); raw = []; for (let i = 0; i < t.length; i++) raw.push(t.charCodeAt(i)); }
+    else raw = Array.from(Buffer.from(b64, 'base64'));
+  } catch (e) { return null; }
+  if (raw.length < 10 || raw[0] !== PROFILE.VER) return null;
+  const p = { grownup: raw[1] === 1, title: raw[2], colour: raw[3], ride: raw[4], dream: raw[5], age: raw[6], sea: raw[7], treat: raw[8] };
+  if (raw[1] > 1 || p.title >= PROFILE.TITLES.length || p.colour >= PROFILE.COLOURS.length || p.ride >= PROFILE.RIDES.length ||
+      p.dream >= PROFILE.DREAMS.length || p.age >= PROFILE.AGES.length) return null;
+  let nm = ''; for (let i = 9; i < raw.length; i++) nm += String.fromCharCode(raw[i]);
+  p.name = sanitizeName(nm);
+  if (!p.name || p.name !== nm) return null;
+  p.titleWord = PROFILE.TITLES[p.title].charAt(0) + PROFILE.TITLES[p.title].slice(1).toLowerCase();
+  p.hex = PROFILE.COLOURS[p.colour].hex;
+  return p;
+}
+function questTable(dream) {
+  const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
+  const base = questTableBase();
+  return d ? [d].concat(base) : base;
+}
+function questTableBase() {
   return [
     { id: 'houses3', need: 'houses', n: 3, tell: 'build a third house so the island has a proper village',
       done: 'The village grew to three houses.' },
@@ -366,16 +423,16 @@ function questTable() {
 }
 function worldStats(w) {
   const st = { blocks: w.count, houses: houses(w).length, flags: flags(w).length, palms: 0, tallest: 0,
-    arcades: arcades(w).length, factories: factories(w).length };
+    arcades: arcades(w).length, factories: factories(w).length, grass: 0 };
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
     const t = topZ(w, x, y);
     if (t + 1 > st.tallest) st.tallest = t + 1;
-    for (let z = 0; z < ISLE.ZMAX; z++) if (w.cols[idx(x, y, z)] === 8) st.palms++;
+    for (let z = 0; z < ISLE.ZMAX; z++) { const v = w.cols[idx(x, y, z)]; if (v === 8) st.palms++; else if (v === 1) st.grass++; }
   }
   return st;
 }
-function pickQuest(stats, lastId) {
-  const t = questTable();
+function pickQuest(stats, lastId, dream) {
+  const t = questTable(dream);
   for (let i = 0; i < t.length; i++) {
     const q = t[i];
     if (q.id === lastId) continue;
@@ -387,11 +444,12 @@ function questMet(q, stats) { return q ? (stats[q.need] || 0) >= q.n : false; }
 function chapter(o) {
   const name = sanitizeName(o.name) || 'CAPTAIN';
   const cap = name.charAt(0) + name.slice(1).toLowerCase();
+  const T = (o.title && /^[A-Za-z]{2,12}$/.test(o.title)) ? o.title.charAt(0).toUpperCase() + o.title.slice(1).toLowerCase() : 'Captain';
   const s = o.stats || {}, prev = o.prevStats || {};
   const built = Math.max(0, (s.blocks || 0) - (prev.blocks || 0));
   const newHouses = Math.max(0, (s.houses || 0) - (prev.houses || 0));
   const page1 = [];
-  page1.push('Captain ' + cap + ' woke up on Sunset Island, where the sea is pink at dinner time.');
+  page1.push(T + ' ' + cap + ' woke up on Sunset Island, where the sea is pink at dinner time.');
   if (built > 0) page1.push('Today ' + cap + ' carried ' + built + ' block' + (built === 1 ? '' : 's') + ' up the beach.');
   if (newHouses > 0) page1.push('By the time the sun went orange, ' + newHouses + ' new house' + (newHouses === 1 ? ' stood' : 's stood') + ' where there had been only sand.');
   else if (built > 0) page1.push('The island looked a little more like home than it did yesterday.');
@@ -418,8 +476,8 @@ function chapter(o) {
   if (o.lastQuestDone) page3.push('The thing ' + cap + ' set out to do got done. ' + o.lastQuestDone);
   if (o.quest) {
     page3.push('Tonight the island is quiet.');
-    page3.push('Tomorrow, Captain ' + cap + ' is going to ' + o.quest.tell + '.');
-    page3.push('Sleep well, Captain. The island will wait.');
+    page3.push('Tomorrow, ' + T + ' ' + cap + ' is going to ' + o.quest.tell + '.');
+    page3.push('Sleep well, ' + T + '. The island will wait.');
   }
   return [
     { title: 'WHAT ' + name + ' DID', lines: page1 },
@@ -445,7 +503,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile };
 }
 </script>
 <script>
@@ -458,12 +516,15 @@ if (typeof module !== 'undefined' && module.exports) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   let CREW = 'OLLIE';
   let builder = '', chain = [];
+  let PRO = null, TITLE = 'CAPTAIN', FLAGCOL = '#FFF3E2';
   try { const q = new URLSearchParams(location.search).get('crew');
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); } } catch (e) {}
+  try { PRO = parseProfile(new URLSearchParams(location.search).get('p')); } catch (e) { PRO = null; }
+  if (PRO) { CREW = PRO.name; TITLE = PROFILE.TITLES[PRO.title]; FLAGCOL = PRO.hex; }
   function updateLineage() {
     const own = !builder || builder === CREW;
     document.getElementById('title-badge').textContent =
-      (own ? CREW : builder) + "'S ISLAND \u00B7 GAME 02";
+      (own ? (PRO ? TITLE + ' ' : '') + CREW : builder) + "'S ISLAND \u00B7 GAME 02";
     const el = document.getElementById('lineage');
     if (chain.length) { el.textContent = 'REMIXED FROM ' + chain.join(' \u2190 '); el.classList.add('on'); }
     else el.classList.remove('on');
@@ -479,7 +540,7 @@ if (typeof module !== 'undefined' && module.exports) {
     chain = [builder].concat(chain).slice(0, 3);
     builder = '';
     updateLineage();
-    toast('REMIXED! This island is yours now, Captain ' + CREW + '.');
+    toast('REMIXED! This island is yours now, ' + TITLE + ' ' + CREW + '.');
     saveNow();
     noteLearned('You can start with somebody else\u2019s island and make it your own, and their name stays on it because they built it first.');
     blip(660); setTimeout(function () { blip(880); }, 100); setTimeout(function () { blip(1180); }, 200);
@@ -536,7 +597,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (t.id === 9) { // flag: checkered banner on a pole
       g.fillStyle = '#2A1B3D'; g.fillRect(cx - 1.5, cy - 26, 3, 26);
       for (let r = 0; r < 3; r++) for (let c2 = 0; c2 < 3; c2++) {
-        g.fillStyle = ((r + c2) % 2) ? '#2A1B3D' : '#FFF3E2';
+        g.fillStyle = ((r + c2) % 2) ? '#2A1B3D' : FLAGCOL;
         g.fillRect(cx + 1.5 + c2 * 6, cy - 26 + r * 5, 6, 5);
       }
     }
@@ -755,11 +816,11 @@ if (typeof module !== 'undefined' && module.exports) {
     let restored = false;
     if (!w) {
       const sv = loadSave();
-      if (sv && sv.w.count > 0) { w = sv.w; bestLap = sv.t; chain = sv.c; carIdx = sv.car || 0; restored = true; }
+      if (sv && sv.w.count > 0) { w = sv.w; bestLap = sv.t; chain = sv.c; carIdx = PRO ? PRO.ride : (sv.car || 0); restored = true; }
     }
     world.ref = w || makeWorld();
     updateLineage();
-    if (restored) toast('YOUR ISLAND IS BACK, CAPTAIN ' + CREW + '!');
+    if (restored) toast('YOUR ISLAND IS BACK, ' + TITLE + ' ' + CREW + '!');
     else if (w) toast(builder && builder !== CREW ? 'WELCOME TO ' + builder + "'S ISLAND! Tap REMIX to make it yours."
       : (ghostLap ? 'CHALLENGE! Beat the lap record of ' + fmtLap(ghostLap) : 'WELCOME ABOARD! This island travelled inside the link.'));
     fit();
@@ -788,7 +849,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const I_NAMES = ['COCO', 'BARNACLE BOB', 'PEARL', 'MANGO', 'SALTY SAM', 'CAPTAIN CRUMB', 'SHELLY', 'BISCUIT'];
   const I_COLORS = ['#FF6E6C', '#FFD447', '#8FD8E8', '#3FA96B', '#FFB067', '#C75B82', '#FFF3E2', '#5C3A6E'];
   function phrases() { return [
-    'Ahoy, Captain ' + CREW + '!',
+    'Ahoy, ' + TITLE + ' ' + CREW + '!',
     'I LOVE my new house!',
     'Best island in the whole sea!',
     'Did you build all this? AMAZING!',
@@ -799,7 +860,7 @@ if (typeof module !== 'undefined' && module.exports) {
     'This beats the cruise ship!',
     'Knock knock! It is me, your neighbour!',
     'I am never leaving. Ever.',
-    'Three cheers for Captain ' + CREW + '!',
+    'Three cheers for ' + TITLE + ' ' + CREW + '!',
   ]; }
   let islanders = [];
   function rebuildIslanders() {
@@ -944,9 +1005,10 @@ if (typeof module !== 'undefined' && module.exports) {
     { name: 'SEA CRUISER', body: '#8FD8E8', trim: '#FFF3E2', shape: 'truck' },
   ];
   let carIdx = 0;
+  if (PRO) { carIdx = PRO.ride; CARS.forEach(function (c) { c.body = PRO.hex; }); }
 
   // ===== P4 DRIVING: the buggy, ramps, and lap times that travel in the link =====
-  let driving = false;
+  let driving = false, driveSaid = false;
   const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
   let lapStart = 0, lapNow = 0, lapArmed = false, bestLap = 0, ghostLap = 0;
   let arcadeScore = 0; const dingAt = {};
@@ -1075,6 +1137,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (on) {
       spawnCar();
       toast(flags(world.ref).length ? 'DRIVE THROUGH YOUR FLAG TO START THE LAP!' : 'DRIVE! Build a FLAG to race a lap.');
+    if (PRO && !driveSaid) { driveSaid = true; setTimeout(function () { toast('YOUR ' + CARS[carIdx].name + ', IN ' + PROFILE.COLOURS[PRO.colour].name + '.'); }, 2400); }
     }
   }
   function holdBtn(id, val) {
@@ -1276,9 +1339,9 @@ if (typeof module !== 'undefined' && module.exports) {
   function openStory() {
     const st = worldStats(world.ref);
     const lastId = journal.quest ? journal.quest.id : null;
-    const q = journal.quest || pickQuest(st, lastId);
+    const q = journal.quest || pickQuest(st, lastId, PRO ? PRO.dream : -1);
     storyPages = chapter({
-      name: CREW, stats: st, prevStats: journal.prevStats || {},
+      name: CREW, title: TITLE, stats: st, prevStats: journal.prevStats || {},
       newIslanders: journal.newIslanders, learned: journal.learned,
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
@@ -1323,7 +1386,8 @@ if (typeof module !== 'undefined' && module.exports) {
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
     arcades: () => arcades(world.ref), factories: () => factories(world.ref), arcadeScore: () => arcadeScore,
-    arcadeCheck, setCarAt: (x, y) => { car.x = x; car.y = y; }, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
+    arcadeCheck, setCarAt: (x, y) => { car.x = x; car.y = y; },
+    profile: () => PRO, title: () => TITLE, flagCol: () => FLAGCOL, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
