@@ -117,6 +117,11 @@
     box-shadow: 0 0 0 4px var(--yellow) inset, 0 16px 0 rgba(20,8,30,0.4), 0 24px 60px rgba(20,8,30,0.5); }
   .certline { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dusk);
     font-weight: 800; margin-top: 4px; }
+  .arcade-line { display: inline-block; background: var(--ink); color: var(--yellow);
+    font-size: clamp(10px, 1.7vh, 13px); font-weight: 900; letter-spacing: 2.5px;
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 4px; }
+  .dedication { font-size: clamp(12px, 2vh, 15px); color: var(--dusk); font-weight: 700;
+    margin: 2px 0 8px; font-style: italic; }
   #cert-name { font-size: clamp(24px, 6.5vw, 36px); font-weight: 900; color: var(--ink); line-height: 1.1; }
   #cert-rank { display: inline-block; background: var(--yellow); border: 3px solid var(--ink);
     border-radius: 12px; padding: 5px 16px; font-weight: 900; margin: 8px 0 2px;
@@ -150,9 +155,11 @@
   </div>
 
   <div class="panel open" id="menu"><div class="card">
+    <div class="arcade-line">OLIVER&#39;S ARCADE &middot; GAME 01</div>
     <h1>SUNSET ISLAND</h1>
     <div class="sub">Cruise Crew Chaos</div>
     <div id="crew-line" class="crewline"></div>
+    <div class="dedication">Built for Oliver, first Captain of Sunset Island, by Uncle Fabian</div>
     <div class="btn-row" style="margin-bottom:4px">
       <button id="btn-ship-sunset" class="shipbtn sel">&#127749; Sunset Island</button>
       <button id="btn-ship-storm" class="shipbtn">&#9928;&#65039; Storm Night</button>
@@ -175,7 +182,7 @@
       Pick your ship on the title screen: classic sunset, or spooky Storm Night with rain and lightning!<br><br>
       Quick back-to-back rescues build a <b>combo</b>. Snatching a bag from right beside a drain earns a <b>close call bonus</b>. Every rescue raises the <b>chaos level</b> (the strip along the top): the deck tilts harder, wind gusts arrive, and waves start sweeping across. You cannot lose. You can only get funnier.
     </div>
-    <div class="fine">This prototype does not require an account and does not collect personal information. Nothing is stored or transmitted &mdash; closing the tab erases everything. Internal test build, not a public service.</div>
+    <div class="fine">No account. No ads. Nothing stored or transmitted. Just play.</div>
   </div></div>
 
   <div class="panel" id="paused"><div class="card">
@@ -198,6 +205,7 @@
     <div id="cert-name"></div>
     <div id="cert-rank"></div>
     <div class="certline" style="margin-bottom:6px">for outstanding luggage heroics</div>
+    <div id="cert-owner" class="certline" style="font-style:italic"></div>
     <div class="stats">
       <div class="stat"><div class="lbl">Final score</div><div class="val" id="s-score">0</div></div>
       <div class="stat"><div class="lbl">Luggage rescued</div><div class="val" id="s-rescued">0</div></div>
@@ -393,7 +401,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { GameCore, SeagullDirector, makeRng, CFG, REWARDS, LUGGAGE_TYPES };
 }
 
-/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v6
+/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v7 (Oliver Edition, transcript features)
    Full-viewport responsive canvas. Canvas 2D + procedural Web Audio.
    No network, no storage, no dependencies. */
 'use strict';
@@ -405,7 +413,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
   // crew name from URL only: nothing stored, nothing transmitted
-  let CREW = 'CAPTAIN';
+  let CREW = 'OLIVER';
   try {
     const q = new URLSearchParams(location.search).get('crew');
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); }
@@ -594,7 +602,7 @@ if (typeof module !== 'undefined' && module.exports) {
     last = performance.now();
   }
   function rankFor(sc) {
-    return sc >= 400 ? 'RANK: FLEET ADMIRAL' : sc >= 300 ? 'RANK: SHIP CAPTAIN' : sc >= 200 ? 'RANK: FIRST MATE' : sc >= 100 ? 'RANK: LUGGAGE WRANGLER' : 'RANK: DECK SWAB';
+    return sc >= 1000 ? 'RANK: KNIGHT LEGEND (1000 CLUB)' : sc >= 400 ? 'RANK: FLEET ADMIRAL' : sc >= 300 ? 'RANK: SHIP CAPTAIN' : sc >= 200 ? 'RANK: FIRST MATE' : sc >= 100 ? 'RANK: LUGGAGE WRANGLER' : 'RANK: DECK SWAB';
   }
   function endRound() {
     SFX.end();
@@ -605,6 +613,7 @@ if (typeof module !== 'undefined' && module.exports) {
     $('s-combo').textContent = 'x' + Math.max(1, sum.bestCombo);
     $('s-chaos').textContent = sum.chaos.toFixed(1) + ' / 10';
     $('cert-name').textContent = 'CAPTAIN ' + CREW;
+    $('cert-owner').textContent = (CREW === 'OLIVER') ? 'This island was built for you, Captain.' : '';
     $('cert-rank').textContent = rankFor(sum.score);
     $('s-reward-name').textContent = sum.reward.name;
     $('s-reward-blurb').textContent = sum.reward.blurb;
@@ -617,7 +626,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const LUG_BASE = {
     duffel: { w: 44, h: 26, c1: '#E8543F', c2: '#FFD447', shape: 'duffel' },
     hatbox: { w: 30, h: 30, c1: '#7B4FA0', c2: '#FFF3E2', shape: 'hatbox' },
-    trunk:  { w: 52, h: 34, c1: '#3E6E4F', c2: '#C9834E', shape: 'trunk' },
+    trunk:  { w: 50, h: 26, c1: '#6B4226', c2: '#FFF3E2', shape: 'choc' },
   };
   function spawnLuggage(type, rx, ry, rv) {
     const st = LUG_BASE[type];
@@ -768,6 +777,9 @@ if (typeof module !== 'undefined' && module.exports) {
         SFX.rescue(); buzz(30);
         if (wasNear) SFX.bonus();
         pop(L.x, L.y, ['#3FA96B', '#FFD447', '#FF6E6C', '#FFF3E2'], 16);
+        for (let ci = 0; ci < 7; ci++) { const ca = -Math.PI / 2 + (ci - 3) * 0.34;
+          particles.push({ x: L.x, y: L.y, vx: Math.cos(ca) * (140 + ci * 18) * s, vy: Math.sin(ca) * (200 + ci * 12) * s,
+            rot: 0, vr: 6 + ci, t: 0.9, c: '#FFD447', coin: true }); }
         floaties.push({ x: L.x, y: L.y, vy: -90 * s, t: 1.2, text: '+' + r.pts + (wasNear ? ' CLOSE CALL!' : ''), c: '#FFD447' });
         if (r.combo > 1) floaties.push({ x: L.x, y: L.y + 22 * s, vy: -70 * s, t: 1.2, text: 'COMBO x' + r.combo, c: '#FF9E5E' });
         if (r.tutorialDone) {
@@ -871,6 +883,33 @@ if (typeof module !== 'undefined' && module.exports) {
     const sea = ctx.createLinearGradient(0, HORIZON, 0, DECK.y + 30);
     for (let i = 0; i < 3; i++) sea.addColorStop([0, 0.5, 1][i], theme.sea[i]);
     ctx.fillStyle = sea; ctx.fillRect(0, HORIZON, W, DECK.y + 30 - HORIZON);
+    // Oliver's whale: surfaces on a fixed 18s cycle, first show 6s in
+    { const wt = (performance.now() / 1000) % 18;
+      if (wt > 6 && wt < 10.5) {
+        const ph = (wt - 6) / 4.5;
+        const wx = W * (0.12 + ph * 0.76);
+        const wy = HORIZON + (DECK.y + 30 - HORIZON) * 0.45 - Math.sin(ph * Math.PI) * 16 * s;
+        const wsz = 46 * s;
+        ctx.save(); ctx.translate(wx, wy);
+        ctx.fillStyle = 'rgba(42,27,61,0.85)';
+        ctx.beginPath(); ctx.ellipse(0, 0, wsz, wsz * 0.42, 0, Math.PI, 0); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(wsz * 0.85, -wsz * 0.05);
+        ctx.quadraticCurveTo(wsz * 1.25, -wsz * 0.1, wsz * 1.28, -wsz * 0.5);
+        ctx.quadraticCurveTo(wsz * 1.34, -wsz * 0.16, wsz * 1.52, -wsz * 0.34);
+        ctx.quadraticCurveTo(wsz * 1.42, 0, wsz * 1.1, wsz * 0.06);
+        ctx.closePath(); ctx.fill();
+        if (ph > 0.3 && ph < 0.7) {
+          const sp = (ph - 0.3) / 0.4;
+          ctx.strokeStyle = 'rgba(255,243,226,' + (0.85 * (1 - sp)) + ')';
+          ctx.lineWidth = 3 * s; ctx.beginPath();
+          ctx.moveTo(-wsz * 0.35, -wsz * 0.4);
+          ctx.quadraticCurveTo(-wsz * 0.5, -wsz * (0.7 + sp * 0.5), -wsz * 0.62, -wsz * (0.85 + sp * 0.6));
+          ctx.moveTo(-wsz * 0.35, -wsz * 0.4);
+          ctx.quadraticCurveTo(-wsz * 0.2, -wsz * (0.75 + sp * 0.5), -wsz * 0.12, -wsz * (0.9 + sp * 0.6));
+          ctx.stroke();
+        }
+        ctx.restore();
+      } }
     // island silhouette
     ctx.fillStyle = theme.island;
     ctx.beginPath(); ctx.ellipse(W * 0.16, HORIZON + 6, 70 * s, 14 * s, 0, Math.PI, 0); ctx.fill();
@@ -978,7 +1017,16 @@ if (typeof module !== 'undefined' && module.exports) {
     if (gull) drawGull();
     if (particles) for (const p of particles) {
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-      ctx.fillStyle = p.c; ctx.fillRect(-3.5 * s, -2.5 * s, 7 * s, 5 * s); ctx.restore();
+      if (p.coin) {
+        ctx.fillStyle = '#FFD447'; ctx.beginPath();
+        ctx.ellipse(0, 0, 5 * s, 5 * s * Math.max(0.25, Math.abs(Math.cos(p.rot * 2))), 0, 0, 6.29); ctx.fill();
+        ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 1.6 * s; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath(); ctx.arc(-1.5 * s, -1.5 * s, 1.3 * s, 0, 6.29); ctx.fill();
+      } else {
+        ctx.fillStyle = p.c; ctx.fillRect(-3.5 * s, -2.5 * s, 7 * s, 5 * s);
+      }
+      ctx.restore();
     }
     ctx.textAlign = 'center';
     if (floaties) for (const f of floaties) {
@@ -1085,6 +1133,14 @@ if (typeof module !== 'undefined' && module.exports) {
       ctx.fillStyle = st.c1; ctx.beginPath(); ctx.arc(0, 0, w / 2, 0, 6.29); ctx.fill(); ctx.stroke();
       ctx.fillStyle = st.c2; ctx.beginPath(); ctx.arc(0, 0, w / 5, 0, 6.29); ctx.fill();
       ctx.strokeStyle = st.c2; ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.arc(0, 0, w / 2 - 4 * s, 0, 6.29); ctx.stroke();
+    } else if (st.shape === 'choc') {
+      ctx.fillStyle = st.c1; rr(-w / 2, -h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(42,27,61,0.5)'; ctx.lineWidth = 2 * s;
+      for (let i = 1; i < 4; i++) { const gx = -w / 2 + (w / 4) * i;
+        ctx.beginPath(); ctx.moveTo(gx, -h / 2 + 3 * s); ctx.lineTo(gx, h / 2 - 3 * s); ctx.stroke(); }
+      ctx.fillStyle = st.c2; rr(w / 2 - 14 * s, -h / 2 - 2 * s, 16 * s, h + 4 * s, 4 * s); ctx.fill();
+      ctx.strokeStyle = 'rgba(42,27,61,0.85)'; ctx.lineWidth = 2.5 * s;
+      rr(w / 2 - 14 * s, -h / 2 - 2 * s, 16 * s, h + 4 * s, 4 * s); ctx.stroke();
     } else {
       ctx.fillStyle = st.c1; rr(-w / 2, -h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();
       ctx.fillStyle = st.c2; ctx.fillRect(-w / 2, -4 * s, w, 8 * s);
