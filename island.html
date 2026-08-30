@@ -14,7 +14,8 @@
     font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
   canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
   #topbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 10px); left:10px; right:10px;
-    display:flex; justify-content:space-between; align-items:center; gap:8px; pointer-events:none; }
+    display:flex; justify-content:space-between; align-items:center; gap:6px; pointer-events:none; }
+  #pop, #cargo { flex:0 0 auto; }
   .badge { background:rgba(42,27,61,0.92); color:var(--cream); border:2px solid rgba(255,243,226,0.55);
     border-radius:12px; padding:6px 12px; font-weight:900; font-size:clamp(10px,2.8vw,12px); letter-spacing:0.06em;
     box-shadow:0 3px 0 rgba(20,8,30,0.45); white-space:nowrap; }
@@ -36,16 +37,25 @@
     padding:9px 16px; border-radius:999px; border:2px solid rgba(255,243,226,0.5); opacity:0;
     transition:opacity 0.25s; pointer-events:none; max-width:86vw; text-align:center; }
   #toast.on { opacity:1; }
+  #bubble { position:fixed; width:160px; background:var(--cream); color:var(--ink); font-weight:800;
+    font-size:12px; padding:10px 12px; border-radius:14px; border:3px solid var(--ink);
+    box-shadow:0 4px 0 rgba(20,8,30,0.4); opacity:0; transform:scale(0.8); transition:all 0.18s;
+    pointer-events:none; z-index:5; line-height:1.35; }
+  #bubble.on { opacity:1; transform:scale(1); }
+  #bubble::after { content:''; position:absolute; left:50%; bottom:-12px; margin-left:-8px;
+    border:8px solid transparent; border-top-color:var(--ink); }
 </style>
 </head>
 <body>
 <canvas id="world"></canvas>
 <div id="topbar">
-  <div class="badge" id="title-badge">OLLIE'S ISLAND &middot; GAME 02</div>
+  <div class="badge" id="title-badge" style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis">OLLIE'S ISLAND &middot; GAME 02</div>
+  <div class="badge" id="pop" style="color:#8FD8E8">ISLANDERS 0</div>
   <div class="badge" id="cargo">CARGO 0 / 400</div>
 </div>
 <div id="bottombar"></div>
 <div id="toast"></div>
+<div id="bubble"></div>
 <script>
 /* CAPTAIN'S ISLAND core: world model + link codec. Pure logic, headless-testable. */
 'use strict';
@@ -136,8 +146,27 @@ function decode(str) {
   }
   return w;
 }
+/* House detection: a DOOR with a real structure around it makes a home.
+   Deterministic from world state, so islanders travel inside the share link for free. */
+function houses(w) {
+  const found = [];
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
+    let hasDoor = false;
+    for (let z = 0; z < ISLE.ZMAX; z++) if (w.cols[idx(x, y, z)] === 6) hasDoor = true;
+    if (!hasDoor) continue;
+    if (found.some(h => Math.max(Math.abs(h.x - x), Math.abs(h.y - y)) <= 3)) continue;
+    let near = 0;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (!inBounds(nx, ny) || (dx === 0 && dy === 0)) continue;
+      for (let z = 0; z < ISLE.ZMAX; z++) if (w.cols[idx(nx, ny, z)]) near++;
+    }
+    if (near >= 10) { found.push({ x, y }); if (found.length >= 8) return found; }
+  }
+  return found;
+}
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses };
 }
 </script>
 <script>
@@ -227,9 +256,10 @@ if (typeof module !== 'undefined' && module.exports) {
       }
     }
   }
-  let t0 = performance.now();
+  let t0 = performance.now(), tPrev = 0;
   function frame(now) {
     const t = (now - t0) / 1000;
+    const dt = Math.min(0.05, t - tPrev); tPrev = t;
     ctx.clearRect(0, 0, W, H);
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     ['#FFC078', '#FF8A70', '#C75B82', '#8C4A78'].forEach((c, i) => sky.addColorStop([0, 0.4, 0.75, 1][i], c));
@@ -247,6 +277,8 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom);
     ctx.drawImage(off, 0, 0);
     ctx.restore();
+    stepIslanders(dt, t);
+    drawIslanders(t);
     requestAnimationFrame(frame);
   }
 
@@ -274,12 +306,14 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   let tool = 3; // wood first: house building starts with walls
   function tapAt(sx, sy) {
+    const hit = islanderAt(sx, sy);
+    if (hit) { chat(hit); return; }
     const c = cellAt(sx, sy);
     if (!c) return;
     let r;
     if (tool === -1) r = erase(world.ref, c.x, c.y);
     else r = place(world.ref, c.x, c.y, tool);
-    if (r.ok) { blip(tool === -1 ? 300 : 520 + r.z * 90); redrawWorld(); syncCargo(); }
+    if (r.ok) { blip(tool === -1 ? 300 : 520 + r.z * 90); redrawWorld(); syncCargo(); popCheck(); }
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
     else if (r.why === 'height') toast('MAX HEIGHT! Four blocks tall is the limit.');
   }
@@ -291,7 +325,7 @@ if (typeof module !== 'undefined' && module.exports) {
     b.className = 'tool'; b.dataset.val = val;
     b.innerHTML = (sw ? '<span class="sw" style="background:' + sw + '"></span>' : '') + label;
     b.addEventListener('click', () => {
-      if (val === 'undo') { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); } return; }
+      if (val === 'undo') { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); popCheck(); } return; }
       if (val === 'share') { share(); return; }
       tool = Number(val);
       document.querySelectorAll('.tool').forEach(t => t.classList.toggle('sel', t.dataset.val === String(val)));
@@ -305,6 +339,14 @@ if (typeof module !== 'undefined' && module.exports) {
   mkTool('SHARE', null, 'share').id = 'btn-share';
   document.querySelector('[data-val="3"]').classList.add('sel');
 
+  function popCheck() {
+    const before = islanders.length, after = rebuildIslanders();
+    if (after > before) {
+      const nw = islanders[after - 1];
+      toast(nw.name + ' MOVED IN! Tap them to say hi.');
+      blip(660); setTimeout(() => blip(880), 110); setTimeout(() => blip(1100), 220);
+    }
+  }
   function syncCargo() {
     const el = document.getElementById('cargo');
     el.textContent = 'CARGO ' + world.ref.count + ' / ' + ISLE.MAX_BLOCKS;
@@ -354,16 +396,102 @@ if (typeof module !== 'undefined' && module.exports) {
     cam.x = (W - off.width * cam.zoom) / 2;
     cam.y = Math.max(40, (H - off.height * cam.zoom) / 2 - 20);
     syncCargo();
+    rebuildIslanders();
     requestAnimationFrame(frame);
   }
   addEventListener('hashchange', () => {
     if (!location.hash.startsWith('#i=')) return;
     const w = decode(location.hash.slice(3));
-    if (w) { world.ref = w; redrawWorld(); syncCargo(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
+    if (w) { world.ref = w; redrawWorld(); syncCargo(); rebuildIslanders(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
   });
-  window.__ISLAND = { world, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); } return r; },
-    erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); } return r; },
-    undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); } return r; },
+  // ISLANDERS: derived from houses, never stored. Curated names and phrases only.
+  const I_NAMES = ['COCO', 'BARNACLE BOB', 'PEARL', 'MANGO', 'SALTY SAM', 'CAPTAIN CRUMB', 'SHELLY', 'BISCUIT'];
+  const I_COLORS = ['#FF6E6C', '#FFD447', '#8FD8E8', '#3FA96B', '#FFB067', '#C75B82', '#FFF3E2', '#5C3A6E'];
+  function phrases() { return [
+    'Ahoy, Captain ' + CREW + '!',
+    'I LOVE my new house!',
+    'Best island in the whole sea!',
+    'Did you build all this? AMAZING!',
+    'I saw a whale this morning!',
+    'Chocolate for dinner again!',
+    'Your roof is my favourite colour!',
+    'Can you build me a palm tree?',
+    'This beats the cruise ship!',
+    'Knock knock! It is me, your neighbour!',
+    'I am never leaving. Ever.',
+    'Three cheers for Captain ' + CREW + '!',
+  ]; }
+  let islanders = [];
+  function rebuildIslanders() {
+    const hs = houses(world.ref);
+    islanders = hs.map((h, i) => {
+      const old = islanders[i];
+      return { home: h, name: I_NAMES[i % I_NAMES.length], col: I_COLORS[i % I_COLORS.length],
+        x: old && old.name === I_NAMES[i % I_NAMES.length] ? old.x : h.x + 1.5,
+        y: old ? old.y : h.y + 1.5,
+        tx: h.x + 1.5, ty: h.y + 1.5, wait: Math.random() * 2, seed: i * 1.7 };
+    });
+    const el = document.getElementById('pop');
+    el.textContent = 'ISLANDERS ' + islanders.length;
+    return islanders.length;
+  }
+  function wanderTarget(p) {
+    for (let tries = 0; tries < 12; tries++) {
+      const nx = p.home.x + 0.5 + (Math.random() * 12 - 6);
+      const ny = p.home.y + 0.5 + (Math.random() * 12 - 6);
+      const cx = Math.floor(nx), cy = Math.floor(ny);
+      if (inBounds(cx, cy) && topZ(world.ref, cx, cy) < 0) { p.tx = nx; p.ty = ny; return; }
+    }
+  }
+  function stepIslanders(dt, t) {
+    for (const p of islanders) {
+      p.wait -= dt;
+      if (p.wait <= 0) { wanderTarget(p); p.wait = 2.5 + Math.random() * 3.5; }
+      const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
+      if (d > 0.05) { const sp = Math.min(d, 1.1 * dt); p.x += dx / d * sp; p.y += dy / d * sp; }
+    }
+  }
+  function drawIslanders(t) {
+    for (const p of islanders) {
+      const wx = isoX(p.x, p.y), wy = isoY(p.x, p.y, 0) + ZH;
+      const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y;
+      const bob = Math.sin(t * 5 + p.seed) * 2.2 * cam.zoom, s = cam.zoom;
+      ctx.fillStyle = 'rgba(42,27,61,0.3)';
+      ctx.beginPath(); ctx.ellipse(sx, sy + 2 * s, 9 * s, 4 * s, 0, 0, 6.29); ctx.fill();
+      ctx.fillStyle = p.col;
+      ctx.beginPath(); ctx.ellipse(sx, sy - 9 * s + bob, 7 * s, 9 * s, 0, 0, 6.29); ctx.fill();
+      ctx.fillStyle = '#FFF3E2';
+      ctx.beginPath(); ctx.arc(sx, sy - 21 * s + bob, 6.5 * s, 0, 6.29); ctx.fill();
+      ctx.fillStyle = '#2A1B3D';
+      ctx.beginPath(); ctx.arc(sx - 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29);
+      ctx.arc(sx + 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29); ctx.fill();
+      ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 1.2 * s;
+      ctx.beginPath(); ctx.arc(sx, sy - 20 * s + bob, 2.6 * s, 0.35, 2.8); ctx.stroke();
+    }
+  }
+  let bubbleT = null;
+  function islanderAt(sx, sy) {
+    for (const p of islanders) {
+      const wx = isoX(p.x, p.y), wy = isoY(p.x, p.y, 0) + ZH;
+      const px = wx * cam.zoom + cam.x, py = wy * cam.zoom + cam.y - 14 * cam.zoom;
+      if (Math.hypot(sx - px, sy - py) < 26 * cam.zoom) return { p, px, py };
+    }
+    return null;
+  }
+  function chat(hit) {
+    const el = document.getElementById('bubble');
+    const ph = phrases();
+    el.innerHTML = '<b>' + hit.p.name + '</b><br>' + ph[Math.floor(Math.random() * ph.length)];
+    el.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px';
+    el.style.top = Math.max(60, hit.py - 92) + 'px';
+    el.classList.add('on');
+    blip(760); setTimeout(() => blip(920), 90);
+    clearTimeout(bubbleT); bubbleT = setTimeout(() => el.classList.remove('on'), 3200);
+  }
+
+  window.__ISLAND = { world, islandersRef: () => islanders, houses: () => houses(world.ref), popCheck, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
+    erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
+    undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
   boot();
 })();
