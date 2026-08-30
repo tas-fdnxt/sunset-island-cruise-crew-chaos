@@ -5,7 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2A1B3D">
 <title>Captain's Island</title>
-<meta name="description" content="Build your own island. Houses, paths, palms. Then share the whole island inside a single link. No account, no ads, nothing stored.">
+<meta name="description" content="Build your own island. Houses with people in them, cars and ramps, an arcade machine, a chocolate factory. Then send the whole island inside one link. No app, no account, no ads.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ollie's Arcade">
+<meta property="og:title" content="Captain's Island">
+<meta property="og:description" content="Build an island. Houses with people in them, cars and ramps, an arcade machine, a chocolate factory. Then send the whole island inside one link. No app, no account, no ads.">
+<meta property="og:url" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/island.html">
+<meta property="og:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-island.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="An isometric sunset island with little houses, a palm tree, a racing flag and a red car flying off a ramp.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Captain's Island">
+<meta name="twitter:description" content="Build an island, then send the whole thing inside one link. No app, no account, no ads.">
+<meta name="twitter:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-island.png">
 <style>
   :root { --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067;
     --yellow:#FFD447; --green:#3FA96B; --dusk:#5C3A6E; }
@@ -187,6 +200,8 @@ const ISLE = {
     { id:7, name:'ROOF',   top:'#C75B82', side:'#94405E', side2:'#A84568' },
     { id:8, name:'PALM',   top:'#3FA96B', side:'#96602F', side2:'#B06E3C' },
     { id:9, name:'FLAG',   top:'#FFF3E2', side:'#2A1B3D', side2:'#3E2650' },
+    { id:10, name:'ARCADE',  top:'#FFD447', side:'#2A1B3D', side2:'#3E2650' },
+    { id:11, name:'FACTORY', top:'#8A5A3C', side:'#5A3320', side2:'#6E4028' },
   ],
 };
 function makeWorld() {
@@ -269,6 +284,37 @@ function flags(w) {
     for (let z = 0; z < ISLE.ZMAX; z++) if (w.cols[idx(x, y, z)] === 9) { out.push({ x, y }); break; }
   return out;
 }
+function cellsOf(w, id) {
+  const out = [];
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++)
+    for (let z = 0; z < ISLE.ZMAX; z++) if (w.cols[idx(x, y, z)] === id) { out.push({ x, y }); break; }
+  return out;
+}
+function arcades(w) { return cellsOf(w, 10); }
+function factories(w) { return cellsOf(w, 11); }
+/* The chocolate factory arrives by itself when the village reaches three houses.
+   It lands on open ground five to twelve cells from a house, never inside one. */
+function factorySpot(w) {
+  const hs = houses(w);
+  if (hs.length < 3) return null;
+  const h = hs[hs.length - 1];
+  const open = (x, y) => inBounds(x, y) && topZ(w, x, y) < 0;
+  for (let r = 5; r <= 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    const x = h.x + dx, y = h.y + dy;
+    if (open(x, y) && open(x + 1, y) && open(x - 1, y) && open(x, y + 1) && open(x, y - 1)) return { x, y };
+  }
+  return null;
+}
+function giftFactory(w) {
+  if (factories(w).length) return null;
+  const sp = factorySpot(w);
+  if (!sp) return null;
+  const r = place(w, sp.x, sp.y, 11);
+  if (!r.ok) return null;
+  w.undo.pop(); // a gift is not undoable, but it can be erased like any block
+  return r;
+}
 function fmtLap(ms) {
   if (!(ms > 0)) return '';
   const s = Math.floor(ms / 1000), t = Math.floor((ms % 1000) / 100);
@@ -308,14 +354,19 @@ function questTable() {
       done: 'Four palms now shade the beach.' },
     { id: 'flag', need: 'flags', n: 1, tell: 'plant a racing flag and drive the very first lap',
       done: 'A racing flag went up.' },
+    { id: 'arcade', need: 'arcades', n: 1, tell: 'build an arcade machine so the islanders have somewhere to play',
+      done: 'An arcade machine lit up on the beach.' },
     { id: 'tall', need: 'tallest', n: 4, tell: 'build a lighthouse four blocks tall, the tallest thing on the island',
       done: 'A tower rose four blocks high.' },
+    { id: 'choco', need: 'factories', n: 1, tell: 'open a chocolate factory so nobody on the island ever runs out',
+      done: 'The chocolate factory opened its doors.' },
     { id: 'houses6', need: 'houses', n: 6, tell: 'grow the village to six houses so everyone has a neighbour',
       done: 'Six houses stood in a row.' },
   ];
 }
 function worldStats(w) {
-  const st = { blocks: w.count, houses: houses(w).length, flags: flags(w).length, palms: 0, tallest: 0 };
+  const st = { blocks: w.count, houses: houses(w).length, flags: flags(w).length, palms: 0, tallest: 0,
+    arcades: arcades(w).length, factories: factories(w).length };
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
     const t = topZ(w, x, y);
     if (t + 1 > st.tallest) st.tallest = t + 1;
@@ -348,6 +399,11 @@ function chapter(o) {
   if (o.newIslanders && o.newIslanders.length) {
     page1.push(o.newIslanders.join(' and ') + ' moved in, and knocked on the door to say hello.');
   }
+  const newArc = Math.max(0, (s.arcades || 0) - (prev.arcades || 0));
+  const newFac = Math.max(0, (s.factories || 0) - (prev.factories || 0));
+  if (newArc > 0) page1.push('An arcade machine lit up on the beach, and the islanders queued up for a go.');
+  if (newFac > 0) page1.push('A chocolate factory opened its doors and puffed its very first puff of smoke.');
+  if (o.arcadePlays > 0) page1.push('The arcade machine went DING ' + o.arcadePlays + ' time' + (o.arcadePlays === 1 ? '' : 's') + ', twenty points a go.');
   if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
   if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
   const page2 = [];
@@ -389,7 +445,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter };
 }
 </script>
 <script>
@@ -433,6 +489,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const TW = 44, TH = 22, ZH = 18;
   let cam = { x: 0, y: 0, zoom: 1 };
   const world = { ref: null };
+  let arcadeCells = [], factoryCells = [];
 
   const off = document.createElement('canvas');
   const octx = off.getContext('2d');
@@ -483,6 +540,24 @@ if (typeof module !== 'undefined' && module.exports) {
         g.fillRect(cx + 1.5 + c2 * 6, cy - 26 + r * 5, 6, 5);
       }
     }
+    if (t.id === 10) { // arcade cabinet: glowing screen on the front, joystick on the side, marquee on top
+      g.fillStyle = '#8FD8E8'; g.fillRect(cx - 17, cy + 6, 13, ZH - 4);
+      g.fillStyle = '#FF6E6C'; g.fillRect(cx - 14, cy + 9, 3, 3);
+      g.fillStyle = '#FFD447'; g.fillRect(cx - 8, cy + 13, 3, 3);
+      g.fillStyle = '#FFD447'; g.beginPath(); g.arc(cx + 10, cy + TH / 2 + 5, 2.4, 0, 6.29); g.fill();
+      g.fillStyle = '#2A1B3D'; g.fillRect(cx + 9, cy + TH / 2 + 5, 2, 6);
+      g.fillStyle = '#FF6E6C'; g.beginPath(); g.arc(cx, cy, 3, 0, 6.29); g.fill();
+    }
+    if (t.id === 11) { // chocolate factory: chimney, smoke, and a chocolate bar on the front
+      g.fillStyle = '#2A1B3D'; g.fillRect(cx + 5, cy - 20, 7, 20);
+      g.fillStyle = '#FF6E6C'; g.fillRect(cx + 4, cy - 22, 9, 3);
+      [[0, -26, 3.2, 0.9], [3, -33, 4, 0.7], [7, -41, 5, 0.45]].forEach(function (p) {
+        g.fillStyle = 'rgba(255,243,226,' + p[3] + ')'; g.beginPath(); g.arc(cx + 8 + p[0], cy + p[1], p[2], 0, 6.29); g.fill();
+      });
+      g.fillStyle = '#4A2A18';
+      for (let r = 0; r < 2; r++) for (let c2 = 0; c2 < 2; c2++) g.fillRect(cx - 16 + c2 * 7, cy + 6 + r * 6, 5, 4);
+      g.fillStyle = '#FFD447'; g.fillRect(cx - 17, cy + 15 + 2, 15, 2);
+    }
     if (t.id === 8) { // palm: fronds above
       const fy = cy - TH / 2 - 6;
       g.fillStyle = '#2F8354';
@@ -509,6 +584,7 @@ if (typeof module !== 'undefined' && module.exports) {
         }
       }
     }
+    arcadeCells = arcades(w); factoryCells = factories(w);
   }
   let t0 = performance.now(), tPrev = 0;
   function frame(now) {
@@ -574,6 +650,8 @@ if (typeof module !== 'undefined' && module.exports) {
       blip(tool === -1 ? 300 : 520 + r.z * 90);
       if (tool === -1 && r.id === 6) toast('THAT WAS A DOOR! Your islander may move out.');
       if (tool === -1 && r.id === 9) toast('THAT WAS YOUR FLAG! The race line is gone.');
+      if (tool === 10 && arcades(world.ref).length === 1) { toast('ARCADE MACHINE! Drive past it for 20 points.'); sayPersonal('arcade'); }
+      if (tool === 11 && factories(world.ref).length === 1) { toast('CHOCOLATE FACTORY OPEN! The islanders are queueing.'); sayPersonal('choco'); }
       redrawWorld(); syncCargo(); popCheck(); saveSoon();
     }
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
@@ -615,6 +693,16 @@ if (typeof module !== 'undefined' && module.exports) {
       sayPersonal('house');
       noteLearned('A house needs walls all the way round and a door to get in, and then somebody comes to live in it.');
       blip(660); setTimeout(() => blip(880), 110); setTimeout(() => blip(1100), 220);
+    }
+    if (before < 3 && after >= 3 && canSave() && !factories(world.ref).length) {
+      const g = giftFactory(world.ref);
+      if (g) {
+        redrawWorld(); syncCargo(); saveSoon();
+        setTimeout(function () { toast('A CHOCOLATE FACTORY OPENED! Three houses make a village.'); blip(520); setTimeout(function () { blip(780); }, 100); setTimeout(function () { blip(1040); }, 200); }, 2400);
+        setTimeout(function () { sayPersonal('choco'); }, 4300);
+        noteLearned('Three houses make a village, and a village is big enough for a chocolate factory.');
+        try { refreshQuest(); } catch (e) {}
+      }
     }
   }
   function syncCargo() {
@@ -728,6 +816,16 @@ if (typeof module !== 'undefined' && module.exports) {
     return islanders.length;
   }
   function wanderTarget(p) {
+    p.play = null;
+    if (arcadeCells.length && Math.random() < 0.45) {
+      let a = arcadeCells[0], best = 1e9;
+      for (const c of arcadeCells) { const d = Math.hypot(c.x - p.home.x, c.y - p.home.y); if (d < best) { best = d; a = c; } }
+      const spots = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+      for (const d of spots) {
+        const cx = a.x + d[0], cy = a.y + d[1];
+        if (inBounds(cx, cy) && topZ(world.ref, cx, cy) < 0) { p.tx = cx + 0.5; p.ty = cy + 0.5; p.play = a; return; }
+      }
+    }
     for (let tries = 0; tries < 12; tries++) {
       const nx = p.home.x + 0.5 + (Math.random() * 12 - 6);
       const ny = p.home.y + 0.5 + (Math.random() * 12 - 6);
@@ -759,6 +857,16 @@ if (typeof module !== 'undefined' && module.exports) {
       ctx.arc(sx + 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29); ctx.fill();
       ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 1.2 * s;
       ctx.beginPath(); ctx.arc(sx, sy - 20 * s + bob, 2.6 * s, 0.35, 2.8); ctx.stroke();
+      if (p.play && Math.hypot(p.tx - p.x, p.ty - p.y) < 0.4) { // at the arcade: arms up, sparkle
+        const w2 = Math.sin(t * 12 + p.seed) * 2.5 * s;
+        ctx.fillStyle = p.col;
+        ctx.beginPath(); ctx.arc(sx - 9 * s, sy - 15 * s + bob - w2, 2.6 * s, 0, 6.29); ctx.arc(sx + 9 * s, sy - 15 * s + bob + w2, 2.6 * s, 0, 6.29); ctx.fill();
+        ctx.fillStyle = '#FFD447';
+        ctx.beginPath(); ctx.arc(sx + 13 * s, sy - 30 * s + Math.sin(t * 7) * 3 * s, 1.8 * s, 0, 6.29); ctx.fill();
+      } else if (factoryCells.length) { // chocolate in hand, straight from the factory
+        ctx.fillStyle = '#6E4028'; ctx.fillRect(sx + 6 * s, sy - 12 * s + bob, 4.5 * s, 8 * s);
+        ctx.fillStyle = '#FFD447'; ctx.fillRect(sx + 6 * s, sy - 9 * s + bob, 4.5 * s, 2 * s);
+      }
     }
   }
   let bubbleT = null;
@@ -772,7 +880,9 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function chat(hit) {
     const el = document.getElementById('bubble');
-    const ph = phrases();
+    let ph = phrases();
+    if (hit.p.play) ph = ['WATCH ME! High score!', 'One more go on the arcade!', 'DING DING! Twenty points!', 'This machine is the BEST.'];
+    else if (factoryCells.length && Math.random() < 0.35) ph = ['The chocolate factory smells AMAZING!', 'Chocolate bars for everybody!', 'I work at the chocolate factory now!'];
     el.innerHTML = '<b>' + hit.p.name + '</b><br>' + ph[Math.floor(Math.random() * ph.length)];
     el.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px';
     el.style.top = Math.max(60, hit.py - 92) + 'px';
@@ -814,6 +924,8 @@ if (typeof module !== 'undefined' && module.exports) {
       house: 'Remember you said you wanted to build houses? This whole street is yours.',
       race: 'You said the fast car should race. Now it does, and only you hold the record.',
       share: 'You said your friends should play it too. Now your island fits inside one link.',
+      arcade: 'Remember you asked for arcade machines, Ollie? Here is your first one. Build as many as you like.',
+      choco: 'Remember the chocolate factory you asked for, Ollie? It is open, and it is yours.',
     },
   };
   let saidAlready = {};
@@ -837,6 +949,19 @@ if (typeof module !== 'undefined' && module.exports) {
   let driving = false;
   const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
   let lapStart = 0, lapNow = 0, lapArmed = false, bestLap = 0, ghostLap = 0;
+  let arcadeScore = 0; const dingAt = {};
+  function arcadeCheck() {
+    for (const a of arcadeCells) {
+      if (Math.hypot(a.x + 0.5 - car.x, a.y + 0.5 - car.y) >= 1.8) continue;
+      const k = a.x + ',' + a.y, now = performance.now();
+      if (dingAt[k] && now - dingAt[k] < 3000) continue;
+      dingAt[k] = now; arcadeScore += 20;
+      journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal);
+      toast('DING! 20 POINTS! ARCADE TOTAL ' + arcadeScore);
+      blip(1040); setTimeout(() => blip(1320), 80); setTimeout(() => blip(1560), 160);
+      noteLearned('Every arcade machine pays 20 points when you drive past it, so two machines pay 40.');
+    }
+  }
   function clearCell(x, y) {
     const cx = Math.floor(x), cy = Math.floor(y);
     if (!inBounds(cx, cy)) return false;
@@ -876,6 +1001,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (car.z > 0.05 || clearCell(car.x, ny)) car.y = ny; else { car.sp *= 0.35; car.h -= 0.5; }
     car.x = Math.max(0.5, Math.min(ISLE.N - 0.5, car.x));
     car.y = Math.max(0.5, Math.min(ISLE.N - 0.5, car.y));
+    arcadeCheck();
     if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) {
       car.vz = 3.6; blip(880); toast('BIG AIR!');
       noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.');
@@ -1040,6 +1166,19 @@ if (typeof module !== 'undefined' && module.exports) {
         g.strokeStyle = 'rgba(42,27,61,0.35)'; g.setLineDash([7, 7]); g.lineWidth = 3;
         g.beginPath(); g.moveTo(200, 175); g.lineTo(520, 145); g.stroke(); g.setLineDash([]);
       } },
+    { title: 'ARCADE AND CHOCOLATE', text: 'Build an ARCADE and drive past it for 20 points. Build THREE houses and a chocolate factory opens all by itself. Or build one with the FACTORY block!',
+      q: 'How many houses make the chocolate factory open?', a: ['Three houses', 'A hundred houses'], right: 0,
+      draw: function (g, t) {
+        for (let i = 0; i < 3; i++) { mPrism(g, 110 + i * 60, 205 + i * 0, ISLE.TYPES[4], 1.5); mPrism(g, 110 + i * 60, 184, ISLE.TYPES[7], 1.5); }
+        mPrism(g, 330, 215, ISLE.TYPES[11], 2.2);
+        g.fillStyle = '#2A1B3D'; g.fillRect(338, 160, 12, 44); g.fillStyle = '#FF6E6C'; g.fillRect(336, 156, 16, 5);
+        for (let i = 0; i < 3; i++) { const k = ((t * 0.6) + i * 0.33) % 1;
+          g.fillStyle = 'rgba(255,243,226,' + (0.9 - k * 0.8) + ')'; g.beginPath(); g.arc(344 + k * 26, 150 - k * 70, 6 + k * 10, 0, 6.29); g.fill(); }
+        mPrism(g, 450, 225, ISLE.TYPES[10], 2.2);
+        g.fillStyle = (Math.floor(t * 4) % 2) ? '#8FD8E8' : '#FFF3E2'; g.fillRect(418, 236, 26, 24);
+        g.fillStyle = '#FF6E6C'; g.fillRect(424, 242, 6, 6); g.fillStyle = '#FFD447'; g.fillRect(434, 250, 6, 6);
+        g.fillStyle = '#FFD447'; g.font = 'bold 22px system-ui'; g.fillText('+20', 470, 190 - (t * 40 % 30));
+      } },
   ];
   let bookIdx = 0, bookRAF = null, bookT0 = 0;
   function drawBook() {
@@ -1142,8 +1281,9 @@ if (typeof module !== 'undefined' && module.exports) {
       name: CREW, stats: st, prevStats: journal.prevStats || {},
       newIslanders: journal.newIslanders, learned: journal.learned,
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
-      quest: q, lastQuestDone: journal.lastQuestDone,
+      quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
     });
+    journal.arcadePlays = 0;
     journal.quest = q;
     journal.prevStats = st;
     journal.newIslanders = [];
@@ -1181,7 +1321,9 @@ if (typeof module !== 'undefined' && module.exports) {
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
-    worldStats: () => worldStats(world.ref), noteLearned, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
+    worldStats: () => worldStats(world.ref), noteLearned,
+    arcades: () => arcades(world.ref), factories: () => factories(world.ref), arcadeScore: () => arcadeScore,
+    arcadeCheck, setCarAt: (x, y) => { car.x = x; car.y = y; }, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
