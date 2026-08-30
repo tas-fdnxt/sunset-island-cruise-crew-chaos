@@ -155,11 +155,11 @@
   </div>
 
   <div class="panel open" id="menu"><div class="card">
-    <div class="arcade-line">OLIVER&#39;S ARCADE &middot; GAME 01</div>
+    <div class="arcade-line">OLLIE&#39;S ARCADE &middot; GAME 01</div>
     <h1>SUNSET ISLAND</h1>
     <div class="sub">Cruise Crew Chaos</div>
     <div id="crew-line" class="crewline"></div>
-    <div class="dedication">Built for Oliver, first Captain of Sunset Island, by Uncle Fabian</div>
+    <div class="dedication">Built for Captain Ollie and First Mate Sibella by Uncle Tabs</div>
     <div class="btn-row" style="margin-bottom:4px">
       <button id="btn-ship-sunset" class="shipbtn sel">&#127749; Sunset Island</button>
       <button id="btn-ship-storm" class="shipbtn">&#9928;&#65039; Storm Night</button>
@@ -401,7 +401,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { GameCore, SeagullDirector, makeRng, CFG, REWARDS, LUGGAGE_TYPES };
 }
 
-/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v7 (Oliver Edition, transcript features)
+/* SUNSET ISLAND: CRUISE CREW CHAOS — presentation layer v8 (Ollie & Sibella Edition)
    Full-viewport responsive canvas. Canvas 2D + procedural Web Audio.
    No network, no storage, no dependencies. */
 'use strict';
@@ -413,7 +413,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
   // crew name from URL only: nothing stored, nothing transmitted
-  let CREW = 'OLIVER';
+  let CREW = 'OLLIE';
   try {
     const q = new URLSearchParams(location.search).get('crew');
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); }
@@ -613,7 +613,9 @@ if (typeof module !== 'undefined' && module.exports) {
     $('s-combo').textContent = 'x' + Math.max(1, sum.bestCombo);
     $('s-chaos').textContent = sum.chaos.toFixed(1) + ' / 10';
     $('cert-name').textContent = 'CAPTAIN ' + CREW;
-    $('cert-owner').textContent = (CREW === 'OLIVER') ? 'This island was built for you, Captain.' : '';
+    $('cert-owner').textContent = (CREW === 'OLLIE') ? 'also known as Sibella\u2019s brother \u2022 also known as nephew of Uncle Tabs \u2022 this island was built for you, Captain'
+      : (CREW === 'SIBELLA') ? 'First Mate of Sunset Island \u2022 also known as Ollie\u2019s sister \u2022 this island sails for you too'
+      : '';
     $('cert-rank').textContent = rankFor(sum.score);
     $('s-reward-name').textContent = sum.reward.name;
     $('s-reward-blurb').textContent = sum.reward.blurb;
