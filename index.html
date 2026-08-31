@@ -419,7 +419,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); }
   } catch (e) {}
   // Captain profile from ?p= (nickname plus tap choices, nothing else). Same codec as island.html.
-  const P_TITLES = ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT'];
+  const P_TITLES = ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT', 'INVENTOR'];
   function parseProfile(str) {
     if (!str || str.length > 40) return null;
     let raw;
