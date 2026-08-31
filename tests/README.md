@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. Four hundred and twenty five checks across fifteen files. The building suites run on a flat test grid with no sea (extract-core.js sets ISLE.ALL_LAND, which the game never does); test-shore.js turns the sea back on.
+The safety net. Run these before every deploy. Four hundred and sixty eight checks across sixteen files. The building suites run on a flat test grid with no sea (extract-core.js sets ISLE.ALL_LAND, which the game never does); test-shore.js turns the sea back on.
 
 ## Running them
 
@@ -22,6 +22,7 @@ From the repo root:
     node tests/test-living.js
     node tests/test-garden.js
     node tests/test-walk.js
+    node tests/test-coins.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -80,3 +81,6 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   wall, a jump is for fun not for climbing, the sea and the grid edge are walls, spawning near home facing the door, and the
   mesh that draws the world: every exposed face and no hidden one, with doors and windows drawn as faces (a frame, a leaf
   or a pane, a handle or mullions, a sill) that sit just outside the wall and never further than 0.04.
+- **test-coins.js** coins, trophies, the chase and the board. Ten points is a coin and nothing else pays, six trophies from
+  facts the engine can detect and a mask that rides in the link, the gull that dips low every five seconds and is caught only
+  low and close and gets away at fifty, the board's sort order, and the chapter lines for a chase, coins and a new trophy.
