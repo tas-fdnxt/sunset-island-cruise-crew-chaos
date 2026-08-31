@@ -34,16 +34,36 @@
     box-shadow:0 3px 0 rgba(20,8,30,0.45); white-space:nowrap; }
   #cargo { color:var(--yellow); font-variant-numeric:tabular-nums; }
   #cargo.full { color:var(--coral); }
-  #bottombar { position:fixed; left:0; right:0; bottom:0; padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 8px);
-    display:flex; gap:6px; overflow-x:auto; background:linear-gradient(180deg, rgba(42,27,61,0) , rgba(42,27,61,0.85) 30%); }
-  .tool { flex:0 0 auto; width:58px; height:64px; border-radius:14px; border:3px solid rgba(255,243,226,0.5);
-    background:rgba(42,27,61,0.92); color:var(--cream); font-weight:900; font-size:10px; cursor:pointer;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
-    box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.04em; }
-  .tool:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
-  .tool.sel { border-color:var(--yellow); background:var(--dusk); }
-  .tool .sw { width:26px; height:26px; border-radius:6px; border:2px solid var(--ink); }
+  /* THE DOCK. Fixed places, thumb sized, never scrolls. Undo, two pinned blocks, the current block, erase, drive, share. */
+  #bottombar { position:fixed; left:0; right:0; bottom:0; padding:8px 6px calc(env(safe-area-inset-bottom,0px) + 8px);
+    display:flex; gap:6px; align-items:flex-end; justify-content:center; background:linear-gradient(180deg, rgba(42,27,61,0) , rgba(42,27,61,0.88) 30%); z-index:5; }
+  .dock { flex:0 0 auto; width:46px; height:58px; border-radius:14px; border:3px solid rgba(255,243,226,0.5); background:rgba(42,27,61,0.92);
+    color:var(--cream); font-weight:900; font-size:9px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.04em; padding:0; touch-action:manipulation; }
+  .dock .ic { font-size:20px; line-height:1; }
+  .dock:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  .dock.sel { border-color:var(--yellow); background:var(--dusk); }
+  #cur { width:70px; height:70px; border-color:var(--yellow); background:var(--dusk); font-size:10px; }
+  #cur canvas, .tool canvas, .pin canvas { width:34px; height:36px; image-rendering:auto; }
+  #cur canvas { width:40px; height:42px; }
+  .pin { width:40px; height:50px; font-size:8px; }
   #btn-share { background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); }
+  #btn-drive { background:linear-gradient(180deg,var(--coral),#C74744); }
+  /* THE DRAWER. Every block, in three groups, drawn by the engine. One tap picks and it drops away. */
+  #drawer { position:fixed; left:8px; right:8px; bottom:calc(env(safe-area-inset-bottom,0px) + 84px); z-index:7; display:none;
+    background:rgba(255,243,226,0.97); border:4px solid var(--ink); border-radius:22px; padding:12px 12px 8px; box-shadow:0 8px 0 rgba(20,8,30,0.5);
+    max-height:60dvh; overflow-y:auto; }
+  #drawer.on { display:block; }
+  #drawer .grp { font-size:10px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:6px 4px 4px; }
+  #drawer .tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px; margin-bottom:6px; }
+  .tool { height:70px; border-radius:14px; border:3px solid var(--ink); background:#fff; color:var(--ink); font-weight:900; font-size:9px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; box-shadow:0 3px 0 rgba(20,8,30,0.35); letter-spacing:0.04em; padding:0; }
+  .tool:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.35); }
+  .tool.sel { background:var(--yellow); }
+  #tip { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 88px); z-index:6; display:none;
+    background:var(--ink); color:var(--cream); border:3px solid var(--cream); border-radius:16px; padding:8px 14px; font-weight:800; font-size:13px; max-width:86vw; text-align:center; }
+  #tip.on { display:block; }
+  #tip b { color:var(--yellow); }
   #btn-drive { background:linear-gradient(180deg,#FF8A70,var(--coral)); color:var(--cream); }
   #btn-undo  { background:linear-gradient(180deg,var(--peach),var(--coral)); color:var(--ink); }
   #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 92px);
@@ -78,6 +98,8 @@
     text-overflow:ellipsis; }
   #lineage.on { display:block; }
   #btn-remix { background:linear-gradient(180deg,#8FD8E8,#4E92B0); color:var(--ink); display:none; }
+  #keeper { position:fixed; right:10px; top:calc(env(safe-area-inset-top,0px) + 414px); z-index:6; width:44px; height:44px; border-radius:50%; border:3px solid var(--ink);
+    background:var(--cream); font-size:9px; font-weight:900; color:var(--ink); box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; padding:0; line-height:1.1; }
   #btn-remix.on { display:flex; }
   #btn-book { position:fixed; right:10px; top:calc(env(safe-area-inset-top,0px) + 54px); z-index:6;
     width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--yellow);
@@ -205,6 +227,9 @@
   </div>
 </div>
 <div id="bottombar"></div>
+<div id="drawer"></div>
+<div id="tip"></div>
+<button id="keeper" aria-label="Ask the keeper"></button>
 <div id="toast"></div>
 <div id="bubble"></div>
 <div id="drivebar">
@@ -924,7 +949,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const el = document.getElementById('lineage');
     if (chain.length) { el.textContent = 'REMIXED FROM ' + chain.join(' \u2190 '); el.classList.add('on'); }
     else el.classList.remove('on');
-    const rb = document.getElementById('btn-remix');
+    const rb = document.getElementById('btn-remix'); if (!rb) return;
     if (rb) {
       rb.classList.toggle('on', !own);
       const bar2 = document.getElementById('bottombar');
@@ -1154,6 +1179,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (WX.kind === 'rain') drawRain(t);
     drawGulls(t, hour);
     drawGhost();
+    drawPreview();
     stepIslanders(dt, t);
     drawIslanders(t);
     stepCar(dt);
@@ -1341,6 +1367,8 @@ if (typeof module !== 'undefined' && module.exports) {
     else r = place(world.ref, c.x, c.y, tool);
     if (r.ok) {
       blip(tool === -1 ? 300 : 520 + r.z * 90);
+      try { if (navigator.vibrate) navigator.vibrate(tool === -1 ? 8 : 12); } catch (e) {}
+      heightPop = { x: c.x, y: c.y, z: tool === -1 ? Math.max(0, r.z) : r.z, n: tool === -1 ? topZ(world.ref, c.x, c.y) + 1 : r.z + 1, until: performance.now() + 1100 };
       if (tool === -1 && r.id === 6) toast('THAT WAS A DOOR! Your islander may move out.');
       if (tool === -1 && r.id === 9) toast('THAT WAS YOUR FLAG! The race line is gone.');
       if (tool === 10 && arcades(world.ref).length === 1) { toast('ARCADE MACHINE! Drive past it for 20 points.'); sayPersonal('arcade'); }
@@ -1352,33 +1380,114 @@ if (typeof module !== 'undefined' && module.exports) {
     else if (r.why === 'water') toast('That is the sea! Build on the sand.');
     else if (r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.');
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
-    else if (r.why === 'height') toast('MAX HEIGHT! Four blocks tall is the limit.');
+    else if (r.why === 'height') toast('MAX HEIGHT! Eight blocks tall is the limit.');
   }
 
-  // UI
-  const bar = document.getElementById('bottombar');
-  function mkTool(label, sw, val) {
-    const b = document.createElement('button');
-    b.className = 'tool'; b.dataset.val = val;
-    b.innerHTML = (sw ? '<span class="sw" style="background:' + sw + '"></span>' : '') + label;
-    b.addEventListener('click', () => {
-      if (val === 'undo') { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return; }
-      if (val === 'share') { share(); return; }
-      if (val === 'drive') { setDrive(true); blip(520); setTimeout(() => blip(700), 90); return; }
-      if (val === 'remix') { remix(); return; }
-      tool = Number(val);
-      document.querySelectorAll('.tool').forEach(t => t.classList.toggle('sel', t.dataset.val === String(val)));
-      blip(600);
-    });
-    bar.appendChild(b); return b;
+  // UI: the dock and the drawer
+  const bar = document.getElementById('bottombar'), drawer = document.getElementById('drawer'), tipEl = document.getElementById('tip');
+  const GROUPS = [['GROUND', [1, 2]], ['WALLS', [3, 4, 5, 6, 7]], ['THINGS', [8, 9, 10, 11]]];
+  const TIPS = { 1: 'Soft ground. Ten of them make a garden.', 2: 'One block high in a line makes a ramp.', 3: 'Walls. Four in a ring and a door, and somebody moves in.',
+    4: 'Strong walls, same as wood but red.', 5: 'Put it in a wall.', 6: 'Put it in a wall and somebody moves in.', 7: 'Goes on top.', 8: 'Shade for the islanders. They love it.',
+    9: 'Drive through it to time a lap.', 10: 'Drive past it for 20 points.', 11: 'Three houses make one appear, or build it yourself.', '-1': 'Tap a block to take it away.' };
+  const iconCache = {};
+  function iconFor(id) { // a real prism, drawn by the engine, on a tiny canvas
+    if (iconCache[id]) return icon2(id);
+    const c = document.createElement('canvas'); c.width = 68; c.height = 76; const g = c.getContext('2d');
+    if (id === -1) { g.strokeStyle = '#2A1B3D'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(18, 20); g.lineTo(50, 56); g.moveTo(50, 20); g.lineTo(18, 56); g.stroke(); }
+    else { g.save(); g.translate(34 - isoX(0, 0), 44 - isoY(0, 0, 0)); g.scale(1, 1); prism(g, 0, 0, 0, ISLE.TYPES[id]); g.restore(); }
+    iconCache[id] = c; return icon2(id);
   }
-  mkTool('UNDO', null, 'undo').id = 'btn-undo';
-  for (const t of ISLE.TYPES) if (t) mkTool(t.name, t.top, t.id);
-  mkTool('ERASE', '#2A1B3D', -1);
-  mkTool('REMIX', '#8FD8E8', 'remix').id = 'btn-remix';
-  mkTool('DRIVE', '#FF6E6C', 'drive').id = 'btn-drive';
-  mkTool('SHARE', null, 'share').id = 'btn-share';
-  document.querySelector('[data-val="3"]').classList.add('sel');
+  function icon2(id) { const c = document.createElement('canvas'); c.width = 68; c.height = 76; c.getContext('2d').drawImage(iconCache[id], 0, 0); return c; }
+  let recent = [];
+  function nameOf(id) { return id === -1 ? 'ERASE' : ISLE.TYPES[id].name; }
+  function showTip(html) { tipEl.innerHTML = html; tipEl.classList.add('on'); clearTimeout(showTip.t); showTip.t = setTimeout(function () { tipEl.classList.remove('on'); }, 3200); }
+  function setTool(id, quiet) {
+    tool = id;
+    if (id !== -1) { recent = [id].concat(recent.filter(function (r) { return r !== id; })).slice(0, 3); }
+    renderDock(); renderDrawer();
+    drawer.classList.remove('on');
+    if (!quiet) { blip(600); showTip('<b>' + nameOf(id) + ':</b> ' + TIPS[String(id)]); }
+    try { localStorage.setItem('captains-island-recent-v1', JSON.stringify(recent)); } catch (e) {}
+  }
+  function dockBtn(id, label, icon, onClick) {
+    const b = document.createElement('button'); b.className = 'dock'; b.id = id;
+    b.innerHTML = '<span class="ic">' + icon + '</span>' + label;
+    b.addEventListener('click', onClick); return b;
+  }
+  function renderDock() {
+    bar.innerHTML = '';
+    bar.appendChild(dockBtn('btn-undo', 'UNDO', '\u21B6', function () { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); popCheck(); saveSoon(); heightPop = null; } }));
+    recent.filter(function (r) { return r !== tool; }).slice(0, 2).forEach(function (id) {
+      const b = document.createElement('button'); b.className = 'dock pin'; b.dataset.val = id; b.appendChild(iconFor(id)); b.appendChild(document.createTextNode(nameOf(id)));
+      b.addEventListener('click', function () { setTool(id); }); bar.appendChild(b);
+    });
+    const cur = document.createElement('button'); cur.className = 'dock'; cur.id = 'cur'; cur.dataset.val = tool;
+    cur.appendChild(iconFor(tool)); cur.appendChild(document.createTextNode(nameOf(tool)));
+    cur.addEventListener('click', function () { drawer.classList.toggle('on'); blip(drawer.classList.contains('on') ? 700 : 500); if (drawer.classList.contains('on')) showTip('Pick a block. <b>' + nameOf(tool) + '</b> is in your hand.'); });
+    bar.appendChild(cur);
+    const er = dockBtn('btn-erase', 'ERASE', '\u2716', function () { setTool(-1); }); if (tool === -1) er.classList.add('sel'); bar.appendChild(er);
+    const rm = dockBtn('btn-remix', 'REMIX', '\u2728', function () { remix(); }); if (builder && builder !== CREW) rm.classList.add('on'); bar.appendChild(rm);
+    bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
+    bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
+  }
+  function renderDrawer() {
+    drawer.innerHTML = '';
+    GROUPS.forEach(function (grp) {
+      const h = document.createElement('div'); h.className = 'grp'; h.textContent = grp[0]; drawer.appendChild(h);
+      const tiles = document.createElement('div'); tiles.className = 'tiles';
+      grp[1].forEach(function (id) {
+        const b = document.createElement('button'); b.className = 'tool' + (id === tool ? ' sel' : ''); b.dataset.val = id;
+        b.appendChild(iconFor(id)); b.appendChild(document.createTextNode(ISLE.TYPES[id].name));
+        b.addEventListener('click', function () { setTool(id); }); tiles.appendChild(b);
+      });
+      drawer.appendChild(tiles);
+    });
+  }
+  try { recent = (JSON.parse(localStorage.getItem('captains-island-recent-v1') || '[]') || []).filter(function (r) { return ISLE.TYPES[r]; }).slice(0, 3); } catch (e) { recent = []; }
+  if (!recent.length) recent = [3, 6, 2];
+  setTool(3, true);
+  document.getElementById('keeper').textContent = OWNER ? 'LOG' : 'CLEO';
+  document.getElementById('keeper').addEventListener('click', function () {
+    if (!OWNER) { centreOn(cleo.x, cleo.y); const px = W / 2, py = H / 2; setTimeout(function () { talkToKeeper({ px: px, py: py }); }, 350); }
+    else { const k = islanders[0]; if (k) { centreOn(k.x, k.y); setTimeout(function () { talkToKeeper({ px: W / 2, py: H / 2 }); }, 350); } else talkToKeeper({ px: W / 2, py: H * 0.4 }); }
+  });
+  addEventListener('keydown', function (e) {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (driving) return;
+    const k = e.key.toLowerCase();
+    if (k >= '1' && k <= '9') { setTool(Number(k)); }
+    else if (k === '0') setTool(10); else if (k === 'f') setTool(11);
+    else if (k === 'e') setTool(-1); else if (k === 'u') document.getElementById('btn-undo').click();
+    else if (k === 'd') document.getElementById('btn-drive').click(); else if (k === 's') share();
+    else if (k === 'escape') drawer.classList.remove('on');
+    else return;
+    e.preventDefault();
+  });
+  // preview before commit: a ghost of the block where it will land, under a held finger or a hovering mouse
+  let hoverCell = null, heightPop = null;
+  cv.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse' && !pts.size && !driving) hoverCell = cellAt(e.clientX, e.clientY); });
+  cv.addEventListener('pointerleave', function () { hoverCell = null; });
+  function drawPreview() {
+    let c = null;
+    if (gesture && gesture.kind === 'maybe-tap' && pts.size === 1) { const p = [...pts.values()][0]; c = cellAt(p.x, p.y); }
+    else if (hoverCell) c = hoverCell;
+    if (c && !driving && isLand(c.x, c.y)) {
+      const tz = topZ(world.ref, c.x, c.y), z = tool === -1 ? Math.max(0, tz) : tz + 1;
+      if (tool !== -1 && z >= ISLE.ZMAX) return;
+      const cx = isoX(c.x, c.y), cy = isoY(c.x, c.y, tool === -1 ? z : z);
+      ctx.save(); ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom); ctx.globalAlpha = 0.55;
+      if (tool === -1) { if (tz >= 0) { ctx.strokeStyle = '#FF6E6C'; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(cx, cy - TH / 2); ctx.lineTo(cx + TW / 2, cy); ctx.lineTo(cx, cy + TH / 2); ctx.lineTo(cx - TW / 2, cy); ctx.closePath(); ctx.stroke(); } }
+      else { prism(ctx, c.x, c.y, z, ISLE.TYPES[tool]); ctx.globalAlpha = 1; ctx.strokeStyle = '#FFD447'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(cx, cy - TH / 2); ctx.lineTo(cx + TW / 2, cy); ctx.lineTo(cx, cy + TH / 2); ctx.lineTo(cx - TW / 2, cy); ctx.closePath(); ctx.stroke(); }
+      ctx.restore();
+    }
+    if (heightPop) {
+      if (performance.now() > heightPop.until) { heightPop = null; return; }
+      const k = 1 - (heightPop.until - performance.now()) / 1100;
+      const sx = isoX(heightPop.x, heightPop.y) * cam.zoom + cam.x, sy = (isoY(heightPop.x, heightPop.y, heightPop.z) - 14 - k * 18) * cam.zoom + cam.y;
+      ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = '#FFD447'; ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 3; ctx.font = 'bold ' + Math.round(16 * Math.max(0.8, cam.zoom)) + 'px system-ui'; ctx.textAlign = 'center';
+      ctx.strokeText(String(heightPop.n), sx, sy); ctx.fillText(String(heightPop.n), sx, sy); ctx.restore();
+    }
+  }
 
   function popCheck() {
     try { refreshQuest(); } catch (e) {}
@@ -2035,6 +2144,7 @@ if (typeof module !== 'undefined' && module.exports) {
     driving = on;
     document.getElementById('drivebar').classList.toggle('on', on);
     document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
+    drawer.classList.remove('on'); tipEl.classList.remove('on');
     document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
     if (!on) {
       const hs1 = houses(world.ref), st1 = hs1.length ? { x: hs1[0].x, y: hs1[0].y } : { x: ISLE.N / 2, y: ISLE.N / 2 };
@@ -2450,7 +2560,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
-    owner: OWNER, cleo, questStats, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
+    owner: OWNER, cleo, questStats, setTool, tool: () => tool, recent: () => recent.slice(), heightPop: () => heightPop, hover: (c) => { hoverCell = c; }, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
