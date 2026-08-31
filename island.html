@@ -669,6 +669,7 @@ function chapter(o) {
   }
   const page3 = [];
   if (o.lastQuestDone) page3.push('The thing ' + cap + ' set out to do got done. ' + o.lastQuestDone);
+  if (o.weather && o.weather.rainDay) page1.push('It rained on the island in the afternoon, and when it stopped a rainbow stood over the sea.');
   if (o.fact) { const kn = o.keeper ? (o.keeper.charAt(0) + o.keeper.slice(1).toLowerCase()) : 'Cleo'; page3.push(kn + '\u2019s fact for tonight: ' + o.fact); }
   if (o.quest && o.questDays >= 2 && o.keeper) page3.push(o.keeper + ' has been waiting ' + o.questDays + ' days for that one, and is still smiling about it.');
   if (o.quest) {
@@ -778,9 +779,11 @@ function nextThing(st) {
   }
   if (st.quest && !st.questMet && st.quest.job) return { key: 'delivery', line: st.crates > 0 ? 'Drive the crates to ' + st.quest.job.filter(function (j) { return j.left > 0; }).map(function (j) { return j.name; }).join(' and ') + '.' : 'Press DRIVE and go to the DOCK to load crates. Then ' + st.quest.tell.replace('deliver', 'take') + '.' };
   if (st.quest && !st.questMet) return { key: 'quest', line: 'The book says: today you ' + st.quest.tell + '.' };
+  if (st.rain) return { key: 'rain', line: 'It is raining! The islanders are indoors. A rainbow comes when it stops.' };
+  if (h >= 18 || h < 5) return { key: 'moon', line: 'It is nearly bedtime. Tap the moon and I will read tonight\u2019s chapter.' };
   if (!st.flags) return { key: 'flag', line: 'Plant a FLAG, then press DRIVE. Zoom!' };
   if (!st.ramp) return { key: 'ramp', line: 'Line up SAND one block high and drive at it. You will fly.', ghost: 'ramp' };
-  if (h >= 18 || h < 5) return { key: 'moon', line: 'It is nearly bedtime. Tap the moon and I will read tonight\u2019s chapter.' };
+
   const spare = [
     { key: 'tall', line: 'Build something tall. Eight blocks is the very top!' },
     { key: 'share', line: 'Send your island to someone. Tap SHARE and it all fits in one link.' },
@@ -816,6 +819,53 @@ function cleoFact(n, dog) {
   return pool[((n || 1) - 1) % pool.length];
 }
 function coatLevel(chapters) { return Math.min(3, Math.floor((chapters || 0) / 10)); }
+/* THE LIVING ISLAND. The sky follows the real clock. The weather is decided by the date, so it is the same for everyone
+   who opens that day and it needs no server. Nothing here is stored. */
+function mixHex(a, b, t) {
+  const p = function (h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; };
+  const x = p(a), y = p(b);
+  return 'rgb(' + Math.round(x[0] + (y[0] - x[0]) * t) + ',' + Math.round(x[1] + (y[1] - x[1]) * t) + ',' + Math.round(x[2] + (y[2] - x[2]) * t) + ')';
+}
+const SKIES = [ // hour, top, middle, low, sea top, night amount
+  [0, '#141A3C', '#22214F', '#3A2A5C', '#1B3C52', 1],
+  [5, '#141A3C', '#22214F', '#3A2A5C', '#1B3C52', 1],
+  [6.5, '#FFB8A0', '#FF9C8C', '#C77CA0', '#7E6E9A', 0.35],
+  [8, '#9EDCF0', '#BDE6F5', '#EAF6FA', '#3F8AA3', 0],
+  [15, '#8FD4F0', '#B6E2F5', '#E8F4F8', '#3F8AA3', 0],
+  [18, '#FFC078', '#FF8A70', '#C75B82', '#C25E77', 0],
+  [19.5, '#E0704F', '#B24C6A', '#5C3A6E', '#5A3F6C', 0.4],
+  [21, '#1A2048', '#2A2758', '#3A2A5C', '#1B3C52', 1],
+  [24, '#141A3C', '#22214F', '#3A2A5C', '#1B3C52', 1],
+];
+function skyAt(hour) {
+  const h = ((hour % 24) + 24) % 24;
+  let i = 0; while (i < SKIES.length - 2 && SKIES[i + 1][0] <= h) i++;
+  const a = SKIES[i], b = SKIES[i + 1], t = Math.max(0, Math.min(1, (h - a[0]) / (b[0] - a[0])));
+  const sunT = (h - 6) / 13; // 6 to 19: across the sky
+  return { top: mixHex(a[1], b[1], t), mid: mixHex(a[2], b[2], t), low: mixHex(a[3], b[3], t), sea: mixHex(a[4], b[4], t),
+    night: a[5] + (b[5] - a[5]) * t, sun: (sunT >= 0 && sunT <= 1) ? { x: 0.12 + 0.76 * sunT, y: 0.32 - 0.26 * Math.sin(sunT * Math.PI) } : null,
+    moon: (h >= 19 || h < 6) ? { x: 0.2 + 0.6 * (((h + 5) % 24) / 11), y: 0.14 } : null };
+}
+function dayHash(day) { let h = 2166136261; const str = String(day); for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; }
+/* Weather: about one day in four has a shower, two hours long, somewhere between ten and seven. A rainbow follows for an hour. */
+function weatherAt(day, hour) {
+  const h = dayHash(day);
+  const rainy = (h % 4) === 1;
+  if (!rainy) return { kind: 'clear', rainDay: false, start: 0 };
+  const start = 10 + (Math.floor(h / 7) % 9);
+  if (hour >= start && hour < start + 2) return { kind: 'rain', rainDay: true, start: start };
+  if (hour >= start + 2 && hour < start + 3) return { kind: 'rainbow', rainDay: true, start: start };
+  return { kind: 'clear', rainDay: true, start: start };
+}
+/* Tide: the sea creeps up the beach and back twice a day. Returns how many cells of beach are wet, 0 to 3. */
+function tideAt(hour) { return 1.5 + 1.5 * Math.sin((hour / 12) * Math.PI * 2); }
+/* Islander routines: asleep at home at night, keen on the arcade after school, wandering the rest of the time. */
+function routineAt(hour) {
+  const h = ((hour % 24) + 24) % 24;
+  if (h >= 21 || h < 6.5) return 'sleep';
+  if (h >= 15 && h < 18) return 'arcade';
+  return 'wander';
+}
 function houses(w) {
   const found = [];
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
@@ -834,7 +884,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion };
 }
 </script>
 <script>
@@ -1003,6 +1053,44 @@ if (typeof module !== 'undefined' && module.exports) {
     else chunks.forEach(function (c, i) { drawChunk(i); });
     arcadeCells = arcades(world.ref); factoryCells = factories(world.ref);
   }
+  let beachCells = null;
+  function drawTide(hour) {
+    if (!beachCells) { beachCells = []; for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) { const r = shoreR(x, y); if (r > 0 && r <= 4) beachCells.push({ x: x, y: y, r: r }); } }
+    const wet = tideAt(hour);
+    ctx.save(); ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom); ctx.fillStyle = 'rgba(63,138,163,0.32)';
+    for (let i = 0; i < beachCells.length; i++) {
+      const c = beachCells[i]; if (c.r > wet) continue;
+      const cx = isoX(c.x, c.y), cy = isoY(c.x, c.y, -1) + ZH;
+      const sx = cx * cam.zoom + cam.x, sy = cy * cam.zoom + cam.y; if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
+      ctx.beginPath(); ctx.moveTo(cx, cy - TH / 2); ctx.lineTo(cx + TW / 2, cy); ctx.lineTo(cx, cy + TH / 2); ctx.lineTo(cx - TW / 2, cy); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawLamps(night) { // every door glows at night, so the village looks lived in
+    const hs = houses(world.ref); ctx.fillStyle = 'rgba(255,212,71,' + (0.55 * night) + ')';
+    hs.forEach(function (h) { const sx = isoX(h.x, h.y) * cam.zoom + cam.x, sy = (isoY(h.x, h.y, 0) + ZH / 2) * cam.zoom + cam.y; if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) return; ctx.beginPath(); ctx.arc(sx, sy, 11 * cam.zoom, 0, 6.29); ctx.fill(); });
+  }
+  function drawRain(t) {
+    ctx.strokeStyle = 'rgba(200,220,255,0.45)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 90; i++) { const x = ((i * 137) % W) + ((t * 60) % 20), y = ((i * 71 + t * 520) % (H + 40)) - 20; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 14); ctx.stroke(); }
+  }
+  function drawSeaLife(t, hour) { // the whale surfaces on an eighteen second cycle; dolphins jump now and then; a turtle comes ashore at night
+    const ph = (t % 18) / 18;
+    if (ph > 0.55 && ph < 0.85) {
+      const k = (ph - 0.55) / 0.3, x = W * (0.1 + 0.8 * ((Math.floor(t / 18) % 3) / 3)) + 30, y = H * 0.34 + 10 - Math.sin(k * Math.PI) * 14;
+      ctx.fillStyle = '#2F4F6A'; ctx.beginPath(); ctx.ellipse(x, y, 46, 12, 0, 0, 6.29); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x + 40, y); ctx.lineTo(x + 58, y - 12); ctx.lineTo(x + 56, y + 2); ctx.fill();
+      if (k > 0.3 && k < 0.7) { ctx.fillStyle = 'rgba(255,243,226,0.7)'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(x - 20 + (i - 1.5) * 5, y - 14 - i * 9 - (k - 0.3) * 30, 4 + i, 0, 6.29); ctx.fill(); } }
+    }
+    const dp = (t % 7) / 7;
+    if (dp < 0.45) { const x = W * 0.75 - dp * 120, y = H * 0.36 - Math.sin(dp / 0.45 * Math.PI) * 36; ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6 + dp / 0.45 * 1.2); ctx.fillStyle = '#7FB3C8'; ctx.beginPath(); ctx.ellipse(0, 0, 18, 6, 0, 0, 6.29); ctx.fill(); ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-24, -8); ctx.lineTo(-22, 4); ctx.fill(); ctx.beginPath(); ctx.moveTo(2, -5); ctx.lineTo(6, -12); ctx.lineTo(9, -4); ctx.fill(); ctx.restore(); }
+    if (hour >= 21 || hour < 5) { const tx = W * 0.2 + ((t * 6) % (W * 0.3)), ty = H * 0.34 + 4 + Math.sin(t * 3) * 1.5; ctx.fillStyle = '#3FA96B'; ctx.beginPath(); ctx.ellipse(tx, ty, 11, 7, 0, 0, 6.29); ctx.fill(); ctx.fillStyle = '#2F8354'; ctx.beginPath(); ctx.arc(tx + 12, ty + 1, 4, 0, 6.29); ctx.fill(); }
+  }
+  function drawGulls(t, hour) {
+    if (hour >= 20 || hour < 6) return;
+    for (let i = 0; i < 2; i++) { const x = ((t * (28 + i * 9) + i * 400) % (W + 120)) - 60, y = H * (0.08 + i * 0.05) + Math.sin(t * 2 + i) * 6, f = Math.sin(t * 9 + i) * 5;
+      ctx.strokeStyle = '#FFF3E2'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x - 10, y + f); ctx.quadraticCurveTo(x - 4, y - 4, x, y); ctx.quadraticCurveTo(x + 4, y - 4, x + 10, y + f); ctx.stroke(); }
+  }
   function drawCompass() {
     ctx.save(); ctx.font = 'bold ' + Math.round(26 * Math.max(0.6, cam.zoom)) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     [['N', 0, 0, 0, -30], ['E', ISLE.N - 1, 0, 34, 0], ['S', ISLE.N - 1, ISLE.N - 1, 0, 34], ['W', 0, ISLE.N - 1, -34, 0]].forEach(function (c) {
@@ -1018,13 +1106,22 @@ if (typeof module !== 'undefined' && module.exports) {
     const t = (now - t0) / 1000;
     const dt = Math.min(0.05, t - tPrev); tPrev = t;
     ctx.clearRect(0, 0, W, H);
+    const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
     const sky = ctx.createLinearGradient(0, 0, 0, H);
-    ['#FFC078', '#FF8A70', '#C75B82', '#8C4A78'].forEach((c, i) => sky.addColorStop([0, 0.4, 0.75, 1][i], c));
+    sky.addColorStop(0, SKY.top); sky.addColorStop(0.4, SKY.mid); sky.addColorStop(0.75, SKY.low); sky.addColorStop(1, SKY.low);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#FFE49E'; ctx.beginPath(); ctx.arc(W * 0.78, H * 0.16, 42, 0, 6.29); ctx.fill();
+    if (SKY.night > 0.05) { // stars
+      ctx.fillStyle = 'rgba(255,243,226,' + (0.85 * SKY.night) + ')';
+      for (let i = 0; i < 40; i++) { const sx = ((i * 97) % 101) / 101 * W, sy = ((i * 53) % 89) / 89 * H * 0.3, tw = 0.6 + 0.4 * Math.sin(t * 2 + i); ctx.beginPath(); ctx.arc(sx, sy, tw * (i % 3 ? 1 : 1.6), 0, 6.29); ctx.fill(); }
+    }
+    if (SKY.sun) { ctx.fillStyle = WX.kind === 'rain' ? 'rgba(255,228,158,0.35)' : '#FFE49E'; ctx.beginPath(); ctx.arc(W * SKY.sun.x, H * SKY.sun.y, 42, 0, 6.29); ctx.fill(); }
+    if (SKY.moon) { ctx.fillStyle = '#FFF3E2'; ctx.beginPath(); ctx.arc(W * SKY.moon.x, H * SKY.moon.y, 26, 0, 6.29); ctx.fill(); ctx.fillStyle = SKY.top; ctx.beginPath(); ctx.arc(W * SKY.moon.x + 10, H * SKY.moon.y - 6, 22, 0, 6.29); ctx.fill(); }
+    if (WX.kind === 'rain') { ctx.fillStyle = 'rgba(60,70,110,0.35)'; ctx.fillRect(0, 0, W, H); }
+    if (WX.kind === 'rainbow') { ctx.save(); ctx.lineWidth = 6; ['#FF6E6C', '#FFB067', '#FFD447', '#3FA96B', '#8FD8E8', '#8C5BC9'].forEach(function (c, i) { ctx.strokeStyle = c; ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.arc(W * 0.5, H * 0.62, W * 0.62 - i * 7, Math.PI, 0); ctx.stroke(); }); ctx.restore(); }
     const sea = ctx.createLinearGradient(0, H * 0.3, 0, H);
-    ['#C25E77', '#3A6E82', '#1F4E5F'].forEach((c, i) => sea.addColorStop([0, 0.5, 1][i], c));
+    sea.addColorStop(0, SKY.sea); sea.addColorStop(0.5, mixHex('#3A6E82', '#1B3C52', SKY.night)); sea.addColorStop(1, mixHex('#1F4E5F', '#0E2634', SKY.night));
     ctx.fillStyle = sea; ctx.fillRect(0, H * 0.3, W, H * 0.7);
+    drawSeaLife(t, hour);
     ctx.strokeStyle = 'rgba(255,243,226,0.35)'; ctx.lineWidth = 2;
     for (let i = 0; i < 6; i++) {
       const wy = H * 0.36 + i * H * 0.1 + Math.sin(t * 1.3 + i) * 4;
@@ -1039,6 +1136,10 @@ if (typeof module !== 'undefined' && module.exports) {
     }
     ctx.restore();
     drawCompass();
+    drawTide(hour);
+    if (SKY.night > 0.05) { ctx.fillStyle = 'rgba(20,26,60,' + (0.45 * SKY.night) + ')'; ctx.fillRect(0, 0, W, H); drawLamps(SKY.night); }
+    if (WX.kind === 'rain') drawRain(t);
+    drawGulls(t, hour);
     drawGhost();
     stepIslanders(dt, t);
     drawIslanders(t);
@@ -1268,8 +1369,10 @@ if (typeof module !== 'undefined' && module.exports) {
     return islanders.length;
   }
   function wanderTarget(p) {
-    p.play = null;
-    if (arcadeCells.length && Math.random() < 0.45) {
+    p.play = null; p.asleep = false;
+    const routine = routineAt(hourNow());
+    if (routine === 'sleep') { p.tx = p.home.x + 0.5; p.ty = p.home.y + 1.5; p.asleep = true; return; }
+    if (arcadeCells.length && Math.random() < (routine === 'arcade' ? 0.85 : 0.45)) {
       let a = arcadeCells[0], best = 1e9;
       for (const c of arcadeCells) { const d = Math.hypot(c.x - p.home.x, c.y - p.home.y); if (d < best) { best = d; a = c; } }
       const spots = [[1, 0], [0, 1], [-1, 0], [0, -1]];
@@ -1390,7 +1493,7 @@ if (typeof module !== 'undefined' && module.exports) {
     return { blocks: st.blocks, houses: st.houses, flags: st.flags, walls: walls, doors: doors,
       quest: journal.job && journal.quest ? Object.assign({}, journal.quest, { job: journal.job.to }) : journal.quest, questMet: journal.quest ? questMet(journal.quest, questStats()) : false, crates: car.crates || 0,
       ramp: (journal.ledger || []).some(function (e) { return e.line.indexOf('ramp') !== -1; }),
-      hour: new Date().getHours(), tick: tick || 0 };
+      hour: hourNow(), rain: weatherAt(today(), hourNow()).kind === 'rain', tick: tick || 0 };
   }
   let adviceTick = 0;
   function refreshNext() {
@@ -1466,8 +1569,13 @@ if (typeof module !== 'undefined' && module.exports) {
       ctx.fillStyle = '#FFF3E2';
       ctx.beginPath(); ctx.arc(sx, sy - 21 * s + bob, 6.5 * s, 0, 6.29); ctx.fill();
       ctx.fillStyle = '#2A1B3D';
-      ctx.beginPath(); ctx.arc(sx - 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29);
-      ctx.arc(sx + 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29); ctx.fill();
+      if (p.asleep && Math.hypot(p.tx - p.x, p.ty - p.y) < 0.3) { // eyes shut, a little z
+        ctx.fillRect(sx - 3.2 * s, sy - 22 * s + bob, 2.2 * s, 1 * s); ctx.fillRect(sx + 1 * s, sy - 22 * s + bob, 2.2 * s, 1 * s);
+        ctx.fillStyle = '#FFF3E2'; ctx.font = 'bold ' + Math.round(8 * s) + 'px system-ui'; ctx.fillText('z', sx + 8 * s, sy - 30 * s - ((t * 1.2 + p.seed) % 2) * 5 * s);
+      } else {
+        ctx.beginPath(); ctx.arc(sx - 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29);
+        ctx.arc(sx + 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29); ctx.fill();
+      }
       ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 1.2 * s;
       ctx.beginPath(); ctx.arc(sx, sy - 20 * s + bob, 2.6 * s, 0.35, 2.8); ctx.stroke();
       const tj = jobTargets().find(function (j) { return j.name === p.name && j.left > 0; });
@@ -1981,8 +2089,9 @@ if (typeof module !== 'undefined' && module.exports) {
     } catch (e) {}
     return { v: 1, prevStats: {}, newIslanders: [], learned: [], quest: null, lastQuestDone: '', chapters: 0 };
   }
-  let DAY_OVERRIDE = null;
+  let DAY_OVERRIDE = null, HOUR_OVERRIDE = null;
   function today() { return DAY_OVERRIDE || dayKey(); }
+  function hourNow() { if (HOUR_OVERRIDE != null) return HOUR_OVERRIDE; const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
   function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); } catch (e) {} }
   let journal = loadJournal();
   function noteIslander(nm) {
@@ -2055,7 +2164,7 @@ if (typeof module !== 'undefined' && module.exports) {
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
       bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
-      word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard,
+      word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard, weather: weatherAt(today(), 12),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
@@ -2187,7 +2296,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
-    owner: OWNER, cleo, questStats, isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
+    owner: OWNER, cleo, questStats, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
