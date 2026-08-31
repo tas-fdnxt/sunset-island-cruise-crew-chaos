@@ -102,6 +102,29 @@ ok('the banner is in the child\u2019s colour', bannerHit);
 ok('no NaN anywhere in the mesh', !Array.from(m4.pos).some(isNaN) && !Array.from(m4.col).some(isNaN));
 ok('hexRGB', JSON.stringify(hexRGB('#FF8000').map(v => Math.round(v * 255))) === '[255,128,0]');
 
+// doors and windows are drawn as faces: a frame, a leaf or a pane, a handle or mullions, a sill
+// faces are shaded by direction, so a colour matches when it is the same hue at any brightness between 0.6 and 1.1
+function hasCol(m, hx) { const c = hexRGB(hx); for (let i = 0; i < m.count; i++) { const k = m.col[i * 3] / c[0]; if (k < 0.6 || k > 1.1) continue; if (Math.abs(m.col[i * 3 + 1] - c[1] * k) < 0.02 && Math.abs(m.col[i * 3 + 2] - c[2] * k) < 0.02) return true; } return false; }
+const w7 = makeWorld(); const e0 = buildWalkMesh(w7, '#FFF3E2').count;
+place(w7, 64, 64, 6);
+const md = buildWalkMesh(w7, '#FFF3E2');
+ok('a lone door is a top and four faces of four quads each', md.count - e0 === 6 + 4 * 24, md.count - e0);
+ok('the door has a yellow handle', hasCol(md, '#FFD447'));
+ok('the door has a wooden leaf', hasCol(md, '#96602F'));
+let outside = 0; for (let i = 0; i < md.count; i++) { const x = md.pos[i * 3], y = md.pos[i * 3 + 1], z = md.pos[i * 3 + 2]; if (z > 0 && z <= 1 && (x < 63.96 || x > 65.04 || y < 63.96 || y > 65.04)) outside++; }
+ok('door panels sit just outside the wall, never further than 0.04', outside === 0, outside);
+let pushed = false; for (let i = 0; i < md.count; i++) { const y = md.pos[i * 3 + 1]; if (y < 64 && y > 63.9) pushed = true; }
+ok('door panels are pushed off the face so they never fight it for depth', pushed);
+const w8 = makeWorld(); place(w8, 64, 64, 5);
+const mw = buildWalkMesh(w8, '#FFF3E2');
+ok('a lone window is a top and four faces of four quads each', mw.count - e0 === 6 + 4 * 24, mw.count - e0);
+ok('the window has cream mullions and a sky-blue pane', hasCol(mw, '#FFF3E2') && hasCol(mw, '#8FD8E8'));
+place(w8, 65, 64, 4);
+const mwb = buildWalkMesh(w8, '#FFF3E2');
+ok('a brick beside the window hides the shared face on both: one window face and one brick face gone', mwb.count - mw.count === 30 - 6 - 24, mwb.count - mw.count);
+const w9 = makeWorld(); place(w9, 64, 64, 4);
+ok('a plain block is still five plain faces', buildWalkMesh(w9, '#FFF3E2').count - e0 === 30);
+
 // the book and the advisor
 const pages = chapter({ name: 'OLLIE', stats: {}, prevStats: {}, walked: 120, jumped: 3 });
 ok('chapter: walked the island, steps and jumps', /walked the island on foot, 120 steps/.test(pages[0].lines.join(' ')) && /jumped 3 times/.test(pages[0].lines.join(' ')));
