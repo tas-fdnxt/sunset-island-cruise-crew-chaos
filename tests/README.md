@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. One hundred and sixty three checks across seven files.
+The safety net. Run these before every deploy. One hundred and ninety four checks across eight files.
 
 ## Running them
 
@@ -14,6 +14,7 @@ From the repo root:
     node tests/test-story.js
     node tests/test-shop.js
     node tests/test-profile.js
+    node tests/test-book.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -40,6 +41,10 @@ so the suites always test the real shipped code rather than a copy that can drif
 - **test-profile.js** the captain profile carried in ?p= (nickname plus tap choices, nothing else). Roundtrip,
   name sanitising, ten character cap, hostile and out of range bytes rejected, every dream quest maps to a real stat,
   the dream quest comes first, grass is counted for the garden, and Story Time speaks in the chosen title.
+- **test-book.js** the Book. Day keys, one chapter per calendar day (a second tap re-reads, never rewrites),
+  400 chapter cap, symmetry detection (mirrored house yes, lopsided house no, lone door no), bedtime questions
+  built from what actually happened today with the answers flipping on odd chapters, chapters that remember last
+  night's answer and the waiting Storykeeper, and the grown-ups summary counting only the last seven days.
 
 ## The rule
 
