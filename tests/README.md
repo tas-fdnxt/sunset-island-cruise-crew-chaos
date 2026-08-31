@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. Two hundred and twenty one checks across nine files.
+The safety net. Run these before every deploy. Two hundred and sixty checks across ten files.
 
 ## Running them
 
@@ -16,6 +16,7 @@ From the repo root:
     node tests/test-profile.js
     node tests/test-book.js
     node tests/test-cleo.js
+    node tests/test-ladders.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -49,6 +50,10 @@ so the suites always test the real shipped code rather than a copy that can drif
 - **test-cleo.js** the advisor and the keeper. nextThing priorities (tap, house, door, quest, flag, ramp, moon, then
   rotating ideas), one sentence every time, ghost shapes offered, seventeen facts all short and unique with the
   dog lines skipped on Ollie's edition, coat growth every ten chapters, and the keeper's fact on page three.
+- **test-ladders.js** the skill ladders. Three ladders with a job on every rung, stepping (three days fluent moves
+  up, two misses drops back, never below zero), ladder quests with islander names, one rung above with rungs the
+  child already proved skipped, rotation by day, dream quest first, deliveries told as sums in the chapter and asked
+  at bedtime, and the mastery lines on the grown-ups page.
 
 ## The rule
 
