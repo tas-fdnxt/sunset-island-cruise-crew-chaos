@@ -450,14 +450,81 @@ function worldStats(w) {
   }
   return st;
 }
-function pickQuest(stats, lastId, dream) {
+/* THE LADDERS. Kumon's method without the worksheets: one rung above yesterday, fluent after three days, drop back quietly after two misses.
+   Every rung is a job on the island that the engine can detect. Nothing is ever labelled as maths. */
+const LADDERS = {
+  counting: [
+    { need: 'delivered', n: 3, job: [3], tell: 'deliver 3 crates to {A}', done: 'Three crates were delivered.', skill: 'count to 3' },
+    { need: 'delivered', n: 5, job: [5], tell: 'deliver 5 crates to {A}', done: 'Five crates were delivered, counted one by one.', skill: 'count to 5' },
+    { need: 'delivered', n: 7, job: [4, 3], tell: 'deliver 4 crates to {A} and 3 to {B}', done: 'Four and three crates went out, seven altogether.', skill: 'add two small numbers' },
+    { need: 'delivered', n: 10, job: [6, 4], tell: 'deliver 6 crates to {A} and 4 to {B}', done: 'Six and four crates went out, ten altogether.', skill: 'add to ten' },
+    { need: 'delivered', n: 9, job: [2, 3, 4], tell: 'deliver 2 crates to {A}, 3 to {B} and 4 to {C}', done: 'Three deliveries in one day, nine crates.', skill: 'add three numbers' },
+  ],
+  geometry: [
+    { need: 'houses', n: 1, tell: 'build walls in a ring with a door so somebody moves in', done: 'A house with a door, and somebody in it.', skill: 'a closed shape with a door' },
+    { need: 'ramps', n: 1, tell: 'build a ramp one block high and fly off it', done: 'The ramp worked, one block high.', skill: 'one block high is a ramp' },
+    { need: 'tallest', n: 4, tell: 'build a tower four blocks tall', done: 'A tower reached the top.', skill: 'four blocks is the limit' },
+    { need: 'symmetry', n: 1, tell: 'build a house that is the same on both sides', done: 'Both sides matched. Symmetry.', skill: 'symmetry' },
+  ],
+  number: [
+    { need: 'laps', n: 1, tell: 'plant a flag and drive one whole lap', done: 'The first lap was timed.', skill: 'a lap has a time' },
+    { need: 'beaten', n: 1, tell: 'beat your own lap record', done: 'The record fell. Smaller number, faster lap.', skill: 'smaller is faster' },
+    { need: 'gain', n: 2000, tell: 'beat your lap record by two whole seconds', done: 'Two seconds faster than ever.', skill: 'how much faster' },
+  ],
+};
+const LADDER_NAMES = { counting: 'Counting', geometry: 'Shapes and building', number: 'Number sense' };
+function newMastery() { const m = {}; Object.keys(LADDERS).forEach(function (k) { m[k] = { rung: 0, streak: 0, miss: 0 }; }); return m; }
+function ladderStep(m, done) {
+  m = m || { rung: 0, streak: 0, miss: 0 };
+  if (done) { m.streak++; m.miss = 0; if (m.streak >= 3) { m.rung++; m.streak = 0; } }
+  else { m.miss++; m.streak = 0; if (m.miss >= 2) { m.rung = Math.max(0, m.rung - 1); m.miss = 0; } }
+  return m;
+}
+function ladderQuest(ladder, rung, names) {
+  const L = LADDERS[ladder]; if (!L || rung >= L.length) return null;
+  const r = L[rung], nm = names || [];
+  let tell = r.tell, job = null;
+  if (r.job) {
+    if (nm.length < r.job.length) return null;
+    job = r.job.map(function (n, i) { return { name: nm[i], n: n, left: n }; });
+    tell = tell.replace('{A}', nm[0]).replace('{B}', nm[1] || '').replace('{C}', nm[2] || '');
+  }
+  return { id: 'ladder:' + ladder + ':' + rung, need: r.need, n: r.n, tell: tell, done: r.done, ladder: ladder, rung: rung, job: job, skill: r.skill };
+}
+function pickQuest(stats, lastId, dream, mastery, dayIndex, names) {
   const t = questTable(dream);
+  if (mastery) {
+    if (dream >= 0 && t[0].id === 'dream' && (stats[t[0].need] || 0) < t[0].n && lastId !== 'dream') return t[0];
+    const order = ['counting', 'geometry', 'number'];
+    for (let k = 0; k < order.length; k++) {
+      const ladder = order[((dayIndex || 0) + k) % order.length];
+      const m = mastery[ladder] || { rung: 0 };
+      for (let r = m.rung; r < LADDERS[ladder].length; r++) {
+        const q = ladderQuest(ladder, r, names);
+        if (!q) break;
+        if (q.id !== lastId && (stats[q.need] || 0) < q.n) return q;
+      }
+    }
+  }
   for (let i = 0; i < t.length; i++) {
     const q = t[i];
     if (q.id === lastId) continue;
     if ((stats[q.need] || 0) < q.n) return q;
   }
   return t[t.length - 1];
+}
+function masteryLines(mastery, name) {
+  const nm = sanitizeName(name) || 'CAPTAIN';
+  const cap = nm.charAt(0) + nm.slice(1).toLowerCase();
+  const out = [];
+  Object.keys(LADDERS).forEach(function (k) {
+    const m = (mastery && mastery[k]) || { rung: 0, streak: 0 };
+    const L = LADDERS[k];
+    if (m.rung >= L.length) { out.push(LADDER_NAMES[k] + ': every rung done. ' + cap + ' is fluent all the way up.'); return; }
+    const learned = m.rung > 0 ? 'Fluent up to "' + L[m.rung - 1].skill + '". ' : '';
+    out.push(LADDER_NAMES[k] + ': rung ' + (m.rung + 1) + ' of ' + L.length + '. ' + learned + 'Working on "' + L[m.rung].skill + '"' + (m.streak ? ', done ' + m.streak + ' day' + (m.streak === 1 ? '' : 's') + ' running.' : '.'));
+  });
+  return out;
 }
 function questMet(q, stats) { return q ? (stats[q.need] || 0) >= q.n : false; }
 function chapter(o) {
@@ -481,6 +548,11 @@ function chapter(o) {
   if (newArc > 0) page1.push('An arcade machine lit up on the beach, and the islanders queued up for a go.');
   if (newFac > 0) page1.push('A chocolate factory opened its doors and puffed its very first puff of smoke.');
   if (o.arcadePlays > 0) page1.push('The arcade machine went DING ' + o.arcadePlays + ' time' + (o.arcadePlays === 1 ? '' : 's') + ', twenty points a go.');
+  if (o.job && o.job.length) {
+    const parts = o.job.map(function (j) { return (j.n - j.left) + ' to ' + j.name; });
+    const total = o.job.reduce(function (a, j) { return a + (j.n - j.left); }, 0);
+    if (total > 0) page1.push(cap + ' loaded the car and delivered crates: ' + parts.join(' and ') + '. ' + (o.job.length > 1 ? o.job.map(function (j) { return j.n - j.left; }).join(' and ') + ' makes ' + total + '.' : total + ' altogether.'));
+  }
   if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
   if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
   const page2 = [];
@@ -488,6 +560,7 @@ function chapter(o) {
     page2.push(o.bedtime.right ? 'At bedtime last night the book asked, "' + o.bedtime.ask + '" and ' + cap + ' knew the answer.'
       : 'At bedtime last night the book asked, "' + o.bedtime.ask + '" and ' + cap + ' had a good guess. The answer is hiding in the island.');
   }
+  if (o.rungUp) page2.push('Something moved today: ' + cap + ' has done "' + o.rungUp + '" three days running, so tomorrow the island asks for a little more.');
   const L = o.learned || [];
   if (L.length) {
     page2.push('And ' + cap + ' worked something out today.');
@@ -552,6 +625,11 @@ function bedtimeQuestion(o) {
   const keys = o.keys || [], n = o.n || 1, st = o.stats || {};
   let q;
   if (keys.indexOf('ramp') !== -1) q = { ask: 'How high do you build a jumping ramp?', right: 'One block high', wrong: 'Three blocks high' };
+  else if (o.job && o.job.length > 1 && o.job.every(function (j) { return j.left === 0; })) {
+    const total = o.job.reduce(function (a, j) { return a + j.n; }, 0);
+    q = { ask: 'You took ' + o.job.map(function (j) { return j.n + ' to ' + j.name; }).join(' and ') + '. How many altogether?', right: String(total), wrong: String(total + (n % 2 ? 1 : -1)) };
+  }
+  else if (o.job && o.job.length === 1 && o.job[0].left === 0) q = { ask: 'How many crates did ' + o.job[0].name + ' get today?', right: String(o.job[0].n), wrong: String(o.job[0].n + 2) };
   else if (keys.indexOf('sym') !== -1) q = { ask: 'When both sides of a building match, what is that called?', right: 'Symmetry', wrong: 'Gravity' };
   else if (keys.indexOf('lap') !== -1 && o.bestLap > 0) q = { ask: 'Which lap is the faster one?', right: fmtLap(o.bestLap), wrong: fmtLap(o.bestLap + 7000) };
   else if (keys.indexOf('arcade') !== -1) q = { ask: 'One arcade machine pays 20 points. Two machines pay?', right: '40 points', wrong: '20 points' };
@@ -583,6 +661,7 @@ function parentSummary(journal, today, name) {
   if (questsDone) lines.push(cap + ' finished ' + questsDone + ' quest' + (questsDone === 1 ? '' : 's') + ' that the book set the night before.');
   if (laps) lines.push(cap + ' beat a personal lap record ' + laps + ' time' + (laps === 1 ? '' : 's') + '.');
   if (asked) lines.push('Bedtime questions: ' + right + ' right out of ' + asked + '.');
+  if (journal.mastery) masteryLines(journal.mastery, nm).forEach(function (l) { lines.push(l); });
   const names = { counting: 'Counting', geometry: 'Shapes and building', number: 'Number sense', time: 'Time', sharing: 'Sharing' };
   Object.keys(cats).forEach(function (c) { lines.push((names[c] || c) + ': ' + cats[c].join(' ')); });
   if (!ledger.length && !book.length) lines.push('Nothing on this device yet. Chapters appear after the first bedtime story.');
@@ -597,6 +676,7 @@ function nextThing(st) {
     if (st.walls >= 6 && !st.doors) return { key: 'door', line: 'Put a DOOR in that wall and somebody will move in.', ghost: 'door' };
     return { key: 'house', line: 'Build walls in a ring and put a DOOR in one. Somebody will move in!', ghost: 'house' };
   }
+  if (st.quest && !st.questMet && st.quest.job) return { key: 'delivery', line: st.crates > 0 ? 'Drive the crates to ' + st.quest.job.filter(function (j) { return j.left > 0; }).map(function (j) { return j.name; }).join(' and ') + '.' : 'Press DRIVE and go to the DOCK to load crates. Then ' + st.quest.tell.replace('deliver', 'take') + '.' };
   if (st.quest && !st.questMet) return { key: 'quest', line: 'The book says: today you ' + st.quest.tell + '.' };
   if (!st.flags) return { key: 'flag', line: 'Plant a FLAG, then press DRIVE. Zoom!' };
   if (!st.ramp) return { key: 'ramp', line: 'Line up SAND one block high and drive at it. You will fly.', ghost: 'ramp' };
@@ -653,7 +733,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines };
 }
 </script>
 <script>
@@ -827,6 +907,8 @@ if (typeof module !== 'undefined' && module.exports) {
     drawCar();
     stepCleo(dt, t);
     drawCleo(t);
+    drawDock();
+    drawCrates();
     requestAnimationFrame(frame);
   }
 
@@ -1165,7 +1247,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let walls = 0, doors = 0;
     for (let i = 0; i < world.ref.cols.length; i++) { const v = world.ref.cols[i]; if (v === 3 || v === 4) walls++; else if (v === 6) doors++; }
     return { blocks: st.blocks, houses: st.houses, flags: st.flags, walls: walls, doors: doors,
-      quest: journal.quest, questMet: journal.quest ? questMet(journal.quest, st) : false,
+      quest: journal.job && journal.quest ? Object.assign({}, journal.quest, { job: journal.job.to }) : journal.quest, questMet: journal.quest ? questMet(journal.quest, questStats()) : false, crates: car.crates || 0,
       ramp: (journal.ledger || []).some(function (e) { return e.line.indexOf('ramp') !== -1; }),
       hour: new Date().getHours(), tick: tick || 0 };
   }
@@ -1231,6 +1313,12 @@ if (typeof module !== 'undefined' && module.exports) {
       ctx.arc(sx + 2.2 * s, sy - 22 * s + bob, 1.1 * s, 0, 6.29); ctx.fill();
       ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 1.2 * s;
       ctx.beginPath(); ctx.arc(sx, sy - 20 * s + bob, 2.6 * s, 0.35, 2.8); ctx.stroke();
+      const tj = jobTargets().find(function (j) { return j.name === p.name && j.left > 0; });
+      if (tj) {
+        ctx.fillStyle = '#FFD447'; ctx.beginPath(); ctx.arc(sx + 11 * s, sy - 30 * s + bob, 7 * s, 0, 6.29); ctx.fill();
+        ctx.fillStyle = '#2A1B3D'; ctx.font = 'bold ' + Math.round(9 * s) + 'px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText(String(tj.left), sx + 11 * s, sy - 27 * s + bob); ctx.textAlign = 'left';
+      }
       if (p.play && Math.hypot(p.tx - p.x, p.ty - p.y) < 0.4) { // at the arcade: arms up, sparkle
         const w2 = Math.sin(t * 12 + p.seed) * 2.5 * s;
         ctx.fillStyle = p.col;
@@ -1368,6 +1456,74 @@ if (typeof module !== 'undefined' && module.exports) {
     car.h = 0.8; car.sp = 0; car.z = 0; car.vz = 0; car.steer = 0;
     lapStart = 0; lapNow = 0; lapArmed = false;
   }
+  /* DELIVERIES. Crates wait at the dock. Drive over the dock to load, drive to the islander's door to drop. The game counts. */
+  const CRATE_CAP = 5;
+  function dockCell() { const f = flags(world.ref); return f.length ? { x: f[0].x + 0.5, y: f[0].y + 2.5 } : { x: 34.5, y: 38.5 }; }
+  function startJob(q) {
+    if (!q || !q.job) return;
+    journal.job = { id: q.id, to: q.job.map(function (j) { return { name: j.name, n: j.n, left: j.left == null ? j.n : j.left }; }), day: today() };
+    journal.deliveredToday = journal.deliveredToday || 0;
+    saveJournal(journal);
+  }
+  let loadT = 0;
+  function jobTargets() { return journal.job && journal.job.to ? journal.job.to : []; }
+  function deliveryCheck() {
+    const job = journal.job; if (!job) return;
+    const now = performance.now();
+    const d = dockCell();
+    if (Math.hypot(d.x - car.x, d.y - car.y) < 1.6 && (car.crates || 0) < CRATE_CAP && now - loadT > 550) {
+      const need = job.to.reduce(function (a, j) { return a + j.left; }, 0) - (car.crates || 0);
+      if (need > 0) { car.crates = (car.crates || 0) + 1; loadT = now; blip(620 + car.crates * 60); toast('CRATE LOADED: ' + car.crates); }
+    }
+    if ((car.crates || 0) > 0 && now - loadT > 450) {
+      for (let i = 0; i < islanders.length; i++) {
+        const p = islanders[i], t = job.to.find(function (j) { return j.name === p.name && j.left > 0; });
+        if (!t) continue;
+        if (Math.hypot(p.home.x + 0.5 - car.x, p.home.y + 0.5 - car.y) < 2.2) {
+          car.crates--; t.left--; loadT = now;
+          journal.deliveredToday = (journal.deliveredToday || 0) + 1;
+          const got = t.n - t.left;
+          toast(p.name + ' GOT ' + got + (t.left ? ' (' + t.left + ' more to go)' : '. THAT IS ALL OF THEM!'));
+          blip(880); setTimeout(function () { blip(1100); }, 80);
+          saveJournal(journal);
+          if (job.to.every(function (j) { return j.left === 0; })) {
+            const nums = job.to.map(function (j) { return j.n; }), total = nums.reduce(function (a, b) { return a + b; }, 0);
+            setTimeout(function () { toast('DELIVERED! ' + (nums.length > 1 ? nums.join(' + ') + ' = ' + total : total + ' crates, counted.')); }, 1200);
+            noteLearned(nums.length > 1 ? nums.join(' and ') + ' makes ' + total + '. Two loads, one number.' : 'Counting crates one at a time gets you to ' + total + ' without missing any.', 'delivery', 'counting');
+          }
+          try { refreshQuest(); } catch (e) {}
+          break;
+        }
+      }
+    }
+  }
+  function drawDock() {
+    if (!journal.job) return;
+    const left = journal.job.to.reduce(function (a, j) { return a + j.left; }, 0) - (car.crates || 0);
+    const d = dockCell();
+    const wx = isoX(d.x, d.y), wy = isoY(d.x, d.y, 0) + ZH;
+    const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y, s = Math.max(cam.zoom, 0.8);
+    ctx.fillStyle = 'rgba(42,27,61,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy, 14 * s, 6 * s, 0, 0, 6.29); ctx.fill();
+    for (let i = 0; i < Math.min(5, Math.max(0, left)); i++) {
+      const cx = sx + ((i % 3) - 1) * 9 * s, cy = sy - 6 * s - Math.floor(i / 3) * 8 * s;
+      ctx.fillStyle = '#C9834E'; ctx.fillRect(cx - 5 * s, cy - 7 * s, 10 * s, 8 * s);
+      ctx.fillStyle = '#96602F'; ctx.fillRect(cx - 5 * s, cy - 3 * s, 10 * s, 1.5 * s); ctx.fillRect(cx - 0.75 * s, cy - 7 * s, 1.5 * s, 8 * s);
+    }
+    ctx.fillStyle = '#FFF3E2'; ctx.font = 'bold ' + Math.round(9 * s) + 'px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(left > 0 ? 'DOCK \u00B7 ' + left + ' TO GO' : 'DOCK', sx, sy + 12 * s); ctx.textAlign = 'left';
+  }
+  function drawCrates() {
+    if (!driving || !(car.crates > 0)) return;
+    const wx = isoX(car.x, car.y), wy = isoY(car.x, car.y, 0) + ZH - car.z * ZH;
+    const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y, s = Math.max(cam.zoom, 0.95);
+    for (let i = 0; i < car.crates; i++) {
+      const cx = sx + 3 * s, cy = sy - 22 * s - i * 6 * s;
+      ctx.fillStyle = '#C9834E'; ctx.fillRect(cx - 5 * s, cy - 6 * s, 10 * s, 6 * s);
+      ctx.fillStyle = '#96602F'; ctx.fillRect(cx - 0.75 * s, cy - 6 * s, 1.5 * s, 6 * s);
+    }
+    ctx.fillStyle = '#FFD447'; ctx.font = 'bold ' + Math.round(11 * s) + 'px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(String(car.crates), sx + 3 * s, sy - 26 * s - car.crates * 6 * s); ctx.textAlign = 'left';
+  }
   function stepCar(dt) {
     if (!driving) return;
     car.h += car.steer * 2.6 * dt;
@@ -1384,6 +1540,7 @@ if (typeof module !== 'undefined' && module.exports) {
     car.x = Math.max(0.5, Math.min(ISLE.N - 0.5, car.x));
     car.y = Math.max(0.5, Math.min(ISLE.N - 0.5, car.y));
     arcadeCheck();
+    deliveryCheck();
     if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) {
       car.vz = 3.6; blip(880); toast('BIG AIR!');
       noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.', 'ramp', 'geometry');
@@ -1403,7 +1560,7 @@ if (typeof module !== 'undefined' && module.exports) {
             const old = bestLap;
             bestLap = t; toast('NEW RECORD ' + fmtLap(t) + '! Share it.');
             noteLearned('Going round the flag the short way makes the number smaller, and a smaller number is faster.', 'lap', 'number');
-            if (old) { journal.lapBeaten = true; noteLearned('You beat your own record by ' + ((old - t) / 1000).toFixed(1) + ' seconds. Smaller number, faster lap.', 'lap', 'number'); }
+            if (old) { journal.lapBeaten = true; journal.lapBeatenEver = (journal.lapBeatenEver || 0) + 1; journal.lapGainToday = Math.max(journal.lapGainToday || 0, old - t); noteLearned('You beat your own record by ' + ((old - t) / 1000).toFixed(1) + ' seconds. Smaller number, faster lap.', 'lap', 'number'); }
             sayPersonal('race');
           }
           else toast('LAP ' + fmtLap(t));
@@ -1676,10 +1833,23 @@ if (typeof module !== 'undefined' && module.exports) {
     saveJournal(journal);
   }
   function keeperName() { return OWNER ? (islanders.length ? islanders[0].name : 'THE BOOK') : 'CLEO'; }
-  function refreshQuest() {
+  function questStats() {
     const st = worldStats(world.ref);
+    st.delivered = journal.deliveredToday || 0;
+    st.ramps = (journal.ledger || []).some(function (e) { return e.line.indexOf('ramp') !== -1; }) ? 1 : 0;
+    st.symmetry = symmetry(world.ref);
+    st.laps = bestLap > 0 ? 1 : 0;
+    st.beaten = journal.lapBeatenEver || 0;
+    st.gain = journal.lapGainToday || 0;
+    return st;
+  }
+  function islanderNames() { return islanders.map(function (p) { return p.name; }); }
+  function refreshQuest() {
+    const st = questStats();
+    if (journal.quest && journal.quest.job && !journal.job) startJob(journal.quest);
     if (journal.quest && questMet(journal.quest, st)) {
       journal.lastQuestDone = journal.quest.done;
+      journal.doneId = journal.quest.id; journal.doneSkill = journal.quest.skill || '';
       journal.quest = null; journal.questDay = '';
       saveJournal(journal);
       if (OWNER) { if (islanders.length) islanders[0].cheer = 3; } else { cleo.spin = 1.6; cleo.mood = 'sit'; }
@@ -1689,27 +1859,47 @@ if (typeof module !== 'undefined' && module.exports) {
     const q = document.getElementById('quest');
     if (journal.quest) { q.textContent = 'TONIGHT\u2019S QUEST: ' + journal.quest.tell.toUpperCase(); q.classList.add('on'); }
     else q.classList.remove('on');
+    try { refreshNext(); } catch (e) {}
   }
   let storyPages = [], storyIdx = 0, storyEntry = null, storyMode = 'night';
   function writeChapter() {
     const st = worldStats(world.ref);
-    const lastId = journal.quest ? journal.quest.id : null;
-    const q = journal.quest || pickQuest(st, lastId, PRO ? PRO.dream : -1);
+    if (!journal.mastery) journal.mastery = newMastery();
+    // step the ladders on the quest that was set last night
+    let rungUp = '';
+    if (journal.quest && journal.quest.ladder && journal.questDay && daysBetween(journal.questDay, today()) >= 1) {
+      journal.mastery[journal.quest.ladder] = ladderStep(journal.mastery[journal.quest.ladder], false);
+      journal.quest = null; journal.questDay = ''; journal.job = null;
+    }
+    if (journal.doneId && journal.doneId.indexOf('ladder:') === 0) {
+      const lad = journal.doneId.split(':')[1];
+      const before = (journal.mastery[lad] || { rung: 0 }).rung;
+      journal.mastery[lad] = ladderStep(journal.mastery[lad], true);
+      if (journal.mastery[lad].rung > before) rungUp = journal.doneSkill || '';
+      journal.doneId = ''; journal.doneSkill = '';
+    }
+    Object.assign(st, questStats());
+    const lastId = journal.quest ? journal.quest.id : (journal.lastQuestDone ? (journal.lastQuestId || null) : null);
+    const q = journal.quest || pickQuest(st, lastId, PRO ? PRO.dream : -1, journal.mastery, (journal.book || []).length, islanderNames());
     const questDays = (journal.quest && journal.questDay) ? daysBetween(journal.questDay, today()) : 0;
     const pages = chapter({
       name: CREW, title: TITLE, stats: st, prevStats: journal.prevStats || {},
-      newIslanders: journal.newIslanders, learned: journal.learned,
+      newIslanders: journal.newIslanders, learned: journal.learned, job: journal.job ? journal.job.to : null, rungUp: rungUp,
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
       bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
-      q: bedtimeQuestion({ keys: journal.keys || [], n: (journal.book || []).length + 1, stats: st, bestLap: bestLap }) };
+      q: bedtimeQuestion({ keys: journal.keys || [], n: (journal.book || []).length + 1, stats: st, bestLap: bestLap, job: journal.job ? journal.job.to : null }),
+      delivered: journal.deliveredToday || 0, mastery: JSON.parse(JSON.stringify(journal.mastery)) };
     if (!bookAdd(journal, entry)) return journal.book[journal.book.length - 1];
     if (!journal.quest) journal.questDay = today();
     journal.quest = q;
     journal.arcadePlays = 0; journal.prevStats = st; journal.newIslanders = []; journal.learned = []; journal.keys = [];
+    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.job = null; journal.lastQuestId = q.id;
+    if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
+    if (q.job) startJob(q);
     journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
     journal.chapters = journal.book.length;
     saveJournal(journal);
@@ -1829,7 +2019,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
-    owner: OWNER, cleo, cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
+    owner: OWNER, cleo, questStats, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
