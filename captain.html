@@ -100,7 +100,7 @@
 
     <a class="card" href="#" id="link-voyage">
       <span class="tag">YOUR VOYAGE</span>
-      <h2 id="voyage-h">Read what is waiting for you</h2>
+      <h2 id="voyage-h">Your Voyage, read by Cleo</h2>
       <p id="voyage-p"></p>
       <span class="go">READ IT &rarr;</span>
     </a>
@@ -268,21 +268,22 @@ function cap(s) { return s.charAt(0) + s.slice(1).toLowerCase(); }
   $('bclose').addEventListener('click', function () { $('book').classList.remove('on'); });
   $('bnext').addEventListener('click', function () { if (pi < pages.length - 1) { pi++; renderBook(); } });
   $('bprev').addEventListener('click', function () { if (pi > 0) { pi--; renderBook(); } });
-  $('link-voyage').addEventListener('click', function (e) { e.preventDefault(); openBook(); });
+
 
   function showHub(fresh) {
     const nm = pro.name, t = PROFILE.TITLES[pro.title], hex = PROFILE.COLOURS[pro.colour].hex;
     document.documentElement.style.setProperty('--you', hex);
     $('title').textContent = t + ' ' + nm + "'S ISLAND";
     $('subline').textContent = 'A VOYAGE MADE FOR ' + nm;
-    $('voyage-p').textContent = 'Three pages about the ' + PROFILE.DREAMS[pro.dream].toLowerCase() + ' you will build, the ' + PROFILE.RIDES[pro.ride].split(' ').map(cap).join(' ').toLowerCase() + ' you will drive, and how to send your island to a friend.';
+    $('voyage-p').textContent = 'Ten pages about the island waiting for you: the ship, the seagull, the ' + PROFILE.RIDES[pro.ride].split(' ').map(cap).join(' ').toLowerCase() + ' in ' + PROFILE.COLOURS[pro.colour].name.toLowerCase() + ', the ' + PROFILE.DREAMS[pro.dream].toLowerCase() + ' you dream of, and Cleo who keeps your book.';
+    $('link-voyage').href = 'voyage.html?p=' + enc;
     const qs = '?crew=' + encodeURIComponent(nm) + '&p=' + enc;
     $('link-game1').href = 'index.html' + qs;
     $('link-island').href = 'island.html' + qs;
     $('grownup').classList.toggle('on', pro.grownup);
     $('linkfield').value = location.origin + location.pathname + '?p=' + enc;
     $('ask').classList.remove('on'); $('hub').classList.add('on');
-    if (fresh) setTimeout(openBook, 500);
+    if (fresh) setTimeout(function () { location.href = 'voyage.html?p=' + enc; }, 350);
   }
   $('copy').addEventListener('click', async function () {
     const url = $('linkfield').value; $('linkbox').classList.add('on');
