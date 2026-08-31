@@ -106,6 +106,16 @@
   #bdots { display:flex; gap:5px; }
   #bdots i { width:8px; height:8px; border-radius:50%; background:rgba(42,27,61,0.25); display:block; }
   #bdots i.on { background:var(--coral); }
+  #dial { position:fixed; right:10px; top:calc(env(safe-area-inset-top,0px) + 164px); z-index:6; width:44px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  #dial button { width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--cream); color:var(--ink); font-weight:900; font-size:22px;
+    box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; padding:0; line-height:1; }
+  #dial button:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #dial .track { width:14px; height:96px; border-radius:7px; background:rgba(42,27,61,0.55); border:2px solid var(--ink); position:relative; }
+  #dial .knob { position:absolute; left:50%; width:22px; height:22px; margin-left:-11px; border-radius:50%; background:var(--yellow); border:3px solid var(--ink); box-shadow:0 2px 0 rgba(20,8,30,0.5); pointer-events:none; }
+  #dial .snap { position:absolute; left:2px; width:6px; height:2px; background:rgba(255,243,226,0.6); }
+  #dial #home { font-size:18px; }
+  #mini { position:fixed; left:10px; top:calc(env(safe-area-inset-top,0px) + 54px); z-index:6; width:96px; height:96px; border:3px solid var(--ink); border-radius:14px;
+    background:rgba(42,27,61,0.55); box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
   #btn-story { position:fixed; right:10px; top:calc(env(safe-area-inset-top,0px) + 104px); z-index:6;
     width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--dusk);
     color:var(--cream); font-size:22px; font-weight:900; box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; }
@@ -161,6 +171,8 @@
 <div id="lineage"></div>
 <button id="btn-book" aria-label="How to play">?</button>
 <button id="btn-story" aria-label="Story time">&#9789;</button>
+<div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="knob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
+<canvas id="mini" width="192" height="192" aria-label="Map of the island"></canvas>
 <div id="quest"></div>
 <div id="next"></div>
 <div id="story">
@@ -1106,6 +1118,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const t = (now - t0) / 1000;
     const dt = Math.min(0.05, t - tPrev); tPrev = t;
     ctx.clearRect(0, 0, W, H);
+    stepCamera(dt);
     const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, SKY.top); sky.addColorStop(0.4, SKY.mid); sky.addColorStop(0.75, SKY.low); sky.addColorStop(1, SKY.low);
@@ -1149,22 +1162,162 @@ if (typeof module !== 'undefined' && module.exports) {
     drawCleo(t);
     drawDock();
     drawCrates();
+    miniT += dt; if (miniT > 0.25) { miniT = 0; drawMini(); }
     requestAnimationFrame(frame);
   }
 
-  // input: tap builds, drag pans
-  let ptr = null, moved = false;
-  cv.addEventListener('pointerdown', (e) => { ptr = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y }; moved = false; });
+  /* THE CAMERA. Three snap levels (whole island, build, close up), zoom about the point under the fingers or the cursor,
+     pinch and two-finger pan on touch, trackpad pinch and scroll on a Mac, mouse wheel, double tap, arrow keys, a dial,
+     a home button and a minimap. Pans carry a little momentum and the island can never be dragged off the screen. */
+  const ZOOMS = { whole: 0.28, build: 0.9, close: 1.8 };
+  const ZMIN = 0.22, ZMAXV = 2.6;
+  let vel = { x: 0, y: 0 }, target = null;
+  function worldBounds() { return { x0: 0, y0: 0, x1: off.width, y1: off.height }; }
+  function clampCam() {
+    const b = worldBounds(), pad = 120;
+    const minX = W - b.x1 * cam.zoom - pad, maxX = pad - b.x0 * cam.zoom;
+    const minY = H - b.y1 * cam.zoom - pad, maxY = pad - b.y0 * cam.zoom;
+    cam.x = Math.max(Math.min(minX, maxX), Math.min(Math.max(minX, maxX), cam.x));
+    cam.y = Math.max(Math.min(minY, maxY), Math.min(Math.max(minY, maxY), cam.y));
+  }
+  function zoomAbout(sx, sy, z) {
+    z = Math.max(ZMIN, Math.min(ZMAXV, z));
+    const wx = (sx - cam.x) / cam.zoom, wy = (sy - cam.y) / cam.zoom;
+    cam.zoom = z; cam.x = sx - wx * z; cam.y = sy - wy * z;
+    clampCam(); syncDial();
+  }
+  function centreOn(x, y, z) {
+    const zz = z || cam.zoom;
+    target = { x: W / 2 - isoX(x, y) * zz, y: H * 0.5 - (isoY(x, y, 0) + ZH) * zz, zoom: zz };
+  }
+  function goHome() {
+    const f = driving ? { x: car.x, y: car.y } : (lastPlaced || (houses(world.ref)[0] ? { x: houses(world.ref)[0].x, y: houses(world.ref)[0].y } : { x: ISLE.N / 2, y: ISLE.N / 2 }));
+    centreOn(f.x, f.y, ZOOMS.build); blip(700);
+  }
+  function stepCamera(dt) {
+    if (target) {
+      const k = Math.min(1, dt * 7);
+      cam.x += (target.x - cam.x) * k; cam.y += (target.y - cam.y) * k; cam.zoom += (target.zoom - cam.zoom) * k;
+      if (Math.abs(target.x - cam.x) < 0.5 && Math.abs(target.y - cam.y) < 0.5 && Math.abs(target.zoom - cam.zoom) < 0.002) { cam.x = target.x; cam.y = target.y; cam.zoom = target.zoom; target = null; }
+      clampCam(); syncDial(); return;
+    }
+    if (!pts.size && (Math.abs(vel.x) > 2 || Math.abs(vel.y) > 2)) {
+      cam.x += vel.x * dt; cam.y += vel.y * dt; vel.x *= Math.pow(0.05, dt); vel.y *= Math.pow(0.05, dt); clampCam();
+    }
+  }
+  function syncDial() {
+    const t = (Math.log(cam.zoom) - Math.log(ZMIN)) / (Math.log(ZMAXV) - Math.log(ZMIN));
+    const k = document.getElementById('knob'); if (k) k.style.top = Math.round(86 - t * 80) + 'px';
+  }
+  function snapTo(dir) {
+    const levels = [ZOOMS.whole, ZOOMS.build, ZOOMS.close];
+    let i = 0; for (let k = 0; k < levels.length; k++) if (Math.abs(levels[k] - cam.zoom) < Math.abs(levels[i] - cam.zoom)) i = k;
+    if (Math.abs(levels[i] - cam.zoom) > 0.02 && ((dir > 0 && levels[i] < cam.zoom) || (dir < 0 && levels[i] > cam.zoom))) {} else i += dir;
+    i = Math.max(0, Math.min(levels.length - 1, i));
+    const z = levels[i], sx = W / 2, sy = H / 2;
+    const wx = (sx - cam.x) / cam.zoom, wy = (sy - cam.y) / cam.zoom;
+    target = { x: sx - wx * z, y: sy - wy * z, zoom: z }; blip(dir > 0 ? 760 : 560);
+    if (!journal.zoomSaid) { journal.zoomSaid = true; saveJournal(journal); toast(z === ZOOMS.whole ? 'THE WHOLE ISLAND. It is bigger than the screen!' : 'CLOSER. Pinch or scroll to zoom any time.'); }
+  }
+  document.getElementById('zin').addEventListener('click', function () { snapTo(1); });
+  document.getElementById('zout').addEventListener('click', function () { snapTo(-1); });
+  document.getElementById('home').addEventListener('click', goHome);
+
+  // pointers: one finger taps or pans, two fingers pinch and pan together
+  const pts = new Map();
+  let gesture = null, lastMove = null;
+  cv.addEventListener('pointerdown', (e) => {
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
+    target = null; vel.x = 0; vel.y = 0;
+    if (pts.size === 1) gesture = { kind: 'maybe-tap', cx: cam.x, cy: cam.y, x: e.clientX, y: e.clientY, t: performance.now() };
+    else if (pts.size === 2) { const a = [...pts.values()]; gesture = { kind: 'pinch', d0: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), z0: cam.zoom, mx: (a[0].x + a[1].x) / 2, my: (a[0].y + a[1].y) / 2, cx: cam.x, cy: cam.y }; }
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  });
   cv.addEventListener('pointermove', (e) => {
-    if (!ptr) return;
-    const dx = e.clientX - ptr.x, dy = e.clientY - ptr.y;
-    if (Math.hypot(dx, dy) > 10) moved = true;
-    if (moved) { cam.x = ptr.cx + dx; cam.y = ptr.cy + dy; }
+    const p = pts.get(e.pointerId); if (!p) return;
+    p.x = e.clientX; p.y = e.clientY;
+    if (!gesture) return;
+    if (pts.size >= 2 && gesture.kind === 'pinch') {
+      const a = [...pts.values()], d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2;
+      const z = Math.max(ZMIN, Math.min(ZMAXV, gesture.z0 * d / Math.max(20, gesture.d0)));
+      const wx = (gesture.mx - gesture.cx) / gesture.z0, wy = (gesture.my - gesture.cy) / gesture.z0;
+      cam.zoom = z; cam.x = mx - wx * z; cam.y = my - wy * z; clampCam(); syncDial();
+      if (!journal.pinched) { journal.pinched = true; saveJournal(journal); toast('PINCH! The island is bigger than the screen.'); }
+      return;
+    }
+    if (pts.size === 1) {
+      const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
+      if (gesture.kind === 'maybe-tap' && Math.hypot(dx, dy) > 10) gesture.kind = 'pan';
+      if (gesture.kind === 'pan') {
+        const now = performance.now();
+        if (lastMove) { const dtm = Math.max(8, now - lastMove.t) / 1000; vel.x = (e.clientX - lastMove.x) / dtm; vel.y = (e.clientY - lastMove.y) / dtm; }
+        lastMove = { x: e.clientX, y: e.clientY, t: now };
+        cam.x = gesture.cx + dx; cam.y = gesture.cy + dy; clampCam();
+      }
+    }
   });
-  addEventListener('pointerup', (e) => {
-    if (ptr && !moved) tapAt(e.clientX, e.clientY);
-    ptr = null;
+  function endPointer(e) {
+    const p = pts.get(e.pointerId); if (!p) return;
+    pts.delete(e.pointerId);
+    if (gesture && gesture.kind === 'maybe-tap' && pts.size === 0) {
+      tapAt(e.clientX, e.clientY); // a second tap on the same spot stacks a block, so there is no double-tap zoom on purpose
+    }
+    if (gesture && gesture.kind === 'pan' && pts.size === 0) { const age = lastMove ? performance.now() - lastMove.t : 999; if (age > 80) { vel.x = 0; vel.y = 0; } }
+    if (pts.size === 1) { const a = [...pts.values()][0]; gesture = { kind: 'pan', cx: cam.x, cy: cam.y, x: a.x, y: a.y, t: performance.now() }; }
+    else if (pts.size === 0) { gesture = null; lastMove = null; }
+  }
+  addEventListener('pointerup', endPointer);
+  addEventListener('pointercancel', endPointer);
+
+  // trackpad and mouse: pinch on a Mac arrives as a wheel with ctrlKey; two-finger scroll pans; a real mouse wheel zooms
+  cv.addEventListener('wheel', (e) => {
+    e.preventDefault(); target = null;
+    if (e.ctrlKey || e.metaKey) { zoomAbout(e.clientX, e.clientY, cam.zoom * Math.exp(-e.deltaY * 0.01)); return; }
+    const mouseWheel = e.deltaX === 0 && Math.abs(e.deltaY) >= 40 && Number.isInteger(e.deltaY);
+    if (mouseWheel) zoomAbout(e.clientX, e.clientY, cam.zoom * Math.exp(-e.deltaY * 0.0025));
+    else { cam.x -= e.deltaX; cam.y -= e.deltaY; clampCam(); }
+  }, { passive: false });
+  addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    const step = 60;
+    if (e.key === 'ArrowLeft') { cam.x += step; clampCam(); } else if (e.key === 'ArrowRight') { cam.x -= step; clampCam(); }
+    else if (e.key === 'ArrowUp') { cam.y += step; clampCam(); } else if (e.key === 'ArrowDown') { cam.y -= step; clampCam(); }
+    else if (e.key === '+' || e.key === '=') zoomAbout(W / 2, H / 2, cam.zoom * 1.2);
+    else if (e.key === '-' || e.key === '_') zoomAbout(W / 2, H / 2, cam.zoom / 1.2);
+    else if (e.key === 'Home' || e.key === 'h') goHome();
+    else return;
+    e.preventDefault();
   });
+
+  // the minimap: the island's shape, the houses, the car, and the rectangle of what is on screen. Tap to jump.
+  const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
+  let miniBase = null;
+  function miniBaseDraw() {
+    miniBase = document.createElement('canvas'); miniBase.width = 192; miniBase.height = 192; const g = miniBase.getContext('2d');
+    for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
+      if (!isLand(x, y)) continue;
+      const px = 96 + (x - y) * 0.72, py = 12 + (x + y) * 0.62;
+      g.fillStyle = isBeach(x, y) ? '#FFEDBF' : '#F5D98E'; g.fillRect(px - 0.8, py - 0.5, 1.6, 1.1);
+    }
+  }
+  function drawMini() {
+    if (!miniBase) miniBaseDraw();
+    mctx.clearRect(0, 0, 192, 192); mctx.drawImage(miniBase, 0, 0);
+    const w = world.ref; mctx.fillStyle = '#2A1B3D';
+    for (let y = 0; y < ISLE.N; y += 1) for (let x = 0; x < ISLE.N; x += 1) { if (w.cols[idx(x, y, 0)]) { mctx.fillRect(96 + (x - y) * 0.72 - 0.9, 12 + (x + y) * 0.62 - 0.6, 1.8, 1.2); } }
+    houses(w).forEach(function (h) { mctx.fillStyle = '#FF6E6C'; mctx.fillRect(96 + (h.x - h.y) * 0.72 - 2, 12 + (h.x + h.y) * 0.62 - 2, 4, 4); });
+    if (driving) { mctx.fillStyle = '#FFD447'; mctx.beginPath(); mctx.arc(96 + (car.x - car.y) * 0.72, 12 + (car.x + car.y) * 0.62, 3, 0, 6.29); mctx.fill(); }
+    // viewport rectangle: screen corners to world cells
+    const corners = [[0, 0], [W, 0], [W, H], [0, H]].map(function (c) { const wx = (c[0] - cam.x) / cam.zoom - ORIGIN.x, wy = (c[1] - cam.y) / cam.zoom - (ORIGIN.y + ZH); const fx = (wx / (TW / 2) + wy / (TH / 2)) / 2, fy = (wy / (TH / 2) - wx / (TW / 2)) / 2; return [96 + (fx - fy) * 0.72, 12 + (fx + fy) * 0.62]; });
+    mctx.strokeStyle = '#FFF3E2'; mctx.lineWidth = 2; mctx.beginPath(); corners.forEach(function (c, i) { if (i) mctx.lineTo(c[0], c[1]); else mctx.moveTo(c[0], c[1]); }); mctx.closePath(); mctx.stroke();
+  }
+  let miniT = 0;
+  function miniJump(e) {
+    const r = mini.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * 192, py = (e.clientY - r.top) / r.height * 192;
+    const u = (px - 96) / 0.72, v = (py - 12) / 0.62; const x = (u + v) / 2, y = (v - u) / 2;
+    centreOn(Math.max(0, Math.min(ISLE.N - 1, x)), Math.max(0, Math.min(ISLE.N - 1, y))); blip(640);
+  }
+  mini.addEventListener('pointerdown', function (e) { e.stopPropagation(); miniJump(e); });
   function cellAt(sx, sy) {
     const wx = (sx - cam.x) / cam.zoom, wy = (sy - cam.y) / cam.zoom;
     // invert base-level iso (z rendered at ground plane offset ZH)
@@ -1315,9 +1468,10 @@ if (typeof module !== 'undefined' && module.exports) {
       : (ghostLap ? 'CHALLENGE! Beat the lap record of ' + fmtLap(ghostLap) : 'WELCOME ABOARD! This island travelled inside the link.'));
     fit();
     redrawWorld();
-    cam.zoom = W < 600 ? 0.9 : 1.0;
-    const mid = { x: isoX(ISLE.N / 2, ISLE.N / 2), y: isoY(ISLE.N / 2, ISLE.N / 2, 0) };
-    cam.x = W / 2 - mid.x * cam.zoom; cam.y = H * 0.5 - mid.y * cam.zoom;
+    cam.zoom = ZOOMS.build;
+    const hs0 = houses(world.ref), start = hs0.length ? { x: hs0[0].x, y: hs0[0].y } : { x: ISLE.N / 2, y: ISLE.N / 2 };
+    cam.x = W / 2 - isoX(start.x, start.y) * cam.zoom; cam.y = H * 0.5 - (isoY(start.x, start.y, 0) + ZH) * cam.zoom;
+    clampCam(); syncDial();
     syncCargo();
     rebuildIslanders();
     requestAnimationFrame(frame);
@@ -1883,8 +2037,8 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
     document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
     if (!on) {
-      const mid = { x: isoX(ISLE.N / 2, ISLE.N / 2), y: isoY(ISLE.N / 2, ISLE.N / 2, 0) };
-      cam.x = W / 2 - mid.x * cam.zoom; cam.y = H * 0.5 - mid.y * cam.zoom;
+      const hs1 = houses(world.ref), st1 = hs1.length ? { x: hs1[0].x, y: hs1[0].y } : { x: ISLE.N / 2, y: ISLE.N / 2 };
+      cam.x = W / 2 - isoX(st1.x, st1.y) * cam.zoom; cam.y = H * 0.5 - (isoY(st1.x, st1.y, 0) + ZH) * cam.zoom; clampCam(); syncDial();
     }
     if (on) {
       spawnCar();
@@ -2296,7 +2450,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
-    owner: OWNER, cleo, questStats, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
+    owner: OWNER, cleo, questStats, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
