@@ -115,7 +115,7 @@
     <a class="card" href="island.html" id="link-island">
       <span class="tag">GAME 02</span>
       <h2>Your Island</h2>
-      <p>Build houses and people move in and talk to you. Drive your ride, race a lap, open a factory. Then send your whole island to anyone in one link.</p>
+      <p>Cleo the show dog is waiting on the sand with the book. Build houses and people move in and talk to you. Drive your ride, race a lap, open a factory. Then send your whole island to anyone in one link.</p>
       <span class="go">BUILD &rarr;</span>
     </a>
 
@@ -146,7 +146,7 @@
 'use strict';
 const PROFILE = {
   VER: 1,
-  TITLES: ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT'],
+  TITLES: ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT', 'INVENTOR'],
   COLOURS: [
     { name: 'CORAL', hex: '#FF6E6C' }, { name: 'SUNSET', hex: '#FFB067' }, { name: 'SUNSHINE', hex: '#FFD447' },
     { name: 'PALM', hex: '#3FA96B' }, { name: 'SKY', hex: '#8FD8E8' }, { name: 'OCEAN', hex: '#2F7F9A' },
@@ -162,7 +162,7 @@ function sanitizeName(s) { return String(s == null ? '' : s).toUpperCase().repla
 function buildProfile(o) {
   const nm = sanitizeName(o.name); if (!nm) return '';
   const clamp = (v, n) => Math.max(0, Math.min(n - 1, parseInt(v, 10) || 0));
-  const b = [PROFILE.VER, o.grownup ? 1 : 0, clamp(o.title, 7), clamp(o.colour, 8), clamp(o.ride, 3), clamp(o.dream, 7), clamp(o.age, 3), 0, 0];
+  const b = [PROFILE.VER, o.grownup ? 1 : 0, clamp(o.title, 8), clamp(o.colour, 8), clamp(o.ride, 3), clamp(o.dream, 7), clamp(o.age, 3), 0, 0];
   for (let i = 0; i < nm.length; i++) b.push(nm.charCodeAt(i));
   let bin = ''; for (let i = 0; i < b.length; i++) bin += String.fromCharCode(b[i]);
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -173,7 +173,7 @@ function parseProfile(str) {
   try { const t = atob(str.replace(/-/g, '+').replace(/_/g, '/')); raw = []; for (let i = 0; i < t.length; i++) raw.push(t.charCodeAt(i)); } catch (e) { return null; }
   if (raw.length < 10 || raw[0] !== PROFILE.VER) return null;
   const p = { grownup: raw[1] === 1, title: raw[2], colour: raw[3], ride: raw[4], dream: raw[5], age: raw[6] };
-  if (raw[1] > 1 || p.title >= 7 || p.colour >= 8 || p.ride >= 3 || p.dream >= 7 || p.age >= 3) return null;
+  if (raw[1] > 1 || p.title >= 8 || p.colour >= 8 || p.ride >= 3 || p.dream >= 7 || p.age >= 3) return null;
   let nm = ''; for (let i = 9; i < raw.length; i++) nm += String.fromCharCode(raw[i]);
   p.name = sanitizeName(nm); if (!p.name || p.name !== nm) return null;
   return p;
@@ -189,7 +189,7 @@ function cap(s) { return s.charAt(0) + s.slice(1).toLowerCase(); }
   const STEPS = [
     { key: 'grownup', q: 'Who is answering?', opts: [{ l: 'ME! I am the captain', ic: '\uD83E\uDDD2', v: false }, { l: 'A grown-up, making this for someone', ic: '\uD83D\uDC69\u200D\uD83D\uDC67', v: true }] },
     { key: 'name', q: 'What should the island call you?', input: true, hint: 'Just a first name or a nickname. Letters and numbers, up to ten. This is the only thing you ever type.' },
-    { key: 'title', q: 'And you are a...', opts: [['Captain', '\u2693'], ['Pirate', '\uD83C\uDFF4\u200D\u2620\uFE0F'], ['Princess', '\uD83D\uDC51'], ['Explorer', '\uD83E\uDDED'], ['Mermaid', '\uD83E\uDDDC'], ['Knight', '\u2694\uFE0F'], ['Astronaut', '\uD83D\uDE80']].map((o, i) => ({ l: o[0], ic: o[1], v: i })) },
+    { key: 'title', q: 'And you are a...', opts: [['Captain', '\u2693'], ['Pirate', '\uD83C\uDFF4\u200D\u2620\uFE0F'], ['Princess', '\uD83D\uDC51'], ['Explorer', '\uD83E\uDDED'], ['Mermaid', '\uD83E\uDDDC'], ['Knight', '\u2694\uFE0F'], ['Astronaut', '\uD83D\uDE80'], ['Inventor', '\uD83D\uDD27']].map((o, i) => ({ l: o[0], ic: o[1], v: i })) },
     { key: 'colour', q: 'Your favourite colour?', colours: true },
     { key: 'ride', q: 'Pick your ride', opts: [['Red Rocket', '\uD83C\uDFCE\uFE0F'], ['Sand Buggy', '\uD83D\uDEFA'], ['Sea Cruiser', '\uD83D\uDE9A']].map((o, i) => ({ l: o[0], ic: o[1], v: i })) },
     { key: 'dream', q: 'What do you dream of building?', opts: [['Castle', '\uD83C\uDFF0'], ['Zoo', '\uD83E\uDD81'], ['Racetrack', '\uD83C\uDFC1'], ['Bakery', '\uD83E\uDDC1'], ['Rocket base', '\uD83D\uDE80'], ['Secret hideout', '\uD83E\uDD2B'], ['Flower garden', '\uD83C\uDF3B']].map((o, i) => ({ l: o[0], ic: o[1], v: i })) },
@@ -249,7 +249,8 @@ function cap(s) { return s.charAt(0) + s.slice(1).toLowerCase(); }
     const p2 = ['First, the ship. Luggage falls on a tilting deck and you catch it before it slides away.',
       'A seagull comes to steal it. You bonk the seagull.',
       young ? 'Get 1000 points and you become a Knight Legend.' : 'Rescue the giant chocolate bar for 20 points. Reach 1000 and you earn the top rank on the whole island: Knight Legend.'];
-    const p3 = ['Then, your island. Tap the sand and blocks appear. Build walls with a door and somebody moves in and talks to you.',
+    const p3 = ['Then, your island. Cleo is waiting there. She is a show dog, she keeps your book, and if you ever wonder what to do next, tap her.',
+      'Tap the sand and blocks appear. Build walls with a door and somebody moves in and talks to you.',
       'Your ' + ride + ' is parked there in ' + col.toLowerCase() + '. Build a ramp one block high and drive at it to fly.',
       'Tonight, when you tap the moon, the island will write your story and give you your first quest: to ' + PROFILE.DREAM_TELL[pro.dream] + '.',
       'When you are ready, tap SHARE and your whole island fits inside one link. Off you go, ' + t + '.'];
