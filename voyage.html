@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2A1B3D">
+<title>Your Voyage</title>
+<meta name="description" content="Ten pages about the island that is waiting for you, read by Cleo the show dog.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Sunset Island: Your Voyage">
+<meta property="og:description" content="Ten pages about the island that is waiting for you. No app, no account, no ads.">
+<meta property="og:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-arcade.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root {
+    --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067; --you:#FFD447;
+    --yellow:#FFD447; --green:#3FA96B; --dusk:#5C3A6E; --sky1:#FFC078; --sky2:#FF8A70; --sky3:#C75B82; --sky4:#8C4A78;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 34%,var(--sky3) 62%,var(--sky4) 100%); }
+  .sun { position:fixed; top:9vh; right:12vw; width:110px; height:110px; border-radius:50%;
+    background:#FFE49E; box-shadow:0 0 90px 46px rgba(255,228,158,0.55); animation:breathe 5s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+  .cloud { position:fixed; background:rgba(255,243,226,0.85); border-radius:999px; animation:drift linear infinite; }
+  .cloud::before,.cloud::after { content:""; position:absolute; background:inherit; border-radius:50%; }
+  .c1 { top:7vh; left:-140px; width:120px; height:34px; animation-duration:52s; }
+  .c1::before { width:52px; height:52px; top:-24px; left:18px; } .c1::after { width:38px; height:38px; top:-16px; left:62px; }
+  .c2 { top:17vh; left:-220px; width:90px; height:26px; animation-duration:74s; animation-delay:-30s; }
+  .c2::before { width:40px; height:40px; top:-18px; left:14px; } .c2::after { width:28px; height:28px; top:-11px; left:48px; }
+  @keyframes drift { from{transform:translateX(0)} to{transform:translateX(130vw)} }
+  .seaband { position:fixed; left:0; right:0; bottom:0; height:26vh; background:linear-gradient(180deg,#C25E77,#3A6E82 55%,#1F4E5F); }
+  .wavecrest { position:fixed; left:0; right:0; bottom:calc(26vh - 10px); height:22px; opacity:0.9;
+    background:radial-gradient(circle at 10px -6px, transparent 12px, rgba(255,243,226,0.5) 13px, transparent 15px) repeat-x;
+    background-size:40px 22px; animation:lap 4s ease-in-out infinite alternate; }
+  @keyframes lap { from{transform:translateX(0)} to{transform:translateX(-40px)} }
+  #cleo { position:fixed; bottom:12vh; left:-120px; width:96px; height:70px; animation:trot 30s linear infinite; }
+  @keyframes trot { 0%{transform:translateX(0)} 100%{transform:translateX(130vw)} }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    padding:max(12px, env(safe-area-inset-top)) 14px max(12px, env(safe-area-inset-bottom)); }
+  .page { background:linear-gradient(180deg,#FFF7E9,#FFEFD8); border:5px solid var(--ink); border-radius:28px;
+    width:min(100%,520px); max-height:min(92dvh,760px); overflow-y:auto; padding:clamp(18px,3.4vh,30px) clamp(16px,4vw,30px);
+    text-align:center; color:var(--ink); position:relative;
+    box-shadow:0 14px 0 rgba(20,8,30,0.4), 0 22px 54px rgba(20,8,30,0.5); animation:arrive 0.45s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes arrive { from{transform:translateY(26px) scale(0.94); opacity:0} to{transform:none; opacity:1} }
+  .eyebrow { display:inline-block; background:var(--ink); color:var(--yellow); font-weight:900;
+    font-size:clamp(10px,1.6vh,13px); letter-spacing:2.5px; padding:5px 14px; border-radius:999px; margin-bottom:10px; }
+  h1 { font-size:clamp(30px,7.4vw,46px); font-weight:900; line-height:1.03; color:var(--coral);
+    text-shadow:2.5px 2.5px 0 var(--you), 5px 5px 0 rgba(42,27,61,0.14); overflow-wrap:anywhere; }
+  .kicker { font-weight:900; letter-spacing:0.24em; text-transform:uppercase; color:var(--dusk); font-size:clamp(11px,2.6vw,15px); margin:8px 0 14px; }
+  .bigicon { font-size:clamp(54px,11vh,84px); line-height:1.15; margin:6px 0 2px; filter:drop-shadow(0 5px 0 rgba(42,27,61,0.22)); animation:bob 2.6s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-9px) rotate(2deg)} }
+  .bubble { position:relative; background:var(--cream); border:4px solid var(--ink); border-radius:22px;
+    padding:16px 18px; margin:12px 4px 20px; font-size:clamp(18px,4.4vw,25px); font-weight:900; line-height:1.3; }
+  .bubble::after { content:""; position:absolute; left:44px; bottom:-16px; width:26px; height:26px;
+    background:var(--cream); border-right:4px solid var(--ink); border-bottom:4px solid var(--ink);
+    transform:rotate(45deg) skew(8deg,8deg); border-radius:0 0 7px 0; }
+  .whosaid { text-align:left; margin:2px 0 0 30px; font-weight:900; color:var(--dusk); font-size:clamp(12px,2.8vw,15px); letter-spacing:0.06em; }
+  .ask { font-weight:900; font-size:clamp(15px,3.4vw,19px); color:var(--dusk); margin:14px 0 10px; }
+  button { font:inherit; font-weight:900; cursor:pointer; border:4px solid var(--ink); border-radius:18px;
+    min-height:56px; padding:12px 20px; background:var(--cream); color:var(--ink);
+    box-shadow:0 6px 0 var(--ink); transition:transform 0.08s, box-shadow 0.08s; }
+  button:active { transform:translateY(5px); box-shadow:0 1px 0 var(--ink); }
+  .choices { display:flex; gap:12px; justify-content:center; margin-top:6px; }
+  .choices button { flex:1; max-width:220px; font-size:clamp(17px,4vw,21px); }
+  .yes { background:linear-gradient(180deg,#4CBF7C,#37955F); color:var(--cream); text-shadow:0 2px 0 rgba(20,8,30,0.3); }
+  .kinda { background:var(--you); }
+  .stamp { display:inline-block; background:var(--green); color:var(--cream); font-weight:900; border:4px solid var(--ink);
+    border-radius:16px; padding:10px 20px; font-size:clamp(18px,4.6vw,25px); letter-spacing:0.04em; transform:rotate(-3deg); margin:8px 0 12px;
+    box-shadow:0 5px 0 rgba(20,8,30,0.4); animation:slam 0.35s cubic-bezier(.2,2.2,.4,1); text-shadow:0 2px 0 rgba(20,8,30,0.3); }
+  @keyframes slam { from{transform:rotate(-3deg) scale(2.1); opacity:0} to{transform:rotate(-3deg) scale(1); opacity:1} }
+  .reveal-what { font-size:clamp(17px,4vw,22px); font-weight:800; line-height:1.4; margin:4px 2px 14px; }
+  .look { background:var(--ink); color:var(--cream); border-radius:16px; padding:12px 16px; text-align:left;
+    font-size:clamp(14px,3.3vw,17px); font-weight:700; line-height:1.5; margin-bottom:16px; }
+  .look b { color:var(--yellow); }
+  .look .spy { display:block; font-size:11px; letter-spacing:0.2em; color:var(--peach); font-weight:900; margin-bottom:4px; }
+  .next { width:100%; font-size:clamp(18px,4.2vw,22px); background:linear-gradient(180deg,var(--peach),var(--coral)); color:var(--ink); }
+  .board { width:100%; font-size:clamp(19px,4.6vw,24px); background:linear-gradient(180deg,#4CBF7C,#37955F); color:var(--cream);
+    text-shadow:0 2px 0 rgba(20,8,30,0.3); display:block; text-decoration:none; border:4px solid var(--ink); border-radius:18px; padding:16px; box-shadow:0 6px 0 var(--ink); }
+  .board:active { transform:translateY(5px); box-shadow:0 1px 0 var(--ink); }
+  .orders { text-align:left; background:rgba(92,58,110,0.1); border:3px dashed var(--dusk); border-radius:16px;
+    padding:14px 16px; margin:12px 0 16px; font-weight:800; font-size:clamp(14px,3.4vw,17px); line-height:1.7; }
+  .orders .t { font-weight:900; letter-spacing:0.16em; text-transform:uppercase; color:var(--dusk); font-size:12px; }
+  #dots { position:fixed; left:0; right:0; bottom:max(10px, env(safe-area-inset-bottom)); display:flex; gap:7px; justify-content:center; pointer-events:none; }
+  #dots i { width:10px; height:10px; border-radius:50%; background:rgba(255,243,226,0.45); border:2px solid rgba(42,27,61,0.5); }
+  #dots i.on { background:var(--you); transform:scale(1.25); }
+  #confetti { position:fixed; inset:0; pointer-events:none; }
+  .dedic { font-size:clamp(12px,2.6vw,14px); color:var(--dusk); font-weight:700; font-style:italic; margin-top:12px; }
+  .grown { display:none; background:#8FD8E8; border:3px solid var(--ink); border-radius:14px; padding:10px 12px; font-weight:800; font-size:14px; margin-bottom:10px; }
+  .grown.on { display:block; }
+  @media (prefers-reduced-motion: reduce) { .bigicon,.sun,.cloud,#cleo,.wavecrest{animation:none} }
+</style>
+</head>
+<body>
+  <div class="sun"></div>
+  <div class="cloud c1"></div><div class="cloud c2"></div>
+  <div class="seaband"></div><div class="wavecrest"></div>
+  <canvas id="cleo" width="96" height="70"></canvas>
+  <canvas id="confetti"></canvas>
+  <div id="stage"></div>
+  <div id="dots"></div>
+<script>
+'use strict';
+(function () {
+  const PROFILE = {
+    TITLES: ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT', 'INVENTOR'],
+    COLOURS: [{ name: 'CORAL', hex: '#FF6E6C' }, { name: 'SUNSET', hex: '#FFB067' }, { name: 'SUNSHINE', hex: '#FFD447' }, { name: 'PALM', hex: '#3FA96B' },
+      { name: 'SKY', hex: '#8FD8E8' }, { name: 'OCEAN', hex: '#2F7F9A' }, { name: 'PURPLE', hex: '#8C5BC9' }, { name: 'PINK', hex: '#FF7EB6' }],
+    RIDES: ['RED ROCKET', 'SAND BUGGY', 'SEA CRUISER'],
+    DREAMS: ['CASTLE', 'ZOO', 'RACETRACK', 'BAKERY', 'ROCKET BASE', 'SECRET HIDEOUT', 'FLOWER GARDEN'],
+    DREAM_TELL: ['build a castle tower four blocks tall', 'build three houses so the zoo animals have homes', 'plant a racing flag and drive the very first lap of the racetrack',
+      'open a factory so the bakery has an oven', 'build a launch tower four blocks tall', 'build walls with a door so there is somewhere to hide', 'lay down ten grass blocks for the garden'],
+  };
+  function sanitizeName(s) { return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim().slice(0, 10); }
+  function parseProfile(str) {
+    if (!str || typeof str !== 'string' || str.length > 40) return null;
+    let raw; try { const t = atob(str.replace(/-/g, '+').replace(/_/g, '/')); raw = []; for (let i = 0; i < t.length; i++) raw.push(t.charCodeAt(i)); } catch (e) { return null; }
+    if (raw.length < 10 || raw[0] !== 1) return null;
+    const p = { grownup: raw[1] === 1, title: raw[2], colour: raw[3], ride: raw[4], dream: raw[5], age: raw[6] };
+    if (raw[1] > 1 || p.title >= 8 || p.colour >= 8 || p.ride >= 3 || p.dream >= 7 || p.age >= 3) return null;
+    let nm = ''; for (let i = 9; i < raw.length; i++) nm += String.fromCharCode(raw[i]);
+    p.name = sanitizeName(nm); if (!p.name || p.name !== nm) return null;
+    return p;
+  }
+  function cap(s) { return s.charAt(0) + s.slice(1).toLowerCase(); }
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  let enc = '';
+  try { enc = new URLSearchParams(location.search).get('p') || ''; } catch (e) {}
+  let pro = parseProfile(enc);
+  if (!pro) { try { enc = localStorage.getItem('captain-profile-v1') || ''; pro = parseProfile(enc); } catch (e) {} }
+  const P = pro || { name: 'CAPTAIN', title: 0, colour: 2, ride: 0, dream: 0, age: 1, grownup: false };
+  const NAME = P.name, TITLE = PROFILE.TITLES[P.title], T = cap(TITLE), N = cap(NAME), HEX = PROFILE.COLOURS[P.colour].hex;
+  const COL = cap(PROFILE.COLOURS[P.colour].name), RIDE = PROFILE.RIDES[P.ride].split(' ').map(cap).join(' '), DREAM = PROFILE.DREAMS[P.dream].toLowerCase();
+  const YOUNG = P.age === 0;
+  document.documentElement.style.setProperty('--you', HEX);
+  const qs = pro ? '?crew=' + encodeURIComponent(NAME) + '&p=' + enc : '';
+
+  // audio, same recipe as the game
+  let AC = null;
+  function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+  function tone(f0, f1, dur, type, vol) { const ac = audio(); if (!ac) return; const o = ac.createOscillator(), g = ac.createGain(); o.type = type || 'square';
+    o.frequency.setValueAtTime(f0, ac.currentTime); o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), ac.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.07, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+    o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur + 0.02); }
+  const S_page = () => tone(660, 660, 0.06, 'square', 0.05);
+  const S_yes = () => { tone(523, 523, 0.07, 'square', 0.07); setTimeout(() => tone(659, 659, 0.07, 'square', 0.07), 70); setTimeout(() => tone(784, 1046, 0.14, 'square', 0.08), 140); };
+
+  // confetti
+  const cv = document.getElementById('confetti'), cx = cv.getContext('2d');
+  let parts = [];
+  function fit() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; cx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); }
+  addEventListener('resize', fit); fit();
+  const COLS = [HEX, '#FF6E6C', '#3FA96B', '#8FD8E8', '#FFB067', '#FFF3E2'];
+  function burst(n) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, sp = 140 + Math.random() * 260;
+    parts.push({ x: innerWidth / 2, y: innerHeight * 0.34, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 140, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 12, t: 1.1 + Math.random() * 0.7, c: COLS[i % COLS.length] }); } }
+  let lastT = performance.now();
+  (function loop(now) { const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; cx.clearRect(0, 0, innerWidth, innerHeight);
+    for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 420 * dt; p.rot += p.vr * dt; p.t -= dt;
+      cx.save(); cx.globalAlpha = Math.max(0, Math.min(1, p.t)); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillStyle = p.c; cx.fillRect(-4, -3, 8, 6); cx.restore(); if (p.t <= 0) parts.splice(i, 1); }
+    requestAnimationFrame(loop); })(performance.now());
+
+  // Cleo trots along the beach behind the book, drawn by hand, bow in the child's colour
+  const kc = document.getElementById('cleo').getContext('2d');
+  (function dog(now) {
+    const t = now / 1000, g = kc, s = 2.2, cx0 = 48, cy0 = 58, trot = Math.sin(t * 12);
+    g.clearRect(0, 0, 96, 70);
+    g.fillStyle = '#2A1B3D';
+    [[-6, trot], [-2, -trot], [3, trot], [7, -trot]].forEach(function (l) { g.fillRect(cx0 + l[0] * s, cy0 - 5 * s, 2.6 * s, (6 - Math.abs(l[1]) * 1.5) * s); });
+    g.beginPath(); g.ellipse(cx0 + 1 * s, cy0 - 9 * s, 9 * s, 5 * s, 0, 0, 6.29); g.fill();
+    g.strokeStyle = '#2A1B3D'; g.lineWidth = 2.4 * s; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx0 + 9 * s, cy0 - 11 * s); g.quadraticCurveTo(cx0 + 13 * s, cy0 - 17 * s, cx0 + 12 * s + trot * 3, cy0 - 20 * s); g.stroke();
+    g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(cx0 + 10 * s, cy0 - 14 * s, 6 * s, 0, 6.29); g.fill();
+    g.fillStyle = '#C9834E'; g.beginPath(); g.ellipse(cx0 + 12 * s, cy0 - 12.5 * s, 4 * s, 3.4 * s, 0, 0, 6.29); g.fill();
+    g.fillStyle = '#2A1B3D'; g.beginPath(); g.moveTo(cx0 + 6 * s, cy0 - 18 * s); g.lineTo(cx0 + 4 * s, cy0 - 24 * s + Math.abs(trot) * 2); g.lineTo(cx0 + 9 * s, cy0 - 20 * s); g.fill();
+    g.beginPath(); g.moveTo(cx0 + 13 * s, cy0 - 18.5 * s); g.lineTo(cx0 + 15 * s, cy0 - 24 * s + Math.abs(trot) * 2); g.lineTo(cx0 + 10 * s, cy0 - 20 * s); g.fill();
+    g.beginPath(); g.arc(cx0 + 9 * s, cy0 - 14.5 * s, 1 * s, 0, 6.29); g.arc(cx0 + 12.8 * s, cy0 - 14.5 * s, 1 * s, 0, 6.29); g.fill();
+    g.beginPath(); g.arc(cx0 + 15.5 * s, cy0 - 12 * s, 1.3 * s, 0, 6.29); g.fill();
+    g.fillStyle = HEX; g.beginPath(); g.moveTo(cx0 + 10 * s, cy0 - 20 * s); g.lineTo(cx0 + 6 * s, cy0 - 23 * s); g.lineTo(cx0 + 6 * s, cy0 - 17 * s); g.fill();
+    g.beginPath(); g.moveTo(cx0 + 10 * s, cy0 - 20 * s); g.lineTo(cx0 + 14 * s, cy0 - 23 * s); g.lineTo(cx0 + 14 * s, cy0 - 17 * s); g.fill();
+    g.fillStyle = '#5C3A6E'; g.fillRect(cx0 + 16 * s, cy0 - 12 * s, 7 * s, 5 * s); g.fillStyle = '#FFF3E2'; g.fillRect(cx0 + 17 * s, cy0 - 11 * s, 5 * s, 3 * s);
+    requestAnimationFrame(dog);
+  })(performance.now());
+
+  // the voyage: ten pages, every one true, every "where to spy it" a real place in the game
+  const CARDS = [
+    { cover: true, icon: '\uD83D\uDCD6', title: T.toUpperCase() + ' ' + NAME + '\u2019S VOYAGE', kicker: 'read by Cleo, the show dog',
+      what: 'Hello, ' + T + ' ' + N + '. I am Cleo. I keep the book, and I know every corner of Sunset Island. Ten pages, and then you set sail. Ready?', btn: 'OPEN THE BOOK' },
+    { icon: '\uD83D\uDEA2', line: 'Somewhere out on the pink sea, a cruise ship is tilting, and the luggage is sliding off the deck.',
+      what: 'Game 01 is the ship. You run up and down the deck and catch every bag before it slides into the sea. The deck tilts. So do you.',
+      look: 'Open <b>CRUISE CREW CHAOS</b> and press <b>PLAY</b>. Tap left and right to run. The first bag has a golden arrow pointing at it.' },
+    { icon: '\uD83E\uDD85', line: 'There are bad guys. Well. One bad guy. A seagull, with no manners at all.',
+      what: 'The seagull swoops down and drags your luggage towards the drains. Run up and bonk it and it flaps off, squawking.',
+      look: 'In <b>CRUISE CREW CHAOS</b>, when the seagull lands, run straight at it. Bonk. Keep the bag.' },
+    { icon: '\uD83C\uDF6B', line: 'Every rescue makes coins burst into the air. And one thing on that deck is worth twenty points all by itself.',
+      what: 'A giant chocolate bar trunk. Rescue it and the score jumps by twenty. The seagull wants it too, so guard it.',
+      look: 'In <b>CRUISE CREW CHAOS</b>, watch for the big brown trunk with the gold wrapper. Twenty points.' },
+    { icon: '\uD83D\uDEE1\uFE0F', line: 'Get to one thousand points and something happens that has never happened to anybody with your name.',
+      what: 'You become a KNIGHT LEGEND, the top rank on the whole island, and the certificate at the end says ' + T.toUpperCase() + ' ' + NAME + ' on it.',
+      look: 'Finish a game of <b>CRUISE CREW CHAOS</b> and read your certificate. It is yours. It says your name.' },
+    { icon: '\uD83C\uDFDD\uFE0F', line: 'Now the island. It is empty sand right now. That is because it is waiting for you.',
+      what: 'Tap the sand and a block pops up. Tap it again and another sits on top. Grass, sand, wood, brick, windows, doors, roofs, palms.',
+      look: 'Open <b>YOUR ISLAND</b>. Tap anywhere on the sand. Pick a block from the bar at the bottom. I will be standing right there.' },
+    { icon: '\uD83C\uDFE0', line: 'Build four walls in a ring and put a door in one, and something happens that I never get tired of.',
+      what: 'Somebody moves in. A little islander walks out of the door, wanders about, and talks to you when you tap them. More houses, more islanders.',
+      look: 'In <b>YOUR ISLAND</b>, use <b>WOOD</b> or <b>BRICK</b> for the walls and put a <b>DOOR</b> in the front. Then wait one second.' },
+    { icon: '\uD83C\uDFCE\uFE0F', line: 'Parked on the sand, painted ' + COL.toLowerCase() + ', is your ' + RIDE + '. It goes fast. It also flies.',
+      what: 'Press DRIVE and the ' + RIDE + ' is yours. Line up some sand blocks one high and drive at them. Off you go, into the air. Plant a flag and race laps.',
+      look: 'In <b>YOUR ISLAND</b>, press <b>DRIVE</b>. Left and right to steer. Build a line of <b>SAND</b> one block high for a ramp. A <b>FLAG</b> starts the lap clock.' },
+    { icon: '\uD83C\uDF19', line: 'At night, tap the moon. I will write the chapter about what you did today. A real one, with your name in it.',
+      what: 'Every day gets a chapter, and every chapter ends with one question and a promise for tomorrow. Read it with a grown-up. It is the book of you.',
+      look: 'In <b>YOUR ISLAND</b>, tap the <b>MOON</b> button. And tap <b>me</b> any time you wonder what to do next. I always know.' },
+    { finale: true, icon: '\uD83D\uDCDC', title: T.toUpperCase() + '\u2019S ORDERS', kicker: 'your voyage, ' + N,
+      what: 'You said you dream of building a ' + DREAM + '. So that is where the book will start tonight. Here is your voyage:',
+      orders: ['\u2693 Catch the luggage, bonk the seagull, reach one thousand.', '\uD83C\uDFE0 Build a house with a door and meet your first islander.', '\uD83C\uDFCE\uFE0F Drive the ' + RIDE + ' off a ramp.', '\u2B50 ' + PROFILE.DREAM_TELL[P.dream].charAt(0).toUpperCase() + PROFILE.DREAM_TELL[P.dream].slice(1) + '.', '\uD83D\uDD17 Tap SHARE and send your whole island to someone in one link.'],
+      btn: 'PLAY THE SHIP' },
+  ];
+  const stage = document.getElementById('stage'), dots = document.getElementById('dots');
+  CARDS.forEach(() => dots.appendChild(document.createElement('i')));
+  let idx = 0;
+  function render(revealed) {
+    const c = CARDS[idx];
+    [...dots.children].forEach((d, i) => d.classList.toggle('on', i === idx));
+    let inner = '';
+    if (c.cover || c.finale) {
+      inner = '<div class="eyebrow">' + (c.cover ? 'SUNSET ISLAND \u00B7 YOUR VOYAGE' : 'TOP SECRET \u00B7 ' + esc(TITLE) + ' ONLY') + '</div>' +
+        (c.cover && P.grownup ? '<div class="grown on">Your grown-up made this voyage just for you.</div>' : '') +
+        '<div class="bigicon">' + c.icon + '</div>' +
+        '<h1>' + esc(c.title) + '</h1><div class="kicker">' + esc(c.kicker) + '</div>' +
+        '<div class="reveal-what">' + esc(c.what) + '</div>' +
+        (c.orders ? '<div class="orders"><span class="t">Your orders</span><br>' + c.orders.map(esc).join('<br>') + '</div>' : '') +
+        (c.finale
+          ? '<a class="board" href="island.html' + qs + '">GO TO YOUR ISLAND \u{1F3DD}\uFE0F</a><a class="board" href="index.html' + qs + '" style="margin-top:8px">' + c.btn + ' \u{1F6F3}\uFE0F</a><div class="dedic">Made for ' + esc(T + ' ' + N) + ' by the Sunset Island crew</div>'
+          : '<button class="next" id="go">' + c.btn + ' \u2192</button>');
+    } else if (!revealed) {
+      inner = '<div class="eyebrow">PAGE ' + idx + ' \u00B7 CLEO SAYS\u2026</div>' +
+        '<div class="bigicon">' + c.icon + '</div>' +
+        '<div class="bubble">' + esc(c.line) + '</div>' +
+        '<div class="whosaid">Cleo, the show dog, keeper of the book</div>' +
+        '<div class="ask">' + (YOUNG ? 'Want to see?' : 'Want to know what happens next?') + '</div>' +
+        '<div class="choices"><button class="yes" id="yes">SHOW ME!</button><button class="kinda" id="kinda">Ooh!</button></div>';
+    } else {
+      inner = '<div class="eyebrow">PAGE ' + idx + ' \u00B7 HERE IT IS\u2026</div>' +
+        '<div class="bigicon">' + c.icon + '</div>' +
+        '<div class="stamp">IT\u2019S ON YOUR ISLAND!</div>' +
+        '<div class="reveal-what">' + esc(c.what) + '</div>' +
+        '<div class="look"><span class="spy">WHERE TO SPY IT</span>' + c.look + '</div>' +
+        '<button class="next" id="go">' + (idx === CARDS.length - 2 ? 'ONE MORE THING \u2192' : 'NEXT PAGE \u2192') + '</button>';
+    }
+    stage.innerHTML = '<div class="page">' + inner + '</div>';
+    const yes = document.getElementById('yes'), kinda = document.getElementById('kinda'), go = document.getElementById('go');
+    if (yes) yes.addEventListener('click', () => { S_yes(); burst(46); render(true); });
+    if (kinda) kinda.addEventListener('click', () => { S_yes(); burst(30); render(true); });
+    if (go) go.addEventListener('click', () => { S_page(); idx = Math.min(CARDS.length - 1, idx + 1); render(false); });
+  }
+  let sx = null;
+  addEventListener('pointerdown', e => { sx = e.clientX; });
+  addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (dx > 70 && idx > 0) { S_page(); idx--; render(false); } });
+  render(false);
+  window.__VOYAGE = { cards: CARDS, profile: () => pro, idx: () => idx, go: (i) => { idx = i; render(false); }, reveal: () => render(true) };
+})();
+</script>
+</body>
+</html>
