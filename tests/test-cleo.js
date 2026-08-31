@@ -17,7 +17,8 @@ ok('evening: the moon', nextThing({ blocks: 30, houses: 1, flags: 1, ramp: true,
 ok('late night too', nextThing({ blocks: 30, houses: 1, flags: 1, ramp: true, hour: 2 }).key === 'moon');
 const day = { blocks: 30, houses: 1, flags: 1, ramp: true, hour: 11 };
 ok('daytime, all done: rotating ideas', nextThing(Object.assign({ tick: 0 }, day)).key === 'tall' && nextThing(Object.assign({ tick: 1 }, day)).key === 'share');
-ok('ideas rotate and wrap', nextThing(Object.assign({ tick: 7 }, day)).key === 'tall' && nextThing(Object.assign({ tick: 5 }, day)).key === 'compass' && nextThing(Object.assign({ tick: 6 }, day)).key === 'seed');
+const ideaKeys = []; for (let k = 0; k < 20; k++) { const key = nextThing(Object.assign({ tick: k }, day)).key; if (k && key === 'tall') break; ideaKeys.push(key); }
+ok('ideas rotate and wrap, six or more, no repeats in a cycle', ideaKeys.length >= 6 && new Set(ideaKeys).size === ideaKeys.length && nextThing(Object.assign({ tick: ideaKeys.length }, day)).key === 'tall' && ideaKeys.indexOf('compass') === 5 && ideaKeys.indexOf('seed') === 6);
 ok('the seed idea changes once the garden exists', /Plant a SEED/.test(nextThing(Object.assign({ tick: 6 }, day)).line) && /growing/.test(nextThing(Object.assign({ tick: 6, plants: 2 }, day)).line));
 ok('every line is one sentence, no lists', [{}, { blocks: 3 }, { blocks: 8, walls: 8 }, day].every(st => { const l = nextThing(st).line; return l.length < 90 && l.indexOf('\n') === -1; }));
 ok('quest comes before flag and ramp', nextThing({ blocks: 30, houses: 1, quest: q, flags: 0 }).key === 'quest');
