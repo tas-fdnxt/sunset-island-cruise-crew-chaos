@@ -26,6 +26,18 @@
   html,body { height:100%; overflow:hidden; background:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
   canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
+  canvas#gl { position:fixed; inset:0; width:100vw; height:100dvh; display:none; touch-action:none; z-index:4; }
+  body.walking canvas#gl { display:block; }
+  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #drawer { display:none !important; }
+  #walkui { display:none; }
+  body.walking #walkui { display:block; }
+  #stick { position:fixed; left:22px; bottom:calc(env(safe-area-inset-bottom,0px) + 26px); width:118px; height:118px; border-radius:50%; background:rgba(42,27,61,0.28); border:3px solid rgba(255,243,226,0.7); z-index:6; pointer-events:none; }
+  #knob { position:absolute; left:34px; top:34px; width:44px; height:44px; border-radius:50%; background:var(--cream); border:3px solid var(--ink); box-sizing:border-box; }
+  #w-jump, #w-exit { position:fixed; right:18px; z-index:7; height:66px; border-radius:18px; border:3px solid var(--ink); background:var(--yellow); color:var(--ink); font:900 13px/1.05 system-ui; box-shadow:0 4px 0 var(--ink); padding:0 14px; }
+  #w-jump { bottom:calc(env(safe-area-inset-bottom,0px) + 26px); width:96px; height:96px; border-radius:50%; font-size:15px; }
+  #w-exit { bottom:calc(env(safe-area-inset-bottom,0px) + 136px); background:var(--coral); color:var(--cream); }
+  #w-hint { position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 58px); z-index:7; background:rgba(42,27,61,0.75); color:var(--cream); font:800 12px system-ui; padding:8px 14px; border-radius:14px; opacity:0; transition:opacity .4s; pointer-events:none; }
+  #w-hint.on { opacity:1; }
   #topbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 10px); left:10px; right:10px;
     display:flex; justify-content:space-between; align-items:center; gap:6px; pointer-events:none; }
   #pop, #cargo { flex:0 0 auto; }
@@ -185,6 +197,8 @@
 </head>
 <body>
 <canvas id="world"></canvas>
+<canvas id="gl"></canvas>
+<div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
 <div id="topbar">
   <div class="badge" id="title-badge" style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis">OLLIE'S ISLAND &middot; GAME 02</div>
   <div class="badge" id="pop" style="color:#8FD8E8">ISLANDERS 0</div>
@@ -739,6 +753,7 @@ function chapter(o) {
   const newFac = Math.max(0, (s.factories || 0) - (prev.factories || 0));
   if (newArc > 0) page1.push('An arcade machine lit up on the beach, and the islanders queued up for a go.');
   if (newFac > 0) page1.push('A chocolate factory opened its doors and puffed its very first puff of smoke.');
+  if (o.walked > 0) page1.push(cap + ' climbed out of the car and walked the island on foot, ' + o.walked + ' step' + (o.walked === 1 ? '' : 's') + ', right up to the front doors' + (o.jumped > 0 ? ', and jumped ' + o.jumped + ' time' + (o.jumped === 1 ? '' : 's') + ' for the fun of it.' : '.'));
   if (o.boat) page1.push('The morning boat came in with a long low horn, and brought ' + boatLine(o.boat));
   if (o.garden) {
     const g = o.garden;
@@ -895,6 +910,7 @@ function nextThing(st) {
     { key: 'mirror', line: 'Try building a house that is the same on both sides. Tap me and I will show the missing half.', ghost: 'mirror' },
     { key: 'compass', line: 'Look at the corners of the island. N is north. Try building something north of your flag.' },
     { key: 'seed', line: st.plants ? 'Your garden is growing. Seeds take a whole day to sprout, so come back tomorrow.' : 'Plant a SEED on bare sand. Come back tomorrow and something will have happened.' },
+    { key: 'walk', line: 'Tap WALK and stand on your island. Go and knock on a door.' },
   ];
   return spare[(st.tick || 0) % spare.length];
 }
@@ -987,8 +1003,116 @@ function houses(w) {
   }
   return found;
 }
+/* WALK. The island in first person. Pure parts: where the ground is, how a walker moves, and the mesh of the world.
+   Same grid, same link. A cell's floor is its stack height; seeds and sprouts are walked over, everything else is climbed
+   one block at a time or blocks the way. The sea is never walkable. Nothing here touches the screen. */
+const WALK = { EYE: 1.5, R: 0.28, STEP: 1.02, SPEED: 3.4, JUMP: 6.0, GRAV: 17 };
+function floorAt(w, x, y) {
+  const cx = Math.floor(x), cy = Math.floor(y);
+  if (!inBounds(cx, cy) || !isLand(cx, cy)) return null;
+  const t = topZ(w, cx, cy);
+  if (t < 0) return 0;
+  const id = w.cols[idx(cx, cy, t)];
+  return (id === 12 || id === 13) ? t : t + 1;
+}
+function footprintFloor(w, x, y) {
+  let f = -1;
+  const r = WALK.R;
+  for (const s of [[-r, -r], [r, -r], [-r, r], [r, r], [0, 0]]) {
+    const v = floorAt(w, x + s[0], y + s[1]);
+    if (v === null) return null;
+    if (v > f) f = v;
+  }
+  return f;
+}
+function walkStep(w, p, inp, dt) {
+  dt = Math.min(0.05, dt);
+  const fx = Math.cos(p.yaw), fy = Math.sin(p.yaw), rx = -fy, ry = fx;
+  const sp = WALK.SPEED * (inp.run ? 1.6 : 1);
+  let mx = (fx * (inp.fwd || 0) + rx * (inp.side || 0)) * sp * dt, my = (fy * (inp.fwd || 0) + ry * (inp.side || 0)) * sp * dt;
+  let moved = 0;
+  for (const ax of ['x', 'y']) {
+    const d = ax === 'x' ? mx : my; if (!d) continue;
+    const nx = ax === 'x' ? p.x + d : p.x, ny = ax === 'y' ? p.y + d : p.y;
+    const f = footprintFloor(w, nx, ny);
+    if (f !== null && f <= p.z + (p.onGround ? WALK.STEP : 0.35)) { p.x = nx; p.y = ny; moved += Math.abs(d); }
+  }
+  const f = footprintFloor(w, p.x, p.y); const floor = f === null ? 0 : f;
+  if (inp.jump && p.onGround) { p.vz = WALK.JUMP; p.onGround = false; p.jumps = (p.jumps || 0) + 1; }
+  p.vz -= WALK.GRAV * dt; p.z += p.vz * dt;
+  if (p.z <= floor) { p.z = floor; p.vz = 0; p.onGround = true; } else p.onGround = false;
+  p.steps = (p.steps || 0) + moved;
+  return p;
+}
+function walkSpawn(w) {
+  const hs = houses(w), f = flags(w);
+  const at = hs.length ? { x: hs[0].x + 3.5, y: hs[0].y + 3.5 } : f.length ? { x: f[0].x + 2.5, y: f[0].y + 0.5 } : { x: ISLE.N / 2 + 0.5, y: ISLE.N / 2 + 2.5 };
+  let fl = footprintFloor(w, at.x, at.y);
+  for (let r = 1; fl === null && r < 8; r++) { const c = [[r, 0], [0, r], [-r, 0], [0, -r]].map(function (d) { return { x: at.x + d[0], y: at.y + d[1] }; }).find(function (c) { return footprintFloor(w, c.x, c.y) !== null; }); if (c) { at.x = c.x; at.y = c.y; fl = footprintFloor(w, at.x, at.y); } }
+  const look = hs.length ? { x: hs[0].x + 0.5, y: hs[0].y + 0.5 } : { x: at.x - 1, y: at.y - 1 };
+  return { x: at.x, y: at.y, z: fl === null ? 0 : fl, vz: 0, yaw: Math.atan2(look.y - at.y, look.x - at.x), pitch: -0.08, onGround: true, steps: 0, jumps: 0 };
+}
+/* The mesh: one triangle list of positions and colours. Ground on land, a skirt where land meets sea, every exposed block face,
+   plants and palms as crossed quads, flags as a pole and banner. Faces are shaded by direction so the world reads without lights. */
+function hexRGB(hx) { return [parseInt(hx.slice(1, 3), 16) / 255, parseInt(hx.slice(3, 5), 16) / 255, parseInt(hx.slice(5, 7), 16) / 255]; }
+function buildWalkMesh(w, flagCol) {
+  const P = [], C = [];
+  function quad(a, b, c, d, col, shade) {
+    const s = shade == null ? 1 : shade;
+    for (const v of [a, b, c, a, c, d]) { P.push(v[0], v[1], v[2]); C.push(col[0] * s, col[1] * s, col[2] * s); }
+  }
+  function box(x, y, z0, z1, top, side, side2, inset) {
+    const i = inset || 0, x0 = x + i, x1 = x + 1 - i, y0 = y + i, y1 = y + 1 - i;
+    quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], top, 1);
+    quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], side, 0.86);
+    quad([x1, y1, z0], [x0, y1, z0], [x0, y1, z1], [x1, y1, z1], side, 0.86);
+    quad([x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1], side2, 0.72);
+    quad([x0, y1, z0], [x0, y0, z0], [x0, y0, z1], [x0, y1, z1], side2, 0.72);
+  }
+  function cross(cx, cy, z0, z1, half, col) {
+    quad([cx - half, cy - half, z0], [cx + half, cy + half, z0], [cx + half, cy + half, z1], [cx - half, cy - half, z1], col, 0.9);
+    quad([cx + half, cy + half, z0], [cx - half, cy - half, z0], [cx - half, cy - half, z1], [cx + half, cy + half, z1], col, 0.9);
+    quad([cx - half, cy + half, z0], [cx + half, cy - half, z0], [cx + half, cy - half, z1], [cx - half, cy + half, z1], col, 0.8);
+    quad([cx + half, cy - half, z0], [cx - half, cy + half, z0], [cx - half, cy + half, z1], [cx + half, cy - half, z1], col, 0.8);
+  }
+  const sand = [hexRGB('#F5D98E'), hexRGB('#FFE49E')], beach = [hexRGB('#FFEDBF'), hexRGB('#FFF3CC')], skirt = hexRGB('#D8B970');
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
+    if (!isLand(x, y)) continue;
+    const g = (isBeach(x, y) ? beach : sand)[(x + y) % 2];
+    quad([x, y, 0], [x + 1, y, 0], [x + 1, y + 1, 0], [x, y + 1, 0], g, 1);
+    if (!isLand(x, y - 1)) quad([x, y, -0.6], [x + 1, y, -0.6], [x + 1, y, 0], [x, y, 0], skirt, 0.8);
+    if (!isLand(x, y + 1)) quad([x + 1, y + 1, -0.6], [x, y + 1, -0.6], [x, y + 1, 0], [x + 1, y + 1, 0], skirt, 0.8);
+    if (!isLand(x + 1, y)) quad([x + 1, y, -0.6], [x + 1, y + 1, -0.6], [x + 1, y + 1, 0], [x + 1, y, 0], skirt, 0.7);
+    if (!isLand(x - 1, y)) quad([x, y + 1, -0.6], [x, y, -0.6], [x, y, 0], [x, y + 1, 0], skirt, 0.7);
+    for (let z = 0; z < ISLE.ZMAX; z++) {
+      const id = w.cols[idx(x, y, z)]; if (!id) continue;
+      const t = ISLE.TYPES[id], top = hexRGB(t.top), side = hexRGB(t.side), side2 = hexRGB(t.side2);
+      if (id === 12) { box(x, y, z, z + 0.12, top, side, side2, 0.3); continue; }
+      if (id === 13) { cross(x + 0.5, y + 0.5, z, z + 0.5, 0.22, top); continue; }
+      if (id === 14) { box(x, y, z, z + 0.9, side, side, side2, 0.4); cross(x + 0.5, y + 0.5, z + 0.7, z + 2.1, 0.6, top); cross(x + 0.5, y + 0.5, z + 1.3, z + 2.4, 0.42, hexRGB('#3FA96B')); continue; }
+      if (id === 8) { box(x, y, z, z + 1.7, side, side, side2, 0.38); cross(x + 0.5, y + 0.5, z + 1.4, z + 2.4, 0.75, top); continue; }
+      if (id === 9) {
+        box(x, y, z, z + 1.6, hexRGB('#2A1B3D'), hexRGB('#2A1B3D'), hexRGB('#3E2650'), 0.45);
+        const fc = hexRGB(flagCol || '#FFF3E2');
+        quad([x + 0.55, y + 0.5, z + 1.05], [x + 1.1, y + 0.5, z + 1.05], [x + 1.1, y + 0.5, z + 1.55], [x + 0.55, y + 0.5, z + 1.55], fc, 1);
+        quad([x + 1.1, y + 0.5, z + 1.05], [x + 0.55, y + 0.5, z + 1.05], [x + 0.55, y + 0.5, z + 1.55], [x + 1.1, y + 0.5, z + 1.55], fc, 0.85);
+        continue;
+      }
+      const above = z + 1 < ISLE.ZMAX ? w.cols[idx(x, y, z + 1)] : 0;
+      if (!above) quad([x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1], top, 1);
+      const open = function (nx, ny) { return !inBounds(nx, ny) || !w.cols[idx(nx, ny, z)]; };
+      if (open(x, y - 1)) quad([x, y, z], [x + 1, y, z], [x + 1, y, z + 1], [x, y, z + 1], side, 0.86);
+      if (open(x, y + 1)) quad([x + 1, y + 1, z], [x, y + 1, z], [x, y + 1, z + 1], [x + 1, y + 1, z + 1], side, 0.86);
+      if (open(x + 1, y)) quad([x + 1, y, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x + 1, y, z + 1], side2, 0.72);
+      if (open(x - 1, y)) quad([x, y + 1, z], [x, y, z], [x, y, z + 1], [x, y + 1, z + 1], side2, 0.72);
+      if (id === 11) box(x + 0.55, y + 0.15, z + 1, z + 1.9, hexRGB('#FF6E6C'), hexRGB('#2A1B3D'), hexRGB('#3E2650'), 0.35);
+      if (id === 6 && !above) {} // a door is a door: its own colour, a handle is for the 2D view
+    }
+  }
+  return { pos: new Float32Array(P), col: new Float32Array(C), count: P.length / 3 };
+}
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
+  module.exports = { WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
 }
 </script>
 <script>
@@ -1235,6 +1359,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function frame(now) {
     const t = (now - t0) / 1000;
     const dt = Math.min(0.05, t - tPrev); tPrev = t;
+    if (walking) { stepIslanders(dt, t); stepCleo(dt, t); walkFrame(dt, t); requestAnimationFrame(frame); return; }
     ctx.clearRect(0, 0, W, H);
     stepCamera(dt);
     const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
@@ -1449,7 +1574,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   let tool = 3; // wood first: house building starts with walls
   function tapAt(sx, sy) {
-    if (driving) return;
+    if (driving || walking) return;
     const ch = cleoAt(sx, sy);
     if (ch) { talkToKeeper(ch); return; }
     const hit = islanderAt(sx, sy);
@@ -1525,6 +1650,7 @@ if (typeof module !== 'undefined' && module.exports) {
     bar.appendChild(cur);
     const er = dockBtn('btn-erase', 'ERASE', '\u2716', function () { setTool(-1); }); if (tool === -1) er.classList.add('sel'); bar.appendChild(er);
     const rm = dockBtn('btn-remix', 'REMIX', '\u2728', function () { remix(); }); if (builder && builder !== CREW) rm.classList.add('on'); bar.appendChild(rm);
+    bar.appendChild(dockBtn('btn-walk', 'WALK', '\uD83D\uDEB6', function () { setWalk(true); }));
     bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
     bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
@@ -1551,12 +1677,12 @@ if (typeof module !== 'undefined' && module.exports) {
   });
   addEventListener('keydown', function (e) {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-    if (driving) return;
+    if (driving || walking) return;
     const k = e.key.toLowerCase();
     if (k >= '1' && k <= '9') { setTool(Number(k)); }
     else if (k === '0') setTool(10); else if (k === 'f') setTool(11); else if (k === 'p') setTool(12);
     else if (k === 'e') setTool(-1); else if (k === 'u') document.getElementById('btn-undo').click();
-    else if (k === 'd') document.getElementById('btn-drive').click(); else if (k === 's') share();
+    else if (k === 'd') document.getElementById('btn-drive').click(); else if (k === 'w' && !walking) setWalk(true); else if (k === 's') share();
     else if (k === 'escape') drawer.classList.remove('on');
     else return;
     e.preventDefault();
@@ -1765,6 +1891,7 @@ if (typeof module !== 'undefined' && module.exports) {
   let lastPlaced = null, ghost = null, hintOn = true;
   try { hintOn = localStorage.getItem('captains-island-hints') !== 'off'; } catch (e) {}
   function cleoTarget() {
+    if (walking) { return { x: walker.x + Math.cos(walker.yaw) * 2.2 - Math.sin(walker.yaw) * 1.1, y: walker.y + Math.sin(walker.yaw) * 2.2 + Math.cos(walker.yaw) * 1.1 }; }
     if (driving) { return { x: car.x - Math.cos(car.h) * 2.2, y: car.y - Math.sin(car.h) * 2.2 }; }
     if (lastPlaced && Math.hypot(lastPlaced.x - cleo.x, lastPlaced.y - cleo.y) < 14) return { x: lastPlaced.x + 2.5, y: lastPlaced.y - 0.5 };
     const c = cellAt(innerWidth / 2, innerHeight / 2);
@@ -1999,6 +2126,200 @@ if (typeof module !== 'undefined' && module.exports) {
     el.classList.add('on');
     blip(760); setTimeout(() => blip(920), 90);
     clearTimeout(bubbleT); bubbleT = setTimeout(() => el.classList.remove('on'), 3200);
+  }
+
+  // ===== WALK: the island in first person. Raw WebGL, one file, no server. =====
+  let walking = false, walker = null, gl = null, glc = document.getElementById('gl');
+  let progW = null, progB = null, meshBuf = null, meshCount = 0, seaBuf = null, skyBuf = null, bbBuf = null, texCache = {};
+  const winp = { fwd: 0, side: 0, jump: false, run: false }, wkeys = {};
+  let wStick = null, wLook = null, walkDist0 = 0, hintT = null, walkPtrs = 0;
+  function colRGB(c) { if (c[0] === '#') return hexRGB(c); const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(c); return m ? [m[1] / 255, m[2] / 255, m[3] / 255] : [0.5, 0.5, 0.5]; }
+  function glShader(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+  function glProgram(vs, fs) { const p = gl.createProgram(); gl.attachShader(p, glShader(gl.VERTEX_SHADER, vs)); gl.attachShader(p, glShader(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p; }
+  function glInit() {
+    if (gl) return true;
+    try { gl = glc.getContext('webgl', { antialias: true, alpha: false }) || glc.getContext('experimental-webgl'); } catch (e) { gl = null; }
+    if (!gl) return false;
+    progW = glProgram(
+      'attribute vec3 aP; attribute vec3 aC; uniform mat4 uM; uniform vec3 uEye; varying vec3 vC; varying float vD; void main(){ gl_Position = uM * vec4(aP,1.0); vC = aC; vD = distance(aP, uEye); }',
+      'precision mediump float; varying vec3 vC; varying float vD; uniform vec3 uFog; uniform float uLight; uniform float uFogFar; void main(){ float f = clamp((vD - 18.0) / uFogFar, 0.0, 1.0); vec3 c = mix(vC * uLight, uFog, f); gl_FragColor = vec4(c, 1.0); }');
+    progB = glProgram(
+      'attribute vec3 aP; attribute vec2 aT; uniform mat4 uM; varying vec2 vT; void main(){ gl_Position = uM * vec4(aP,1.0); vT = aT; }',
+      'precision mediump float; varying vec2 vT; uniform sampler2D uS; uniform float uLight; void main(){ vec4 c = texture2D(uS, vT); if (c.a < 0.5) discard; gl_FragColor = vec4(c.rgb * uLight, 1.0); }');
+    meshBuf = gl.createBuffer(); seaBuf = gl.createBuffer(); skyBuf = gl.createBuffer(); bbBuf = gl.createBuffer();
+    gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+    return true;
+  }
+  function glResize() { const d = Math.min(2, window.devicePixelRatio || 1); glc.width = Math.round(innerWidth * d); glc.height = Math.round(innerHeight * d); gl.viewport(0, 0, glc.width, glc.height); }
+  function uploadMesh() {
+    const m = buildWalkMesh(world.ref, FLAGCOL);
+    const inter = new Float32Array(m.count * 6);
+    for (let i = 0; i < m.count; i++) { inter[i * 6] = m.pos[i * 3]; inter[i * 6 + 1] = m.pos[i * 3 + 1]; inter[i * 6 + 2] = m.pos[i * 3 + 2]; inter[i * 6 + 3] = m.col[i * 3]; inter[i * 6 + 4] = m.col[i * 3 + 1]; inter[i * 6 + 5] = m.col[i * 3 + 2]; }
+    gl.bindBuffer(gl.ARRAY_BUFFER, meshBuf); gl.bufferData(gl.ARRAY_BUFFER, inter, gl.STATIC_DRAW); meshCount = m.count;
+  }
+  function mat4Mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
+  function viewProj(eye, f, aspect) {
+    const up = [0, 0, 1];
+    const s = [f[1] * up[2] - f[2] * up[1], f[2] * up[0] - f[0] * up[2], f[0] * up[1] - f[1] * up[0]];
+    const sl = Math.hypot(s[0], s[1], s[2]) || 1; s[0] /= sl; s[1] /= sl; s[2] /= sl;
+    const u = [s[1] * f[2] - s[2] * f[1], s[2] * f[0] - s[0] * f[2], s[0] * f[1] - s[1] * f[0]];
+    const V = new Float32Array([s[0], u[0], -f[0], 0, s[1], u[1], -f[1], 0, s[2], u[2], -f[2], 0,
+      -(s[0] * eye[0] + s[1] * eye[1] + s[2] * eye[2]), -(u[0] * eye[0] + u[1] * eye[1] + u[2] * eye[2]), (f[0] * eye[0] + f[1] * eye[1] + f[2] * eye[2]), 1]);
+    const fov = 1.15, n = 0.08, fa = 260, t = 1 / Math.tan(fov / 2);
+    const Pm = new Float32Array([t / aspect, 0, 0, 0, 0, t, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0]);
+    return { m: mat4Mul(Pm, V), s: s, u: u };
+  }
+  function spriteTex(key, draw) {
+    if (texCache[key]) return texCache[key];
+    const c = document.createElement('canvas'); c.width = 64; c.height = 96; draw(c.getContext('2d'));
+    const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    texCache[key] = tx; return tx;
+  }
+  function folkTex(p) {
+    return spriteTex('folk:' + p.col + (p.visitor ? ':v' : '') + (OWNER && p === islanders[0] ? ':k' : ''), function (g) {
+      g.fillStyle = p.col; g.beginPath(); g.ellipse(32, 62, 16, 24, 0, 0, 6.29); g.fill();
+      g.fillStyle = '#FFF3E2'; g.beginPath(); g.arc(32, 30, 15, 0, 6.29); g.fill();
+      g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(26, 28, 2.6, 0, 6.29); g.arc(38, 28, 2.6, 0, 6.29); g.fill();
+      g.strokeStyle = '#2A1B3D'; g.lineWidth = 2.6; g.beginPath(); g.arc(32, 33, 6, 0.35, 2.8); g.stroke();
+      if (p.visitor) { g.fillStyle = '#FFD447'; g.beginPath(); g.ellipse(32, 18, 24, 6, 0, 0, 6.29); g.fill(); g.fillRect(20, 4, 24, 15); g.fillStyle = '#FF6E6C'; g.fillRect(20, 13, 24, 4); }
+      if (OWNER && p === islanders[0]) { g.fillStyle = '#5C3A6E'; g.fillRect(44, 52, 14, 18); g.fillStyle = '#FFF3E2'; g.fillRect(46, 54, 10, 14); }
+    });
+  }
+  function cleoTex() {
+    return spriteTex('cleo:' + (PRO ? PRO.hex : ''), function (g) {
+      g.fillStyle = '#2A1B3D'; g.beginPath(); g.ellipse(32, 66, 22, 14, 0, 0, 6.29); g.fill();
+      g.fillStyle = '#C9834E'; g.beginPath(); g.ellipse(32, 74, 20, 8, 0, 0, 6.29); g.fill();
+      g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(46, 48, 13, 0, 6.29); g.fill();
+      g.fillStyle = '#C9834E'; g.beginPath(); g.ellipse(48, 54, 9, 7, 0, 0, 6.29); g.fill();
+      g.fillStyle = '#2A1B3D'; g.beginPath(); g.moveTo(36, 40); g.lineTo(40, 26); g.lineTo(46, 40); g.fill(); g.beginPath(); g.moveTo(50, 40); g.lineTo(56, 26); g.lineTo(58, 40); g.fill();
+      g.fillStyle = PRO ? PRO.hex : '#FF7EB6'; g.beginPath(); g.arc(40, 30, 5, 0, 6.29); g.fill();
+      g.fillStyle = '#FFF3E2'; g.beginPath(); g.arc(50, 46, 2.4, 0, 6.29); g.fill(); g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(57, 52, 2.6, 0, 6.29); g.fill();
+      g.fillStyle = '#5C3A6E'; g.fillRect(4, 58, 14, 18); g.fillStyle = '#FFF3E2'; g.fillRect(6, 60, 10, 14);
+    });
+  }
+  function discTex(key, col) { return spriteTex(key, function (g) { g.fillStyle = col; g.beginPath(); g.arc(32, 48, 28, 0, 6.29); g.fill(); }); }
+  function whaleTex() { return spriteTex('whale', function (g) { g.fillStyle = '#5C3A6E'; g.beginPath(); g.ellipse(30, 70, 30, 12, 0, 0, 6.29); g.fill(); g.beginPath(); g.moveTo(56, 66); g.lineTo(64, 56); g.lineTo(64, 78); g.fill(); g.fillStyle = 'rgba(255,243,226,0.85)'; g.beginPath(); g.arc(22, 46, 4, 0, 6.29); g.arc(18, 36, 5, 0, 6.29); g.arc(26, 30, 6, 0, 6.29); g.fill(); }); }
+  function drawBillboard(vp, eye, tex, x, y, z, wdt, hgt, fixed) {
+    const dx = x - eye[0], dy = y - eye[1], L = Math.hypot(dx, dy) || 1;
+    const rx = -dy / L * wdt / 2, ry = dx / L * wdt / 2;
+    const v = new Float32Array([x - rx, y - ry, z, 0, 0, x + rx, y + ry, z, 1, 0, x + rx, y + ry, z + hgt, 1, 1, x - rx, y - ry, z, 0, 0, x + rx, y + ry, z + hgt, 1, 1, x - rx, y - ry, z + hgt, 0, 1]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bbBuf); gl.bufferData(gl.ARRAY_BUFFER, v, gl.DYNAMIC_DRAW);
+    const aP = gl.getAttribLocation(progB, 'aP'), aT = gl.getAttribLocation(progB, 'aT');
+    gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 20, 0);
+    gl.enableVertexAttribArray(aT); gl.vertexAttribPointer(aT, 2, gl.FLOAT, false, 20, 12);
+    gl.bindTexture(gl.TEXTURE_2D, tex); gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+  function setWalk(on) {
+    if (on) {
+      if (!glInit()) { toast('This screen cannot show the island in 3D. Try another device.'); return; }
+      drawer.classList.remove('on'); tipEl.classList.remove('on');
+      if (driving) setDrive(false);
+      walker = walkSpawn(world.ref); walkDist0 = 0;
+      glResize(); uploadMesh();
+      walking = true; document.body.classList.add('walking');
+      const hint = document.getElementById('w-hint'); hint.textContent = (matchMedia && matchMedia('(pointer: coarse)').matches) ? 'Left thumb walks. Right thumb looks. Tap an islander to talk.' : 'W A S D walk, drag to look, space jumps, Esc to stop. Click an islander to talk.'; hint.classList.add('on'); clearTimeout(hintT); hintT = setTimeout(function () { hint.classList.remove('on'); }, 5000);
+      journal.walkedToday = journal.walkedToday || 0; journal.jumpedToday = journal.jumpedToday || 0;
+      if (!journal.walkSaid) { journal.walkSaid = true; noteLearned('The island looks different from the ground. A door is taller than you are, and eight blocks is a long way up.', 'walk', 'geometry'); }
+      blip(520); setTimeout(function () { blip(780); }, 100);
+      cleo.mood = 'sit';
+    } else {
+      walking = false; document.body.classList.remove('walking');
+      journal.walkedToday = (journal.walkedToday || 0) + Math.round(walker ? walker.steps : 0); journal.jumpedToday = (journal.jumpedToday || 0) + (walker ? walker.jumps : 0);
+      saveJournal(journal); refreshNext();
+      if (walker) { cam.x = W / 2 - isoX(walker.x, walker.y) * cam.zoom; cam.y = H * 0.5 - (isoY(walker.x, walker.y, 0) + ZH) * cam.zoom; clampCam(); syncDial(); }
+      blip(400);
+    }
+  }
+  document.getElementById('w-exit').addEventListener('click', function () { setWalk(false); });
+  document.getElementById('w-jump').addEventListener('pointerdown', function (e) { winp.jump = true; e.preventDefault(); });
+  addEventListener('resize', function () { if (gl && walking) glResize(); });
+  glc.addEventListener('pointerdown', function (e) {
+    walkPtrs++;
+    if (e.clientX < innerWidth * 0.45) { if (!wStick) wStick = { id: e.pointerId, x: e.clientX, y: e.clientY }; }
+    else if (!wLook) wLook = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: 0, t: performance.now() };
+    try { glc.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  glc.addEventListener('pointermove', function (e) {
+    if (wStick && e.pointerId === wStick.id) {
+      let dx = e.clientX - wStick.x, dy = e.clientY - wStick.y; const L = Math.hypot(dx, dy); if (L > 46) { dx *= 46 / L; dy *= 46 / L; }
+      winp.fwd = -dy / 46; winp.side = dx / 46; winp.run = L > 42;
+      const k = document.getElementById('knob'); k.style.left = (34 + dx * 0.75) + 'px'; k.style.top = (34 + dy * 0.75) + 'px';
+    } else if (wLook && e.pointerId === wLook.id) {
+      const dx = e.clientX - wLook.x, dy = e.clientY - wLook.y; wLook.x = e.clientX; wLook.y = e.clientY; wLook.moved += Math.abs(dx) + Math.abs(dy);
+      walker.yaw += dx * 0.0062; walker.pitch = Math.max(-1.2, Math.min(1.2, walker.pitch - dy * 0.0048));
+    }
+  });
+  function walkPointerUp(e) {
+    walkPtrs = Math.max(0, walkPtrs - 1);
+    if (wStick && e.pointerId === wStick.id) { wStick = null; winp.fwd = 0; winp.side = 0; winp.run = false; const k = document.getElementById('knob'); k.style.left = '34px'; k.style.top = '34px'; }
+    else if (wLook && e.pointerId === wLook.id) { if (wLook.moved < 10 && performance.now() - wLook.t < 400) walkTap(e.clientX, e.clientY); wLook = null; }
+  }
+  glc.addEventListener('pointerup', walkPointerUp); glc.addEventListener('pointercancel', walkPointerUp);
+  addEventListener('keydown', function (e) { if (!walking) return; wkeys[e.key.toLowerCase()] = true; if (e.key === ' ') { winp.jump = true; e.preventDefault(); } if (e.key === 'Escape') setWalk(false); if (e.key === 'Shift') winp.run = true; });
+  addEventListener('keyup', function (e) { wkeys[e.key.toLowerCase()] = false; if (e.key === 'Shift') winp.run = false; });
+  let lastProj = [];
+  function walkTap(sx, sy) {
+    let best = null, bd = 70;
+    lastProj.forEach(function (q) { const d = Math.hypot(q.sx - sx, q.sy - sy); if (d < bd) { bd = d; best = q; } });
+    if (!best) return;
+    if (best.cleo) talkToKeeper({ px: best.sx, py: best.sy }); else chat({ p: best.p, px: best.sx, py: best.sy });
+  }
+  function walkFrame(dt, t) {
+    if (!wStick) {
+      winp.fwd = (wkeys['w'] || wkeys['arrowup'] ? 1 : 0) - (wkeys['s'] || wkeys['arrowdown'] ? 1 : 0);
+      winp.side = (wkeys['d'] ? 1 : 0) - (wkeys['a'] ? 1 : 0);
+      if (wkeys['arrowleft']) walker.yaw -= 1.8 * dt; if (wkeys['arrowright']) walker.yaw += 1.8 * dt;
+      if (wkeys['q']) walker.yaw -= 1.8 * dt; if (wkeys['e']) walker.yaw += 1.8 * dt;
+    }
+    walkStep(world.ref, walker, winp, dt); winp.jump = false;
+    const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
+    const light = 1 - 0.55 * SKY.night, fog = colRGB(SKY.low).map(function (c) { return c * (1 - 0.35 * SKY.night); });
+    const eye = [walker.x, walker.y, walker.z + WALK.EYE];
+    const cp = Math.cos(walker.pitch), f = [Math.cos(walker.yaw) * cp, Math.sin(walker.yaw) * cp, Math.sin(walker.pitch)];
+    const aspect = glc.width / glc.height, VP = viewProj(eye, f, aspect);
+    gl.disable(gl.CULL_FACE);
+    // sky: two colours across the screen, then the world in front of it
+    const mid = colRGB(SKY.mid);
+    gl.clearColor(mid[0] * light, mid[1] * light, mid[2] * light, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(progW);
+    const uM = gl.getUniformLocation(progW, 'uM');
+    gl.uniformMatrix4fv(uM, false, VP.m); gl.uniform3fv(gl.getUniformLocation(progW, 'uEye'), eye);
+    gl.uniform3fv(gl.getUniformLocation(progW, 'uFog'), fog); gl.uniform1f(gl.getUniformLocation(progW, 'uLight'), light); gl.uniform1f(gl.getUniformLocation(progW, 'uFogFar'), 70);
+    const aP = gl.getAttribLocation(progW, 'aP'), aC = gl.getAttribLocation(progW, 'aC');
+    // the sea: a big plane below the beach, dark at night, with the sky's own colour
+    const sc = colRGB(SKY.sea), sw = 0.94 + 0.06 * Math.sin(t * 1.3);
+    const sea = new Float32Array([-60, -60, -0.4, sc[0] * sw, sc[1] * sw, sc[2] * sw, 190, -60, -0.4, sc[0] * sw, sc[1] * sw, sc[2] * sw, 190, 190, -0.4, sc[0], sc[1], sc[2], -60, -60, -0.4, sc[0] * sw, sc[1] * sw, sc[2] * sw, 190, 190, -0.4, sc[0], sc[1], sc[2], -60, 190, -0.4, sc[0], sc[1], sc[2]]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, seaBuf); gl.bufferData(gl.ARRAY_BUFFER, sea, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(aC); gl.vertexAttribPointer(aC, 3, gl.FLOAT, false, 24, 12);
+    gl.uniform1f(gl.getUniformLocation(progW, 'uFogFar'), 140); gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.uniform1f(gl.getUniformLocation(progW, 'uFogFar'), 70);
+    gl.enable(gl.CULL_FACE);
+    gl.bindBuffer(gl.ARRAY_BUFFER, meshBuf);
+    gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(aC, 3, gl.FLOAT, false, 24, 12);
+    gl.drawArrays(gl.TRIANGLES, 0, meshCount);
+    gl.disable(gl.CULL_FACE);
+    // sprites: islanders, the visitor, Cleo, the whale, the sun and the moon
+    gl.useProgram(progB); gl.uniformMatrix4fv(gl.getUniformLocation(progB, 'uM'), false, VP.m); gl.uniform1f(gl.getUniformLocation(progB, 'uLight'), light);
+    lastProj = [];
+    const proj = function (x, y, z) { const m = VP.m; const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15]; if (cw <= 0.05) return null; return { sx: (cx / cw * 0.5 + 0.5) * innerWidth, sy: (0.5 - cy / cw * 0.5) * innerHeight }; };
+    const folk = allFolk().slice().sort(function (a, b) { return Math.hypot(b.x - eye[0], b.y - eye[1]) - Math.hypot(a.x - eye[0], a.y - eye[1]); });
+    folk.forEach(function (p) {
+      const fz = floorAt(world.ref, p.x, p.y); if (fz === null) return;
+      const bob = p.asleep ? 0 : Math.abs(Math.sin(t * 5 + p.seed)) * 0.05;
+      drawBillboard(VP, eye, folkTex(p), p.x, p.y, fz + bob, 0.9, 1.35);
+      const s = proj(p.x, p.y, fz + 0.8); if (s) lastProj.push({ p: p, sx: s.sx, sy: s.sy });
+    });
+    if (!OWNER) { const fz = floorAt(world.ref, cleo.x, cleo.y); if (fz !== null) { drawBillboard(VP, eye, cleoTex(), cleo.x, cleo.y, fz, 0.9, 1.35 * 0.72); const s = proj(cleo.x, cleo.y, fz + 0.5); if (s) lastProj.push({ cleo: true, sx: s.sx, sy: s.sy }); } }
+    const wh = (t % 18) / 18; if (wh > 0.35 && wh < 0.7) { const wx = ISLE.N / 2 + 78 * Math.cos(t * 0.05), wy = ISLE.N / 2 + 78 * Math.sin(t * 0.05); drawBillboard(VP, eye, whaleTex(), wx, wy, -0.4 + Math.sin((wh - 0.35) / 0.35 * Math.PI) * 0.8, 6, 5); }
+    gl.disable(gl.DEPTH_TEST);
+    if (SKY.sun) { const a = (SKY.sun.x - 0.5) * 3.2; drawBillboard(VP, eye, discTex('sun', WX.kind === 'rain' ? '#E8D9B8' : '#FFE49E'), eye[0] + Math.cos(a) * 180, eye[1] + Math.sin(a) * 180, 20 + (0.5 - SKY.sun.y) * 260, 18, 27); }
+    if (SKY.moon) { const a = (SKY.moon.x - 0.5) * 3.2 + Math.PI; drawBillboard(VP, eye, discTex('moon', '#FFF3E2'), eye[0] + Math.cos(a) * 180, eye[1] + Math.sin(a) * 180, 90, 12, 18); }
+    gl.enable(gl.DEPTH_TEST);
+    // a footstep tick as the island goes by
+    if (walker.steps - walkDist0 > 1.4 && walker.onGround) { walkDist0 = walker.steps; blip(180 + Math.random() * 40); }
   }
 
   // ===== THE GARDEN, THE MORNING BOAT AND THE VISITOR =====
@@ -2614,6 +2935,7 @@ if (typeof module !== 'undefined' && module.exports) {
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
       bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
       word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard, weather: weatherAt(today(), 12),
+      walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
@@ -2624,7 +2946,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!journal.quest) journal.questDay = today();
     journal.quest = q;
     journal.arcadePlays = 0; journal.prevStats = st; journal.newIslanders = []; journal.learned = []; journal.keys = [];
-    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
+    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
     journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
@@ -2757,6 +3079,7 @@ if (typeof module !== 'undefined' && module.exports) {
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE,
+    setWalk, walking: () => walking, walker: () => walker, walkInput: winp, walkKeys: wkeys, glOk: () => !!gl, meshCount: () => meshCount, walkProj: () => lastProj, walkTap,
     garden: () => garden, applyGrowth, boatArrive, setVisitor, visitor: () => visitor, boatAt: () => boatAt(hourNow()), boatGift: () => boatGift(today()), boatSpot, dockCell, chocoDay };
   boot();
 })();
