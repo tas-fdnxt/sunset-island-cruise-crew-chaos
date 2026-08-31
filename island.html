@@ -127,6 +127,16 @@
   #sdots { display:flex; gap:5px; }
   #sdots i { width:8px; height:8px; border-radius:50%; background:rgba(255,243,226,0.3); display:block; }
   #sdots i.on { background:var(--yellow); }
+  .sq button { display:block; width:100%; text-align:left; margin-bottom:6px; padding:11px 12px; border:3px solid var(--ink);
+    border-radius:12px; background:var(--cream); color:var(--ink); font-weight:800; font-size:15px; cursor:pointer; }
+  .sq button.right { background:#7BD8A0; } .sq button.wrong { background:#FFB0AE; }
+  .sq .fb { margin-top:6px; font-weight:900; font-size:14px; color:var(--yellow); }
+  #shelf { display:none; } #shelf.on { display:block; }
+  #shelf button, #sgrown { display:block; width:100%; text-align:left; margin-bottom:6px; padding:10px 12px; border:2px solid rgba(255,243,226,0.45);
+    border-radius:12px; background:rgba(255,243,226,0.08); color:var(--cream); font-weight:800; font-size:14px; cursor:pointer; }
+  #shelf button.cur { border-color:var(--yellow); color:var(--yellow); }
+  #shelf a { display:block; margin-bottom:6px; padding:10px 12px; border:2px solid rgba(255,243,226,0.45); border-radius:12px; color:#8FD8E8; font-weight:800; font-size:14px; text-decoration:none; }
+  #sbook { background:none; border:none; color:#8FD8E8; font-weight:900; font-size:12px; letter-spacing:0.12em; text-decoration:underline; cursor:pointer; margin-top:8px; width:100%; }
   #sclose { width:100%; margin-top:10px; padding:12px; border:3px solid var(--ink); border-radius:14px;
     background:var(--yellow); color:var(--ink); font-weight:900; font-size:16px; letter-spacing:0.06em; cursor:pointer; }
   #bclose { width:100%; margin-top:10px; padding:12px; border:3px solid var(--ink); border-radius:14px;
@@ -156,6 +166,8 @@
       <div id="sdots"></div>
       <button class="bnav" id="snext">NEXT</button>
     </div>
+    <div id="shelf"></div>
+    <button id="sbook">THE WHOLE BOOK</button>
     <button id="sclose">GOODNIGHT</button>
   </div>
 </div>
@@ -465,6 +477,10 @@ function chapter(o) {
   if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
   if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
   const page2 = [];
+  if (o.bedtime && o.bedtime.ask) {
+    page2.push(o.bedtime.right ? 'At bedtime last night the book asked, "' + o.bedtime.ask + '" and ' + cap + ' knew the answer.'
+      : 'At bedtime last night the book asked, "' + o.bedtime.ask + '" and ' + cap + ' had a good guess. The answer is hiding in the island.');
+  }
   const L = o.learned || [];
   if (L.length) {
     page2.push('And ' + cap + ' worked something out today.');
@@ -474,6 +490,7 @@ function chapter(o) {
   }
   const page3 = [];
   if (o.lastQuestDone) page3.push('The thing ' + cap + ' set out to do got done. ' + o.lastQuestDone);
+  if (o.quest && o.questDays >= 2 && o.keeper) page3.push(o.keeper + ' has been waiting ' + o.questDays + ' days for that one, and is still smiling about it.');
   if (o.quest) {
     page3.push('Tonight the island is quiet.');
     page3.push('Tomorrow, ' + T + ' ' + cap + ' is going to ' + o.quest.tell + '.');
@@ -484,6 +501,84 @@ function chapter(o) {
     { title: 'WHAT ' + name + ' WORKED OUT', lines: page2 },
     { title: 'WHAT HAPPENS NEXT', lines: page3 },
   ];
+}
+/* THE BOOK: pure helpers. One chapter per calendar day, kept on the device, read back any time. */
+function dayKey(ts) {
+  const d = new Date(ts == null ? Date.now() : ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function daysBetween(a, b) {
+  const p = (k) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(k)); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+  const x = p(a), y = p(b); if (isNaN(x) || isNaN(y)) return 0;
+  return Math.round((y - x) / 86400000);
+}
+/* Symmetry: a house whose columns mirror left and right of its door column, three cells each way. */
+function symmetry(w) {
+  let n = 0;
+  houses(w).forEach(function (h) {
+    let filled = 0, same = true;
+    for (let dy = -3; dy <= 3 && same; dy++) for (let dx = 1; dx <= 3; dx++) {
+      const ax = h.x - dx, bx = h.x + dx, y = h.y + dy;
+      if (!inBounds(ax, y) || !inBounds(bx, y)) { same = false; break; }
+      for (let z = 0; z < ISLE.ZMAX; z++) {
+        const a = w.cols[idx(ax, y, z)], b = w.cols[idx(bx, y, z)];
+        if (a !== b) { same = false; break; }
+        if (a) filled++;
+      }
+    }
+    if (same && filled >= 8) n++;
+  });
+  return n;
+}
+function bookAdd(journal, entry) {
+  if (!journal.book) journal.book = [];
+  const last = journal.book[journal.book.length - 1];
+  if (last && last.day === entry.day) return false;
+  entry.n = journal.book.length + 1;
+  journal.book.push(entry);
+  if (journal.book.length > 400) journal.book.shift();
+  return true;
+}
+/* Bedtime question: one tap, two answers, always about something that happened today. */
+function bedtimeQuestion(o) {
+  const keys = o.keys || [], n = o.n || 1, st = o.stats || {};
+  let q;
+  if (keys.indexOf('ramp') !== -1) q = { ask: 'How high do you build a jumping ramp?', right: 'One block high', wrong: 'Three blocks high' };
+  else if (keys.indexOf('sym') !== -1) q = { ask: 'When both sides of a building match, what is that called?', right: 'Symmetry', wrong: 'Gravity' };
+  else if (keys.indexOf('lap') !== -1 && o.bestLap > 0) q = { ask: 'Which lap is the faster one?', right: fmtLap(o.bestLap), wrong: fmtLap(o.bestLap + 7000) };
+  else if (keys.indexOf('arcade') !== -1) q = { ask: 'One arcade machine pays 20 points. Two machines pay?', right: '40 points', wrong: '20 points' };
+  else if (keys.indexOf('factory') !== -1) q = { ask: 'How many houses make the chocolate factory open?', right: 'Three houses', wrong: 'Ten houses' };
+  else if (keys.indexOf('tall') !== -1) q = { ask: 'How tall can a tower go on the island?', right: 'Four blocks', wrong: 'Twenty blocks' };
+  else if (keys.indexOf('house') !== -1 || keys.indexOf('count') !== -1) q = { ask: 'What makes an islander move in?', right: 'Walls with a door', wrong: 'A palm tree' };
+  else if (st.houses > 0) q = { ask: 'How many houses are on your island right now?', right: String(st.houses), wrong: String(st.houses + 2) };
+  else q = { ask: 'What does a house need before somebody moves in?', right: 'A door', wrong: 'A window' };
+  const flip = n % 2 === 1;
+  return { ask: q.ask, a: flip ? [q.wrong, q.right] : [q.right, q.wrong], rightIdx: flip ? 1 : 0, picked: -1 };
+}
+/* Plain English for a grown-up, from what is on this device. Last seven days. */
+function parentSummary(journal, today, name) {
+  const nm = sanitizeName(name) || 'CAPTAIN';
+  const cap = nm.charAt(0) + nm.slice(1).toLowerCase();
+  const book = (journal.book || []).filter(e => daysBetween(e.day, today) <= 6);
+  const ledger = (journal.ledger || []).filter(e => daysBetween(e.day, today) <= 6);
+  let blocks = 0, houses = 0, laps = 0, right = 0, asked = 0, questsDone = 0;
+  book.forEach(function (e) {
+    blocks += Math.max(0, (e.stats && e.stats.blocks || 0) - (e.prevStats && e.prevStats.blocks || 0));
+    houses += Math.max(0, (e.stats && e.stats.houses || 0) - (e.prevStats && e.prevStats.houses || 0));
+    if (e.lapBeaten) laps++;
+    if (e.questDone) questsDone++;
+    if (e.q && e.q.picked >= 0) { asked++; if (e.q.picked === e.q.rightIdx) right++; }
+  });
+  const cats = {}; ledger.forEach(function (e) { (cats[e.cat] = cats[e.cat] || []).push(e.line); });
+  const lines = [];
+  lines.push('This week ' + cap + ' read ' + book.length + ' chapter' + (book.length === 1 ? '' : 's') + ', carried ' + blocks + ' block' + (blocks === 1 ? '' : 's') + ' and built ' + houses + ' new house' + (houses === 1 ? '' : 's') + '.');
+  if (questsDone) lines.push(cap + ' finished ' + questsDone + ' quest' + (questsDone === 1 ? '' : 's') + ' that the book set the night before.');
+  if (laps) lines.push(cap + ' beat a personal lap record ' + laps + ' time' + (laps === 1 ? '' : 's') + '.');
+  if (asked) lines.push('Bedtime questions: ' + right + ' right out of ' + asked + '.');
+  const names = { counting: 'Counting', geometry: 'Shapes and building', number: 'Number sense', time: 'Time', sharing: 'Sharing' };
+  Object.keys(cats).forEach(function (c) { lines.push((names[c] || c) + ': ' + cats[c].join(' ')); });
+  if (!ledger.length && !book.length) lines.push('Nothing on this device yet. Chapters appear after the first bedtime story.');
+  return lines;
 }
 function houses(w) {
   const found = [];
@@ -503,7 +598,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary };
 }
 </script>
 <script>
@@ -542,7 +637,7 @@ if (typeof module !== 'undefined' && module.exports) {
     updateLineage();
     toast('REMIXED! This island is yours now, ' + TITLE + ' ' + CREW + '.');
     saveNow();
-    noteLearned('You can start with somebody else\u2019s island and make it your own, and their name stays on it because they built it first.');
+    noteLearned('You can start with somebody else\u2019s island and make it your own, and their name stays on it because they built it first.', 'remix', 'sharing');
     blip(660); setTimeout(function () { blip(880); }, 100); setTimeout(function () { blip(1180); }, 200);
   }
 
@@ -714,6 +809,7 @@ if (typeof module !== 'undefined' && module.exports) {
       if (tool === 10 && arcades(world.ref).length === 1) { toast('ARCADE MACHINE! Drive past it for 20 points.'); sayPersonal('arcade'); }
       if (tool === 11 && factories(world.ref).length === 1) { toast('CHOCOLATE FACTORY OPEN! The islanders are queueing.'); sayPersonal('choco'); }
       redrawWorld(); syncCargo(); popCheck(); saveSoon();
+      if (r.z === 3) noteLearned('Four blocks is as tall as the island lets you build. Any higher and it would topple.', 'tall', 'geometry');
     }
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
     else if (r.why === 'height') toast('MAX HEIGHT! Four blocks tall is the limit.');
@@ -746,13 +842,18 @@ if (typeof module !== 'undefined' && module.exports) {
 
   function popCheck() {
     try { refreshQuest(); } catch (e) {}
+    try {
+      const sy = symmetry(world.ref);
+      if (sy > (journal.symSeen || 0)) { journal.symSeen = sy; noteLearned('You built something that is the same on both sides. That is called symmetry, and castles love it.', 'sym', 'geometry'); toast('SYMMETRY! Both sides match.'); }
+    } catch (e) {}
     const before = islanders.length, after = rebuildIslanders();
     if (after > before) {
       const nw = islanders[after - 1];
       toast(nw.name + ' MOVED IN! Tap them to say hi.');
       noteIslander(nw.name);
       sayPersonal('house');
-      noteLearned('A house needs walls all the way round and a door to get in, and then somebody comes to live in it.');
+      noteLearned('A house needs walls all the way round and a door to get in, and then somebody comes to live in it.', 'house', 'geometry');
+      if (after >= 2) noteLearned('Every house gets one islander, so ' + after + ' houses means ' + after + ' islanders.', 'count', 'counting');
       blip(660); setTimeout(() => blip(880), 110); setTimeout(() => blip(1100), 220);
     }
     if (before < 3 && after >= 3 && canSave() && !factories(world.ref).length) {
@@ -761,7 +862,7 @@ if (typeof module !== 'undefined' && module.exports) {
         redrawWorld(); syncCargo(); saveSoon();
         setTimeout(function () { toast('A CHOCOLATE FACTORY OPENED! Three houses make a village.'); blip(520); setTimeout(function () { blip(780); }, 100); setTimeout(function () { blip(1040); }, 200); }, 2400);
         setTimeout(function () { sayPersonal('choco'); }, 4300);
-        noteLearned('Three houses make a village, and a village is big enough for a chocolate factory.');
+        noteLearned('Three houses make a village, and a village is big enough for a chocolate factory.', 'factory', 'counting');
         try { refreshQuest(); } catch (e) {}
       }
     }
@@ -835,6 +936,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let seen = null;
     try { seen = localStorage.getItem('captains-island-seen-v1'); } catch (e) {}
     if (!seen) setTimeout(function () { openBook(0); }, 700);
+    else if (journal.morning && journal.book && journal.book.length && journal.book[journal.book.length - 1].day !== today()) setTimeout(openMorning, 900);
     refreshQuest();
   }
   addEventListener('hashchange', () => {
@@ -924,6 +1026,11 @@ if (typeof module !== 'undefined' && module.exports) {
         ctx.beginPath(); ctx.arc(sx - 9 * s, sy - 15 * s + bob - w2, 2.6 * s, 0, 6.29); ctx.arc(sx + 9 * s, sy - 15 * s + bob + w2, 2.6 * s, 0, 6.29); ctx.fill();
         ctx.fillStyle = '#FFD447';
         ctx.beginPath(); ctx.arc(sx + 13 * s, sy - 30 * s + Math.sin(t * 7) * 3 * s, 1.8 * s, 0, 6.29); ctx.fill();
+      } else if (p === islanders[0]) { // the Storykeeper carries the book
+        ctx.fillStyle = '#5C3A6E'; ctx.fillRect(sx + 6 * s, sy - 13 * s + bob, 6 * s, 8 * s);
+        ctx.fillStyle = '#FFF3E2'; ctx.fillRect(sx + 7 * s, sy - 12 * s + bob, 4 * s, 6 * s);
+        ctx.fillStyle = '#5C3A6E'; ctx.fillRect(sx + 8.5 * s, sy - 12 * s + bob, 1 * s, 6 * s);
+        if (p.cheer > 0) { p.cheer -= 0.016; ctx.fillStyle = '#FFD447'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(sx + (k - 1) * 10 * s, sy - 34 * s - Math.sin(t * 9 + k) * 4 * s, 2 * s, 0, 6.29); ctx.fill(); } }
       } else if (factoryCells.length) { // chocolate in hand, straight from the factory
         ctx.fillStyle = '#6E4028'; ctx.fillRect(sx + 6 * s, sy - 12 * s + bob, 4.5 * s, 8 * s);
         ctx.fillStyle = '#FFD447'; ctx.fillRect(sx + 6 * s, sy - 9 * s + bob, 4.5 * s, 2 * s);
@@ -942,7 +1049,9 @@ if (typeof module !== 'undefined' && module.exports) {
   function chat(hit) {
     const el = document.getElementById('bubble');
     let ph = phrases();
-    if (hit.p.play) ph = ['WATCH ME! High score!', 'One more go on the arcade!', 'DING DING! Twenty points!', 'This machine is the BEST.'];
+    if (hit.p === islanders[0] && journal.quest) ph = ['The book says: today you will ' + journal.quest.tell + '!', 'I keep the book. Tonight I will write down what you did.'];
+    else if (hit.p === islanders[0] && journal.lastQuestDone) ph = ['You did it! ' + journal.lastQuestDone + ' That goes in the book tonight.'];
+    else if (hit.p.play) ph = ['WATCH ME! High score!', 'One more go on the arcade!', 'DING DING! Twenty points!', 'This machine is the BEST.'];
     else if (factoryCells.length && Math.random() < 0.35) ph = ['The chocolate factory smells AMAZING!', 'Chocolate bars for everybody!', 'I work at the chocolate factory now!'];
     el.innerHTML = '<b>' + hit.p.name + '</b><br>' + ph[Math.floor(Math.random() * ph.length)];
     el.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px';
@@ -1021,7 +1130,7 @@ if (typeof module !== 'undefined' && module.exports) {
       journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal);
       toast('DING! 20 POINTS! ARCADE TOTAL ' + arcadeScore);
       blip(1040); setTimeout(() => blip(1320), 80); setTimeout(() => blip(1560), 160);
-      noteLearned('Every arcade machine pays 20 points when you drive past it, so two machines pay 40.');
+      noteLearned('Every arcade machine pays 20 points when you drive past it, so two machines pay 40.', 'arcade', 'counting');
     }
   }
   function clearCell(x, y) {
@@ -1066,7 +1175,7 @@ if (typeof module !== 'undefined' && module.exports) {
     arcadeCheck();
     if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) {
       car.vz = 3.6; blip(880); toast('BIG AIR!');
-      noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.');
+      noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.', 'ramp', 'geometry');
     }
     const tcx = W / 2 - isoX(car.x, car.y) * cam.zoom;
     const tcy = H * 0.52 - (isoY(car.x, car.y, 0) + ZH) * cam.zoom;
@@ -1080,8 +1189,10 @@ if (typeof module !== 'undefined' && module.exports) {
         if (lapArmed && lapStart) {
           const t = performance.now() - lapStart;
           if (!bestLap || t < bestLap) {
+            const old = bestLap;
             bestLap = t; toast('NEW RECORD ' + fmtLap(t) + '! Share it.');
-            noteLearned('Going round the flag the short way makes the number smaller, and a smaller number is faster.');
+            noteLearned('Going round the flag the short way makes the number smaller, and a smaller number is faster.', 'lap', 'number');
+            if (old) { journal.lapBeaten = true; noteLearned('You beat your own record by ' + ((old - t) / 1000).toFixed(1) + ' seconds. Smaller number, faster lap.', 'lap', 'number'); }
             sayPersonal('race');
           }
           else toast('LAP ' + fmtLap(t));
@@ -1314,20 +1425,30 @@ if (typeof module !== 'undefined' && module.exports) {
     } catch (e) {}
     return { v: 1, prevStats: {}, newIslanders: [], learned: [], quest: null, lastQuestDone: '', chapters: 0 };
   }
+  let DAY_OVERRIDE = null;
+  function today() { return DAY_OVERRIDE || dayKey(); }
   function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); } catch (e) {} }
   let journal = loadJournal();
   function noteIslander(nm) {
     if (journal.newIslanders.indexOf(nm) === -1) { journal.newIslanders.push(nm); saveJournal(journal); }
   }
-  function noteLearned(line) {
-    if (journal.learned.indexOf(line) === -1) { journal.learned.push(line); saveJournal(journal); }
+  function noteLearned(line, key, cat) {
+    if (!journal.ledger) journal.ledger = [];
+    if (!journal.keys) journal.keys = [];
+    if (key && journal.keys.indexOf(key) === -1) journal.keys.push(key);
+    if (journal.ledger.every(function (e) { return e.line !== line; })) journal.ledger.push({ day: today(), cat: cat || 'geometry', line: line });
+    if (journal.ledger.length > 300) journal.ledger.shift();
+    if (journal.learned.indexOf(line) === -1) journal.learned.push(line);
+    saveJournal(journal);
   }
+  function keeperName() { return islanders.length ? islanders[0].name : ''; }
   function refreshQuest() {
     const st = worldStats(world.ref);
     if (journal.quest && questMet(journal.quest, st)) {
       journal.lastQuestDone = journal.quest.done;
-      journal.quest = null;
+      journal.quest = null; journal.questDay = '';
       saveJournal(journal);
+      if (islanders.length) { const k = islanders[0]; k.cheer = 3; }
       blip(700); setTimeout(function () { blip(950); }, 110);
       setTimeout(function () { toast('QUEST DONE! Read it tonight at story time.'); }, 1500);
     }
@@ -1335,36 +1456,121 @@ if (typeof module !== 'undefined' && module.exports) {
     if (journal.quest) { q.textContent = 'TONIGHT\u2019S QUEST: ' + journal.quest.tell.toUpperCase(); q.classList.add('on'); }
     else q.classList.remove('on');
   }
-  let storyPages = [], storyIdx = 0;
-  function openStory() {
+  let storyPages = [], storyIdx = 0, storyEntry = null, storyMode = 'night';
+  function writeChapter() {
     const st = worldStats(world.ref);
     const lastId = journal.quest ? journal.quest.id : null;
     const q = journal.quest || pickQuest(st, lastId, PRO ? PRO.dream : -1);
-    storyPages = chapter({
+    const questDays = (journal.quest && journal.questDay) ? daysBetween(journal.questDay, today()) : 0;
+    const pages = chapter({
       name: CREW, title: TITLE, stats: st, prevStats: journal.prevStats || {},
       newIslanders: journal.newIslanders, learned: journal.learned,
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
+      bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays,
     });
-    journal.arcadePlays = 0;
+    const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
+      lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
+      q: bedtimeQuestion({ keys: journal.keys || [], n: (journal.book || []).length + 1, stats: st, bestLap: bestLap }) };
+    if (!bookAdd(journal, entry)) return journal.book[journal.book.length - 1];
+    if (!journal.quest) journal.questDay = today();
     journal.quest = q;
-    journal.prevStats = st;
-    journal.newIslanders = [];
-    journal.learned = [];
-    journal.lastQuestDone = '';
-    journal.chapters = (journal.chapters || 0) + 1;
+    journal.arcadePlays = 0; journal.prevStats = st; journal.newIslanders = []; journal.learned = []; journal.keys = [];
+    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
+    journal.chapters = journal.book.length;
     saveJournal(journal);
+    return entry;
+  }
+  function pagesFor(entry, tonight) {
+    const pg = entry.pages.slice();
+    if (tonight && entry.q) pg.push({ title: 'BEDTIME QUESTION', bedtime: entry.q });
+    pg.push({ title: 'FOR GROWN-UPS', grown: true });
+    return pg;
+  }
+  function openStory() {
+    const last = (journal.book || [])[journal.book ? journal.book.length - 1 : -1];
+    storyEntry = (last && last.day === today()) ? last : writeChapter();
+    storyMode = 'night';
+    storyPages = pagesFor(storyEntry, true);
     storyIdx = 0;
+    document.getElementById('shelf').classList.remove('on');
     renderStory();
     document.getElementById('story').classList.add('on');
     refreshQuest();
   }
+  function openMorning() {
+    const last = journal.book[journal.book.length - 1];
+    journal.morning = false; saveJournal(journal);
+    storyMode = 'morning'; storyEntry = last;
+    const lines = ['Good morning, ' + TITLE.charAt(0) + TITLE.slice(1).toLowerCase() + ' ' + CREW + '.'];
+    if (last.quest) lines.push('Last night the book said: today you are going to ' + last.quest.tell + '.');
+    if (keeperName()) lines.push(keeperName() + ' is carrying the book. Tap them if you forget.');
+    lines.push('Tonight, tap the moon and the next chapter will be about what you did.');
+    storyPages = [{ title: 'GOOD MORNING', lines: lines }];
+    storyIdx = 0;
+    document.getElementById('shelf').classList.remove('on');
+    renderStory();
+    document.getElementById('story').classList.add('on');
+  }
+  function readChapter(i) {
+    storyEntry = journal.book[i]; storyMode = 'read';
+    storyPages = pagesFor(storyEntry, false); storyIdx = 0;
+    document.getElementById('shelf').classList.remove('on');
+    renderStory();
+  }
+  function renderShelf() {
+    const sh = document.getElementById('shelf');
+    const zero = (CREW === 'OLLIE' && !PRO) ? 'storybook.html' : ('captain.html' + (PRO ? '?p=' + encodeURIComponent(new URLSearchParams(location.search).get('p') || '') : ''));
+    let h = '<a href="' + zero + '">CHAPTER 0 \u00B7 HOW IT ALL BEGAN</a>';
+    h += (journal.book || []).map(function (e, i) { return '<button data-i="' + i + '" class="' + (e === storyEntry ? 'cur' : '') + '">CHAPTER ' + e.n + ' \u00B7 ' + e.day + (e.questDone ? ' \u00B7 quest done' : '') + '</button>'; }).reverse().join('');
+    sh.innerHTML = h;
+    sh.querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { readChapter(Number(b.dataset.i)); blip(600); }); });
+    sh.classList.toggle('on');
+  }
+  document.getElementById('sbook').addEventListener('click', function () { renderShelf(); blip(520); });
+  function answerBedtime(i) {
+    const q = storyEntry.q; if (!q || q.picked >= 0) return;
+    q.picked = i;
+    const right = i === q.rightIdx;
+    journal.bedtimeLast = { ask: q.ask, right: right };
+    saveJournal(journal);
+    blip(right ? 900 : 320); if (right) setTimeout(function () { blip(1150); }, 100);
+    renderStory();
+  }
   function renderStory() {
     const p = storyPages[storyIdx];
-    document.getElementById('storytitle').textContent = 'CHAPTER ' + (journal.chapters || 1) + ' \u00B7 ' + p.title;
-    document.getElementById('storybody').innerHTML = p.lines.map(function (l) {
-      const d = document.createElement('p'); d.textContent = l; return d.outerHTML;
-    }).join('');
+    const head = storyMode === 'morning' ? 'THIS MORNING' : ('CHAPTER ' + (storyEntry && storyEntry.n || 1));
+    document.getElementById('storytitle').textContent = head + ' \u00B7 ' + p.title;
+    const body = document.getElementById('storybody');
+    if (p.bedtime) {
+      const q = p.bedtime;
+      body.innerHTML = '';
+      const ask = document.createElement('p'); ask.textContent = q.ask; body.appendChild(ask);
+      const wrap = document.createElement('div'); wrap.className = 'sq';
+      q.a.forEach(function (label, i) {
+        const b = document.createElement('button'); b.textContent = label; b.dataset.i = String(i);
+        if (q.picked >= 0 && q.picked === i) b.className = (i === q.rightIdx) ? 'right' : 'wrong';
+        b.addEventListener('click', function () { answerBedtime(i); });
+        wrap.appendChild(b);
+      });
+      if (q.picked >= 0) { const fb = document.createElement('div'); fb.className = 'fb'; fb.textContent = q.picked === q.rightIdx ? 'YES! That goes in tomorrow\u2019s chapter.' : 'Good guess. Tomorrow\u2019s chapter will tell you.'; wrap.appendChild(fb); }
+      body.appendChild(wrap);
+    } else if (p.grown) {
+      const lines = parentSummary(journal, today(), CREW);
+      body.innerHTML = lines.map(function (l) { const d = document.createElement('p'); d.textContent = l; return d.outerHTML; }).join('');
+      const b = document.createElement('button'); b.id = 'sgrown'; b.textContent = 'SHARE OR PRINT THIS';
+      b.addEventListener('click', async function () {
+        const text = 'THE BOOK OF ' + TITLE + ' ' + CREW + '\n\n' + lines.join('\n') + '\n\n' + (storyEntry ? storyEntry.pages.map(function (pg) { return pg.title + '\n' + pg.lines.join('\n'); }).join('\n\n') : '');
+        try { if (navigator.share) { await navigator.share({ title: 'The Book of ' + CREW, text: text }); return; } } catch (e) {}
+        try { await navigator.clipboard.writeText(text); toast('COPIED. Paste it anywhere, or print it.'); return; } catch (e) {}
+        try { window.print(); } catch (e) {}
+      });
+      body.appendChild(b);
+    } else {
+      body.innerHTML = p.lines.map(function (l) {
+        const d = document.createElement('p'); d.textContent = l; return d.outerHTML;
+      }).join('');
+    }
     document.getElementById('sdots').innerHTML = storyPages.map(function (x, i) {
       return '<i class="' + (i === storyIdx ? 'on' : '') + '"></i>'; }).join('');
     document.getElementById('sprev').disabled = storyIdx === 0;
@@ -1383,6 +1589,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
+    openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
     arcades: () => arcades(world.ref), factories: () => factories(world.ref), arcadeScore: () => arcadeScore,
