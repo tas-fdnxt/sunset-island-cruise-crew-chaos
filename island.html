@@ -28,7 +28,7 @@
   canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
   canvas#gl { position:fixed; inset:0; width:100vw; height:100dvh; display:none; touch-action:none; z-index:4; }
   body.walking canvas#gl { display:block; }
-  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #drawer { display:none !important; }
+  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer { display:none !important; }
   #walkui { display:none; }
   body.walking #walkui { display:block; }
   body.walking #topbar, body.walking #lineage { z-index:6; }
@@ -43,7 +43,7 @@
     display:flex; justify-content:space-between; align-items:center; gap:6px; pointer-events:none; }
   #pop, #cargo { flex:0 0 auto; }
   .badge { background:rgba(42,27,61,0.92); color:var(--cream); border:2px solid rgba(255,243,226,0.55);
-    border-radius:12px; padding:6px 12px; font-weight:900; font-size:clamp(10px,2.8vw,12px); letter-spacing:0.06em;
+    border-radius:12px; padding:6px 8px; font-weight:900; font-size:clamp(9px,2.6vw,12px); letter-spacing:0.03em;
     box-shadow:0 3px 0 rgba(20,8,30,0.45); white-space:nowrap; }
   #cargo { color:var(--yellow); font-variant-numeric:tabular-nums; }
   #cargo.full { color:var(--coral); }
@@ -92,17 +92,49 @@
   #drivebar { position:fixed; left:0; right:0; bottom:0; display:none; gap:10px; justify-content:center;
     padding:10px 10px calc(env(safe-area-inset-bottom,0px) + 12px); }
   #drivebar.on { display:flex; }
-  .dbtn { flex:1 1 0; max-width:120px; height:78px; border-radius:18px; border:3px solid var(--ink);
+  .dbtn { flex:1 1 0; max-width:120px; height:88px; border-radius:18px; border:3px solid var(--ink);
     background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); font-weight:900;
     font-size:22px; box-shadow:0 5px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
   #d-car { font-size:11px; background:linear-gradient(180deg,#8FD8E8,#4E92B0); letter-spacing:0.04em; }
   #d-exit { font-size:11px; background:linear-gradient(180deg,var(--peach),var(--coral)); letter-spacing:0.04em; }
+  #d-left, #d-right { font-size:34px; flex:1.35 1 0; max-width:150px; }
   .dbtn:active { transform:translateY(4px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
   #lapbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 54px); left:50%; transform:translateX(-50%);
     display:none; gap:10px; align-items:center; background:rgba(42,27,61,0.92); color:var(--yellow);
     border:2px solid rgba(255,243,226,0.5); border-radius:12px; padding:5px 14px; font-weight:900;
     font-size:14px; font-variant-numeric:tabular-nums; letter-spacing:0.06em; white-space:nowrap; }
   #lapbar.on { display:flex; }
+  #chasebar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 96px); left:50%; transform:translateX(-50%); display:none;
+    background:var(--coral); color:var(--cream); border:3px solid var(--ink); border-radius:14px; padding:7px 14px; font-weight:900;
+    font-size:13px; letter-spacing:0.06em; white-space:nowrap; box-shadow:0 4px 0 rgba(20,8,30,0.5); z-index:6; animation:chasepulse 0.9s infinite; }
+  #chasebar.on { display:block; }
+  @keyframes chasepulse { 0%,100% { transform:translateX(-50%) scale(1); } 50% { transform:translateX(-50%) scale(1.06); } }
+  .coin { display:inline-block; width:11px; height:11px; border-radius:50%; background:var(--yellow); border:2px solid #C9932E; vertical-align:-1px; margin-right:4px; }
+  #coins { color:var(--yellow); font-variant-numeric:tabular-nums; transition:transform 0.18s; }
+  .folk { display:inline-block; width:10px; height:13px; margin-right:5px; vertical-align:-2px; background:radial-gradient(circle at 50% 22%, #8FD8E8 0 2.8px, transparent 3.1px), linear-gradient(#8FD8E8, #8FD8E8) 50% 100% / 10px 6px no-repeat; border-radius:0 0 4px 4px; }
+  #coins.pop { transform:scale(1.25); }
+  #btn-board { position:fixed; left:36px; top:calc(env(safe-area-inset-top,0px) + 162px); z-index:6;
+    width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--peach);
+    color:var(--ink); font-size:20px; font-weight:900; box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; }
+  #btn-board:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #win, #board { position:fixed; inset:0; z-index:22; display:none; align-items:center; justify-content:center; background:rgba(28,16,44,0.9); padding:14px; }
+  #win.on, #board.on { display:flex; }
+  .wincard { width:100%; max-width:420px; padding:18px; background:linear-gradient(180deg,#2A1B3D,#5C3A6E); border:4px solid var(--yellow); border-radius:22px; box-shadow:0 8px 0 rgba(10,4,18,0.6); text-align:center; }
+  .wincard canvas { width:100%; height:auto; display:block; }
+  .wincard h3 { color:var(--yellow); font-size:24px; font-weight:900; margin:6px 0 4px; letter-spacing:0.04em; }
+  .wincard .sub { color:var(--cream); font-size:18px; font-weight:800; margin-bottom:6px; }
+  .wincard .tro { color:#8FD8E8; font-size:13px; font-weight:900; letter-spacing:0.14em; margin-bottom:12px; }
+  .bigbtn { width:100%; height:60px; border-radius:18px; border:3px solid var(--ink); background:var(--yellow); color:var(--ink); font:900 18px system-ui; box-shadow:0 5px 0 var(--ink); letter-spacing:0.06em; }
+  .bigbtn:active { transform:translateY(4px); box-shadow:0 1px 0 var(--ink); }
+  #boardcard { width:100%; max-width:460px; max-height:94dvh; overflow:auto; padding:18px; background:linear-gradient(180deg,#2A1B3D,#5C3A6E); border:4px solid var(--cream); border-radius:22px; box-shadow:0 8px 0 rgba(10,4,18,0.6); }
+  #boardcard h3 { color:var(--cream); font-size:22px; font-weight:900; text-align:center; margin-bottom:10px; }
+  .bhead { color:var(--yellow); font-size:11px; font-weight:900; letter-spacing:0.22em; margin:12px 0 6px; }
+  .brow { display:grid; grid-template-columns:1.5fr 1fr 1fr 0.8fr 0.8fr; gap:4px; align-items:center; background:rgba(255,243,226,0.08); border-radius:12px; padding:9px 10px; margin-bottom:6px; color:var(--cream); font-weight:800; font-size:14px; }
+  .brow.me { border:2px solid var(--yellow); }
+  .brow.lab { background:none; color:#8FD8E8; font-size:10px; letter-spacing:0.12em; padding:0 10px; margin-bottom:2px; }
+  .brow .nm { font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .brow .beat { color:var(--coral); }
+  .bnote { color:var(--cream); font-size:14px; font-weight:600; line-height:1.5; opacity:0.85; }
   #lapbest { color:#8FD8E8; font-size:12px; }
   #lineage { position:fixed; top:calc(env(safe-area-inset-top,0px) + 54px); left:50%;
     transform:translateX(-50%); display:none; background:rgba(42,27,61,0.9); color:#8FD8E8;
@@ -201,13 +233,18 @@
 <canvas id="gl"></canvas>
 <div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
 <div id="topbar">
-  <div class="badge" id="title-badge" style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis">OLLIE'S ISLAND &middot; GAME 02</div>
-  <div class="badge" id="pop" style="color:#8FD8E8">ISLANDERS 0</div>
-  <div class="badge" id="cargo">CARGO 0 / 400</div>
+  <div class="badge" id="title-badge" style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis">OLLIE'S ISLAND</div>
+  <div class="badge" id="pop" style="color:#8FD8E8" aria-label="Islanders 0"><span class="folk"></span>0</div>
+  <div class="badge" id="coins"><span class="coin"></span><span id="coinn">0</span></div>
+  <div class="badge" id="cargo">CARGO 0/1000</div>
 </div>
 <div id="lineage"></div>
 <button id="btn-book" aria-label="How to play">?</button>
 <button id="btn-story" aria-label="Story time">&#9789;</button>
+<button id="btn-board" aria-label="The board">&#127942;</button>
+<div id="chasebar">CATCH THAT GULL!</div>
+<div id="win"><div class="wincard"><canvas id="wincv" width="360" height="240"></canvas><h3 id="wintitle"></h3><div class="sub" id="winsub"></div><div class="tro" id="wintro"></div><button class="bigbtn" id="wclose">HOORAY!</button></div></div>
+<div id="board"><div id="boardcard"><h3>THE BOARD</h3><div id="boardbody"></div><button class="bigbtn" id="bdclose" style="margin-top:12px">BACK TO THE ISLAND</button></div></div>
 <div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="knob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
 <canvas id="mini" width="192" height="192" aria-label="Map of the island"></canvas>
 <div id="quest"></div>
@@ -509,24 +546,26 @@ function sanitizeName(s) {
 function parseHash(hash) {
   if (!hash || hash.indexOf('#i=') !== 0) return null;
   const segs = hash.slice(3).split('&');
-  const out = { enc: segs[0], t: 0, b: '', c: [] };
+  const out = { enc: segs[0], t: 0, b: '', c: [], r: null };
   for (let i = 1; i < segs.length; i++) {
     const s = segs[i];
     try {
       if (s.indexOf('t=') === 0) { const v = parseInt(s.slice(2), 10); if (v > 0 && v < 3600000) out.t = v; }
       else if (s.indexOf('b=') === 0) out.b = sanitizeName(decodeURIComponent(s.slice(2)));
       else if (s.indexOf('c=') === 0) out.c = s.slice(2).split(',').map(function (x) { return sanitizeName(decodeURIComponent(x)); }).filter(Boolean).slice(0, 3);
+      else if (s.indexOf('r=') === 0) { const p = s.slice(2).split('.').map(function (x) { return parseInt(x, 10); }); if (p.length === 3 && p.every(function (v) { return v >= 0 && v < 1000000; })) out.r = { coins: p[0], mask: p[1] & 1023, houses: Math.min(p[2], 99) }; }
     } catch (e) {}
   }
   return out;
 }
-function buildHash(enc, t, b, chain) {
+function buildHash(enc, t, b, chain, rec) {
   let s = '#i=' + enc;
   if (t > 0) s += '&t=' + Math.round(t);
   const bn = sanitizeName(b);
   if (bn) s += '&b=' + encodeURIComponent(bn);
   const c = (chain || []).map(sanitizeName).filter(Boolean).slice(0, 3);
   if (c.length) s += '&c=' + c.map(encodeURIComponent).join(',');
+  if (rec && (rec.coins > 0 || rec.mask > 0 || rec.houses > 0)) s += '&r=' + [rec.coins | 0, rec.mask | 0, rec.houses | 0].join('.');
   return s;
 }
 /* CAPTAIN PROFILE: who the game is for, carried in ?p= so no build is ever needed per child.
@@ -769,6 +808,9 @@ function chapter(o) {
     if (total > 0) page1.push(cap + ' loaded the car and delivered crates: ' + parts.join(' and ') + '. ' + (o.job.length > 1 ? o.job.map(function (j) { return j.n - j.left; }).join(' and ') + ' makes ' + total + '.' : total + ' altogether.'));
   }
   if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
+  if (o.chaseWins > 0) page1.push('A gull swooped on the dock and flew off with a crate. ' + cap + ' jumped in the car and chased it round the island, and caught it' + (o.chaseWins > 1 ? ' ' + o.chaseWins + ' times' : '') + '. Crate back on the dock.');
+  if (o.coinsToday > 0) page1.push('The purse grew by ' + o.coinsToday + ' coin' + (o.coinsToday === 1 ? '' : 's') + ' today. Ten points is a coin, and coins hire the crew.');
+  if (o.trophyNew) page1.push('A new trophy stands by the front door now: ' + o.trophyNew + '.');
   if (o.word) page1.push('The word of the island today was ' + o.word.w + '. It means ' + o.word.d + '. ' + cap + (o.wordHeard ? ' heard it from an islander.' : ' can go and find out who says it.'));
   if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
   const page2 = [];
@@ -912,6 +954,7 @@ function nextThing(st) {
     { key: 'compass', line: 'Look at the corners of the island. N is north. Try building something north of your flag.' },
     { key: 'seed', line: st.plants ? 'Your garden is growing. Seeds take a whole day to sprout, so come back tomorrow.' : 'Plant a SEED on bare sand. Come back tomorrow and something will have happened.' },
     { key: 'walk', line: 'Tap WALK and stand on your island. Go and knock on a door.' },
+    { key: 'chase', line: 'Tap DRIVE. A gull will pinch a crate off the dock. Catch it when it flies low and win a trophy.' },
   ];
   return spare[(st.tick || 0) % spare.length];
 }
@@ -1136,8 +1179,64 @@ function buildWalkMesh(w, flagCol) {
   }
   return { pos: new Float32Array(P), col: new Float32Array(C), count: P.length / 3 };
 }
+/* COINS, TROPHIES, THE CHASE, THE BOARD. Pure parts. Coins are earned by playing, never bought, never a gate.
+   Ten points is a coin. A trophy is a fact the engine can detect. The chase is a gull with a crate that dips low now and then. */
+const COINS = { arcade: 2, lap: 3, record: 5, delivery: 1, air: 1, quest: 5, chase: 10 };
+function coinsFor(reason) { return COINS[reason] || 0; }
+const TROPHIES = [
+  { id: 'gull', name: 'GULL CATCHER', line: 'Chased the gull that stole a crate and won it back.', test: function (s) { return (s.chaseWins || 0) >= 1; } },
+  { id: 'air', name: 'BIG AIR', line: 'Built a ramp one block high and flew off it.', test: function (s) { return (s.ramps || 0) >= 1; } },
+  { id: 'record', name: 'RECORD BREAKER', line: 'Beat their own best lap round the flag.', test: function (s) { return (s.beaten || 0) >= 1; } },
+  { id: 'village', name: 'VILLAGE MAKER', line: 'Built five houses with people living in them.', test: function (s) { return (s.houses || 0) >= 5; } },
+  { id: 'arcade', name: 'ARCADE STAR', line: 'Ten goes on the arcade machines.', test: function (s) { return (s.arcadeGoes || 0) >= 10; } },
+  { id: 'purse', name: 'TREASURE KEEPER', line: 'Saved up one hundred coins.', test: function (s) { return (s.coins || 0) >= 100; } },
+];
+function trophyById(id) { return TROPHIES.find(function (t) { return t.id === id; }) || null; }
+function trophiesEarned(s) { return TROPHIES.filter(function (t) { return t.test(s); }).map(function (t) { return t.id; }); }
+function trophyMask(ids) { let m = 0; TROPHIES.forEach(function (t, i) { if ((ids || []).indexOf(t.id) !== -1) m |= 1 << i; }); return m; }
+function trophiesFromMask(m) { return TROPHIES.filter(function (t, i) { return m & (1 << i); }).map(function (t) { return t.id; }); }
+const CHASE = { SPEED: 2.9, HIGH: 2.6, LOW: 0.6, CYCLE: 5, LOWFOR: 2, LIMIT: 50, CATCH: 1.5, TURN: 2.2 };
+function newChase(from, seed) {
+  return { x: from.x, y: from.y, h: 0, z: CHASE.LOW, t: CHASE.LOWFOR + 0.2, tx: from.x, ty: from.y, seed: (seed || 1) | 0, alt: 0, gone: false, won: false };
+}
+function chaseWaypoint(g) {
+  for (let i = 0; i < 16; i++) {
+    const r1 = ((g.seed * 9301 + g.alt * 49297 + i * 233 + 1) % 233280) / 233280, r2 = ((g.seed * 7919 + g.alt * 104729 + i * 577 + 3) % 233280) / 233280;
+    const a = r1 * 6.2832, d = 8 + r2 * 8, x = g.x + Math.cos(a) * d, y = g.y + Math.sin(a) * d;
+    const cx = Math.floor(x), cy = Math.floor(y);
+    if (inBounds(cx, cy) && isLand(cx, cy) && !isBeach(cx, cy)) { g.alt++; return { x: x, y: y }; }
+  }
+  g.alt++; return { x: ISLE.N / 2, y: ISLE.N / 2 };
+}
+function chaseLow(g) { return (g.t % CHASE.CYCLE) < CHASE.LOWFOR; }
+function chaseStep(g, dt) {
+  if (g.gone || g.won) return g;
+  g.t += dt;
+  if (g.t > CHASE.LIMIT) { g.gone = true; return g; }
+  if (Math.hypot(g.tx - g.x, g.ty - g.y) < 1.2) { const w = chaseWaypoint(g); g.tx = w.x; g.ty = w.y; }
+  const want = Math.atan2(g.ty - g.y, g.tx - g.x); let diff = want - g.h;
+  while (diff > Math.PI) diff -= 6.2832; while (diff < -Math.PI) diff += 6.2832;
+  g.h += Math.max(-CHASE.TURN * dt, Math.min(CHASE.TURN * dt, diff));
+  g.x += Math.cos(g.h) * CHASE.SPEED * dt; g.y += Math.sin(g.h) * CHASE.SPEED * dt;
+  g.x = Math.max(0.5, Math.min(ISLE.N - 0.5, g.x)); g.y = Math.max(0.5, Math.min(ISLE.N - 0.5, g.y));
+  const zt = chaseLow(g) ? CHASE.LOW : CHASE.HIGH; g.z += (zt - g.z) * Math.min(1, 4 * dt);
+  return g;
+}
+function chaseCatch(g, car) {
+  if (g.gone || g.won || !chaseLow(g) || g.z > 1.1) return false;
+  if (Math.hypot(g.x - car.x, g.y - car.y) > CHASE.CATCH) return false;
+  g.won = true; return true;
+}
+/* The board: rows sorted by coins, then the faster lap, then trophies. A row is { name, coins, lap, trophies, houses, me }. */
+function boardRows(rows) {
+  return (rows || []).slice().sort(function (a, b) {
+    if ((b.coins || 0) !== (a.coins || 0)) return (b.coins || 0) - (a.coins || 0);
+    const al = a.lap > 0 ? a.lap : 1e12, bl = b.lap > 0 ? b.lap : 1e12; if (al !== bl) return al - bl;
+    return (b.trophies || 0) - (a.trophies || 0);
+  });
+}
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
+  module.exports = { COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
 }
 </script>
 <script>
@@ -1161,7 +1260,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function updateLineage() {
     const own = !builder || builder === CREW;
     document.getElementById('title-badge').textContent =
-      (own ? (PRO ? TITLE + ' ' : '') + CREW : builder) + "'S ISLAND \u00B7 GAME 02";
+      (own ? (PRO ? TITLE + ' ' : '') + CREW : builder) + "'S ISLAND";
     const el = document.getElementById('lineage');
     if (chain.length) { el.textContent = 'REMIXED FROM ' + chain.join(' \u2190 '); el.classList.add('on'); }
     else el.classList.remove('on');
@@ -1429,6 +1528,8 @@ if (typeof module !== 'undefined' && module.exports) {
     drawIslanders(t);
     stepCar(dt);
     drawCar();
+    drawChase();
+    drawTrophies();
     stepCleo(dt, t);
     drawCleo(t);
     drawDock();
@@ -1769,7 +1870,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function syncCargo() {
     const el = document.getElementById('cargo');
-    el.textContent = 'CARGO ' + world.ref.count + ' / ' + ISLE.MAX_BLOCKS;
+    el.textContent = 'CARGO ' + world.ref.count + '/' + ISLE.MAX_BLOCKS;
     el.classList.toggle('full', world.ref.count >= ISLE.MAX_BLOCKS);
   }
   let toastT = null;
@@ -1794,7 +1895,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function shareUrl() {
     const p = new URLSearchParams(location.search).get('crew');
     return location.origin + location.pathname + (p ? '?crew=' + encodeURIComponent(p) : '')
-      + buildHash(encode(world.ref), bestLap, builder || CREW, chain);
+      + buildHash(encode(world.ref), bestLap, builder || CREW, chain, { coins: purse.coins, mask: trophyMask(purse.trophies), houses: houses(world.ref).length });
   }
   async function share() {
     sayPersonal('share');
@@ -1813,7 +1914,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const hp = parseHash(location.hash);
     if (hp) {
       w = decode(hp.enc);
-      if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; }
+      if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; if (hp.r) linkRec = { name: hp.b, lap: hp.t, coins: hp.r.coins, mask: hp.r.mask, houses: hp.r.houses }; }
     }
     let restored = false;
     if (!w) {
@@ -1881,7 +1982,7 @@ if (typeof module !== 'undefined' && module.exports) {
         tx: h.x + 1.5, ty: h.y + 1.5, wait: Math.random() * 2, seed: i * 1.7 };
     });
     const el = document.getElementById('pop');
-    el.textContent = 'ISLANDERS ' + islanders.length;
+    el.innerHTML = '<span class="folk"></span>' + islanders.length; el.setAttribute('aria-label', 'Islanders ' + islanders.length);
     return islanders.length;
   }
   function wanderTarget(p) {
@@ -1935,7 +2036,8 @@ if (typeof module !== 'undefined' && module.exports) {
       let can = true;
       if (walking) { const cf = floorAt(world.ref, cleo.x, cleo.y), fz = floorAt(world.ref, nx, ny); can = fz !== null && (cf === null || fz <= cf + 1.05); }
       if (can) { cleo.vx = nx - cleo.x; cleo.vy = ny - cleo.y; cleo.x = nx; cleo.y = ny; cleo.moving = true; cleo.face = (tg.x - tg.y) < (cleo.x - cleo.y) ? -1 : 1; }
-      else cleo.moving = false;
+      else { cleo.moving = false; cleo.stuck = (cleo.stuck || 0) + dt; if (cleo.stuck > 2 && walking) { const fz = floorAt(world.ref, tg.x, tg.y); if (fz !== null && fz <= walker.z + 1.05) { cleo.x = tg.x; cleo.y = tg.y; } cleo.stuck = 0; } }
+      if (can) cleo.stuck = 0;
     } else cleo.moving = false;
     cleo.x = Math.max(0.5, Math.min(ISLE.N - 0.5, cleo.x)); cleo.y = Math.max(0.5, Math.min(ISLE.N - 0.5, cleo.y));
     if (cleo.bark > 0) cleo.bark -= dt;
@@ -2242,6 +2344,7 @@ if (typeof module !== 'undefined' && module.exports) {
       g.fillStyle = '#5C3A6E'; g.fillRect(2, 62, 12, 16); g.fillStyle = CREAM; g.fillRect(4, 64, 8, 12); // the book
     });
   }
+  function trophyTex() { return spriteTex('trophy:' + (PRO ? PRO.hex : ''), function (g) { drawTrophyCup(g, 32, 50, 0.72, PRO ? PRO.hex : '#FF6E6C'); }); }
   function shadowTex() {
     return spriteTex('shadow', function (g) { const r = g.createRadialGradient(32, 48, 2, 32, 48, 30); r.addColorStop(0, 'rgba(42,27,61,0.42)'); r.addColorStop(1, 'rgba(42,27,61,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 96); });
   }
@@ -2277,7 +2380,8 @@ if (typeof module !== 'undefined' && module.exports) {
       journal.walkedToday = journal.walkedToday || 0; journal.jumpedToday = journal.jumpedToday || 0;
       if (!journal.walkSaid) { journal.walkSaid = true; noteLearned('The island looks different from the ground. A door is taller than you are, and eight blocks is a long way up.', 'walk', 'geometry'); }
       blip(520); setTimeout(function () { blip(780); }, 100);
-      cleo.mood = 'sit';
+      cleo.mood = 'sit'; cleo.stuck = 0;
+      if (!OWNER) { const tg = cleoTarget(), fz = floorAt(world.ref, tg.x, tg.y); if (fz !== null && fz <= walker.z + 1.05) { cleo.x = tg.x; cleo.y = tg.y; } else { cleo.x = walker.x; cleo.y = walker.y; } }
     } else {
       walking = false; document.body.classList.remove('walking');
       journal.walkedToday = (journal.walkedToday || 0) + Math.round(walker ? walker.steps : 0); journal.jumpedToday = (journal.jumpedToday || 0) + (walker ? walker.jumps : 0);
@@ -2318,7 +2422,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let best = null, bd = 70;
     lastProj.forEach(function (q) { const d = Math.hypot(q.sx - sx, q.sy - sy); if (d < bd) { bd = d; best = q; } });
     if (!best) return;
-    if (best.cleo) talkToKeeper({ px: best.sx, py: best.sy }); else chat({ p: best.p, px: best.sx, py: best.sy });
+    if (best.cleo) talkToKeeper({ px: best.sx, py: best.sy }); else if (best.trophy) { const t = trophyById(best.trophy); toast(t.name + '. ' + t.line); blip(880); } else chat({ p: best.p, px: best.sx, py: best.sy });
   }
   function walkFrame(dt, t) {
     if (!wStick) {
@@ -2374,6 +2478,11 @@ if (typeof module !== 'undefined' && module.exports) {
       const bob = p.asleep ? 0 : Math.abs(Math.sin(t * 5 + p.seed)) * 0.05;
       drawBillboard(VP, eye, folkTex(p), p.x, p.y, fz + bob, 0.9, 1.35);
       const s = proj(p.x, p.y, fz + 0.8); if (s) lastProj.push({ p: p, sx: s.sx, sy: s.sy });
+    });
+    trophySpots().forEach(function (tp) {
+      const fz = floorAt(world.ref, tp.x, tp.y); if (fz === null) return;
+      drawBillboard(VP, eye, trophyTex(), tp.x, tp.y, fz, 0.6, 0.9);
+      const s = proj(tp.x, tp.y, fz + 0.45); if (s) lastProj.push({ trophy: tp.id, sx: s.sx, sy: s.sy });
     });
     if (!OWNER) {
       const fz = floorAt(world.ref, cleo.x, cleo.y);
@@ -2531,6 +2640,162 @@ if (typeof module !== 'undefined' && module.exports) {
 
   // ===== P4 DRIVING: the buggy, ramps, and lap times that travel in the link =====
   let driving = false, driveSaid = false;
+  // ===== COINS, THE CHASE, WINS, TROPHIES AND THE BOARD =====
+  const PKEY = 'captains-island-purse-v1-' + CREW;
+  function loadPurse() { try { const p = JSON.parse(localStorage.getItem(PKEY) || 'null'); if (p && p.v === 1) return { v: 1, coins: p.coins | 0, trophies: Array.isArray(p.trophies) ? p.trophies.filter(function (i) { return !!trophyById(i); }) : [], chaseWins: p.chaseWins | 0, arcadeGoes: p.arcadeGoes | 0, deliveries: p.deliveries | 0 }; } catch (e) {} return { v: 1, coins: 0, trophies: [], chaseWins: 0, arcadeGoes: 0, deliveries: 0 }; }
+  const purse = loadPurse();
+  function savePurse() { if (!canSave()) return; try { localStorage.setItem(PKEY, JSON.stringify(purse)); } catch (e) {} }
+  function syncCoins() { document.getElementById('coinn').textContent = String(purse.coins); }
+  function award(reason, why) {
+    const n = coinsFor(reason); if (!n) return 0;
+    purse.coins += n; journal.coinsToday = (journal.coinsToday || 0) + n; saveJournal(journal); savePurse(); syncCoins();
+    const b = document.getElementById('coins'); b.classList.add('pop'); setTimeout(function () { b.classList.remove('pop'); }, 220);
+    if (why) toast(why + ' +' + n + ' COIN' + (n === 1 ? '' : 'S'));
+    if (!journal.coinSaid) { journal.coinSaid = true; noteLearned('Ten points is one coin. The arcade pays twenty points, so that is two coins.', 'coin', 'counting'); }
+    return n;
+  }
+  function trophyStats() { const s = questStats(); s.chaseWins = purse.chaseWins; s.arcadeGoes = purse.arcadeGoes; s.coins = purse.coins; return s; }
+  function trophyCheck(quiet) {
+    const fresh = trophiesEarned(trophyStats()).filter(function (id) { return purse.trophies.indexOf(id) === -1; });
+    if (!fresh.length) return [];
+    fresh.forEach(function (id) { purse.trophies.push(id); });
+    const t = trophyById(fresh[0]); journal.trophyNew = t.name; saveJournal(journal); savePurse();
+    if (!quiet) showWin('NEW TROPHY!', t.line, t.name);
+    return fresh;
+  }
+  let chase = null, chaseT = null, winConf = null;
+  function startChase() {
+    if (!driving || chase) return;
+    chase = newChase(dockCell(), Date.now() % 100000);
+    document.getElementById('chasebar').classList.add('on');
+    blip(1100); setTimeout(function () { blip(760); }, 120); setTimeout(function () { blip(1100); }, 240);
+  }
+  function endChase() { chase = null; clearTimeout(chaseT); chaseT = null; document.getElementById('chasebar').classList.remove('on'); }
+  function chaseWin() {
+    purse.chaseWins++; journal.chaseWinsToday = (journal.chaseWinsToday || 0) + 1; saveJournal(journal); savePurse();
+    endChase(); award('chase');
+    noteLearned('A gull flies the long way round. A car that cuts the corner gets there first.', 'chase', 'geometry');
+    const fresh = trophyCheck(true);
+    showWin('YOU CAUGHT THE GULL!', 'Crate back on the dock. +10 COINS', fresh.length ? 'NEW TROPHY: ' + trophyById(fresh[0]).name : '');
+    blip(900); setTimeout(function () { blip(1150); }, 100); setTimeout(function () { blip(1400); }, 200);
+  }
+  function drawTrophyCup(g, cx, cy, s, ribbon) {
+    g.fillStyle = '#2A1B3D'; g.fillRect(cx - 30 * s, cy + 30 * s, 60 * s, 12 * s); g.fillRect(cx - 12 * s, cy + 14 * s, 24 * s, 18 * s);
+    g.fillStyle = '#FFD447'; g.beginPath(); g.moveTo(cx - 34 * s, cy - 40 * s); g.lineTo(cx + 34 * s, cy - 40 * s); g.lineTo(cx + 22 * s, cy + 6 * s); g.quadraticCurveTo(cx, cy + 22 * s, cx - 22 * s, cy + 6 * s); g.closePath(); g.fill();
+    g.strokeStyle = '#FFD447'; g.lineWidth = 7 * s; g.lineCap = 'round';
+    g.beginPath(); g.arc(cx - 40 * s, cy - 22 * s, 13 * s, 0.5, 4.2); g.stroke(); g.beginPath(); g.arc(cx + 40 * s, cy - 22 * s, 13 * s, -1.1, 2.6); g.stroke();
+    g.fillStyle = '#E8B830'; g.fillRect(cx - 34 * s, cy - 44 * s, 68 * s, 6 * s);
+    g.fillStyle = ribbon; g.beginPath(); g.arc(cx, cy - 12 * s, 11 * s, 0, 6.29); g.fill();
+    g.fillStyle = '#FFF3E2'; g.beginPath(); g.arc(cx, cy - 12 * s, 5 * s, 0, 6.29); g.fill();
+  }
+  function showWin(title, sub, tro) {
+    document.getElementById('wintitle').textContent = title; document.getElementById('winsub').textContent = sub; document.getElementById('wintro').textContent = tro || '';
+    document.getElementById('win').classList.add('on');
+    const cv = document.getElementById('wincv'), g = cv.getContext('2d'), ribbon = PRO ? PRO.hex : '#FF6E6C';
+    const bits = []; for (let i = 0; i < 70; i++) bits.push({ x: Math.random() * 360, y: -20 - Math.random() * 240, vx: (Math.random() - 0.5) * 40, vy: 60 + Math.random() * 90, c: ['#FFD447', '#FF6E6C', '#8FD8E8', '#3FA96B', ribbon][i % 5], r: Math.random() * 6.28, s: 5 + Math.random() * 6 });
+    let last = performance.now(), gone = false;
+    if (winConf) cancelAnimationFrame(winConf);
+    function tick(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      g.clearRect(0, 0, 360, 240);
+      drawTrophyCup(g, 180, 130, 1.5, ribbon);
+      let alive = false;
+      bits.forEach(function (b) { b.y += b.vy * dt; b.x += b.vx * dt; b.r += dt * 3; if (b.y < 250) alive = true; g.save(); g.translate(b.x, b.y); g.rotate(b.r); g.fillStyle = b.c; g.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2); g.restore(); });
+      if (alive && !gone && document.getElementById('win').classList.contains('on')) winConf = requestAnimationFrame(tick); else winConf = null;
+    }
+    winConf = requestAnimationFrame(tick);
+  }
+  function closeWin() { document.getElementById('win').classList.remove('on'); blip(400); }
+  document.getElementById('wclose').addEventListener('click', closeWin);
+  document.getElementById('win').addEventListener('click', function (e) { if (e.target.id === 'win') closeWin(); });
+  function trophySpots() {
+    const hs = houses(world.ref); if (!hs.length || !purse.trophies.length) return [];
+    // open ground two to four blocks from the front door, nearest first, so the cups line up on the sand by the house
+    const d = hs[0], cells = [];
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const x = d.x + dx, y = d.y + dy, r = Math.hypot(dx, dy);
+      if (r < 2 || r > 4.3 || !inBounds(x, y) || !isLand(x, y) || topZ(world.ref, x, y) >= 0) continue;
+      cells.push({ x: x, y: y, r: r });
+    }
+    cells.sort(function (a, b) { return a.r - b.r || a.y - b.y || a.x - b.x; });
+    return purse.trophies.slice(0, cells.length).map(function (id, i) { return { id: id, x: cells[i].x + 0.5, y: cells[i].y + 0.5, z: 0 }; });
+  }
+  function drawTrophies() {
+    const ribbon = PRO ? PRO.hex : '#FF6E6C';
+    trophySpots().forEach(function (tp) {
+      const sx = isoX(tp.x, tp.y) * cam.zoom + cam.x, sy = (isoY(tp.x, tp.y, tp.z) + ZH) * cam.zoom + cam.y, s = Math.max(cam.zoom, 0.8) * 0.22;
+      if (sx < -40 || sx > W + 40 || sy < -60 || sy > H + 40) return;
+      ctx.fillStyle = 'rgba(42,27,61,0.28)'; ctx.beginPath(); ctx.ellipse(sx, sy, 8 * s * 2.2, 3.5 * s * 2.2, 0, 0, 6.29); ctx.fill();
+      drawTrophyCup(ctx, sx, sy - 34 * s, s, ribbon);
+    });
+  }
+  function drawChase() {
+    if (!chase || !driving) return;
+    const g = chase, s = Math.max(cam.zoom, 0.9);
+    const gx = isoX(g.x, g.y) * cam.zoom + cam.x, gy0 = (isoY(g.x, g.y, 0) + ZH) * cam.zoom + cam.y, gy = gy0 - g.z * ZH * cam.zoom;
+    const low = chaseLow(g);
+    if (gx < -30 || gx > W + 30 || gy < -30 || gy > H + 30) {
+      // an arrow on the edge of the screen, pointing at the gull
+      const cx = W / 2, cy = H / 2, dx = gx - cx, dy = gy - cy;
+      const k = Math.min(dx !== 0 ? (cx - 44) / Math.abs(dx) : 1e9, dy !== 0 ? (cy - 130) / Math.abs(dy) : 1e9), ex = cx + dx * k, ey = cy + dy * k;
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(Math.atan2(dy, dx));
+      ctx.fillStyle = low ? '#FFD447' : '#FF6E6C'; ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(-14, -16); ctx.lineTo(-6, 0); ctx.lineTo(-14, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = '#FFF3E2'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center'; ctx.fillText('GULL', ex, ey + 30); ctx.textAlign = 'left';
+      return;
+    }
+    ctx.fillStyle = 'rgba(42,27,61,0.28)'; ctx.beginPath(); ctx.ellipse(gx, gy0, 10 * s, 4 * s, 0, 0, 6.29); ctx.fill();
+    const f = Math.sin(performance.now() / 60) * 6 * s;
+    ctx.fillStyle = '#C9834E'; ctx.fillRect(gx - 6 * s, gy - 2 * s, 12 * s, 9 * s); ctx.fillStyle = '#96602F'; ctx.fillRect(gx - 1 * s, gy - 2 * s, 2 * s, 9 * s);
+    ctx.strokeStyle = '#FFF3E2'; ctx.lineWidth = 3 * s; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(gx - 16 * s, gy - 8 * s + f); ctx.quadraticCurveTo(gx - 6 * s, gy - 14 * s, gx, gy - 8 * s); ctx.quadraticCurveTo(gx + 6 * s, gy - 14 * s, gx + 16 * s, gy - 8 * s + f); ctx.stroke();
+    ctx.fillStyle = '#FFF3E2'; ctx.beginPath(); ctx.ellipse(gx, gy - 7 * s, 7 * s, 4.5 * s, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#FFD447'; ctx.beginPath(); ctx.moveTo(gx + 6 * s, gy - 8 * s); ctx.lineTo(gx + 12 * s, gy - 6.5 * s); ctx.lineTo(gx + 6 * s, gy - 5 * s); ctx.fill();
+    ctx.fillStyle = '#2A1B3D'; ctx.beginPath(); ctx.arc(gx + 3 * s, gy - 9 * s, 1.2 * s, 0, 6.29); ctx.fill();
+    if (low) { ctx.strokeStyle = '#FFD447'; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.ellipse(gx, gy0, CHASE.CATCH * TW / 2 * cam.zoom, CHASE.CATCH * TH / 2 * cam.zoom, 0, 0, 6.29); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#FFD447'; ctx.font = 'bold ' + Math.round(12 * s) + 'px system-ui'; ctx.textAlign = 'center'; ctx.fillText('NOW!', gx, gy - 24 * s); ctx.textAlign = 'left'; }
+  }
+  let linkRec = null;
+  function boardRowsHere() {
+    const rows = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i); if (k.indexOf('captains-island-save-v1-') !== 0) continue;
+        const name = sanitizeName(k.slice('captains-island-save-v1-'.length)); if (!name) continue;
+        let sv = null, pu = null; try { sv = JSON.parse(localStorage.getItem(k)); pu = JSON.parse(localStorage.getItem('captains-island-purse-v1-' + name) || 'null'); } catch (e) {}
+        const w = sv && typeof sv.i === 'string' ? decode(sv.i) : null;
+        rows.push({ name: name, coins: pu ? pu.coins | 0 : 0, lap: sv && sv.t > 0 ? sv.t : 0, trophies: pu && Array.isArray(pu.trophies) ? pu.trophies.length : 0, houses: w ? houses(w).length : 0, me: name === CREW });
+      }
+    } catch (e) {}
+    if (!rows.some(function (r) { return r.me; })) rows.push({ name: CREW, coins: purse.coins, lap: bestLap || 0, trophies: purse.trophies.length, houses: houses(world.ref).length, me: true });
+    else rows.forEach(function (r) { if (r.me) { r.coins = purse.coins; r.lap = bestLap || 0; r.trophies = purse.trophies.length; r.houses = houses(world.ref).length; } });
+    return boardRows(rows);
+  }
+  function rowHtml(r, vs) {
+    const behind = function (mine, theirs, lowerWins) { if (!vs || !r.me) return ''; return (lowerWins ? (theirs > 0 && (mine === 0 || mine > theirs)) : mine < theirs) ? ' class="beat"' : ''; };
+    return '<div class="brow' + (r.me ? ' me' : '') + '"><span class="nm">' + (r.me ? 'YOU' : r.name) + '</span>'
+      + '<span' + behind(r.coins, vs ? vs.coins : 0) + '><span class="coin"></span>' + r.coins + '</span>'
+      + '<span' + behind(r.lap, vs ? vs.lap : 0, true) + '>' + (r.lap > 0 ? fmtLap(r.lap) : 'no lap') + '</span>'
+      + '<span' + behind(r.trophies, vs ? vs.trophies : 0) + '>' + r.trophies + '</span>'
+      + '<span' + behind(r.houses, vs ? vs.houses : 0) + '>' + r.houses + '</span></div>';
+  }
+  function openBoard() {
+    const lab = '<div class="brow lab"><span>WHO</span><span>COINS</span><span>LAP</span><span>CUPS</span><span>HOUSES</span></div>';
+    let html = '<div class="bhead">THIS HOUSE</div>' + lab + boardRowsHere().map(function (r) { return rowHtml(r, null); }).join('');
+    html += '<div class="bhead">THE LINK</div>';
+    if (linkRec) {
+      const them = { name: linkRec.name || 'A FRIEND', coins: linkRec.coins, lap: linkRec.lap, trophies: trophiesFromMask(linkRec.mask).length, houses: linkRec.houses, me: false };
+      const me = { name: CREW, coins: purse.coins, lap: bestLap || 0, trophies: purse.trophies.length, houses: houses(world.ref).length, me: true };
+      html += lab + rowHtml(them, null) + rowHtml(me, them) + '<div class="bnote">The coral numbers are the ones to beat. Beat one, then tap SHARE and send your link back.</div>';
+    } else html += '<div class="bnote">Open a friend\'s link and their numbers show here next to yours. Tap SHARE to send them yours.</div>';
+    if (purse.trophies.length) html += '<div class="bhead">YOUR TROPHIES</div>' + purse.trophies.map(function (id) { const t = trophyById(id); return '<div class="brow" style="grid-template-columns:1fr"><span class="nm">' + t.name + '</span><span style="font-weight:600;font-size:13px;white-space:normal">' + t.line + '</span></div>'; }).join('');
+    document.getElementById('boardbody').innerHTML = html;
+    document.getElementById('board').classList.add('on'); blip(520);
+  }
+  document.getElementById('btn-board').addEventListener('click', openBoard);
+  document.getElementById('bdclose').addEventListener('click', function () { document.getElementById('board').classList.remove('on'); blip(400); });
+  syncCoins();
   const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
   let lapStart = 0, lapNow = 0, lapArmed = false, bestLap = 0, ghostLap = 0;
   let arcadeScore = 0; const dingAt = {};
@@ -2540,8 +2805,8 @@ if (typeof module !== 'undefined' && module.exports) {
       const k = a.x + ',' + a.y, now = performance.now();
       if (dingAt[k] && now - dingAt[k] < 3000) continue;
       dingAt[k] = now; arcadeScore += 20;
-      journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal);
-      toast('DING! 20 POINTS! ARCADE TOTAL ' + arcadeScore);
+      journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal); purse.arcadeGoes++; award('arcade'); trophyCheck();
+      toast('DING! 20 POINTS = 2 COINS! ARCADE TOTAL ' + arcadeScore);
       blip(1040); setTimeout(() => blip(1320), 80); setTimeout(() => blip(1560), 160);
       noteLearned('Every arcade machine pays 20 points when you drive past it, so two machines pay 40.', 'arcade', 'counting');
     }
@@ -2595,7 +2860,7 @@ if (typeof module !== 'undefined' && module.exports) {
         if (!t) continue;
         if (Math.hypot(p.home.x + 0.5 - car.x, p.home.y + 0.5 - car.y) < 2.2) {
           car.crates--; t.left--; loadT = now;
-          journal.deliveredToday = (journal.deliveredToday || 0) + 1;
+          journal.deliveredToday = (journal.deliveredToday || 0) + 1; purse.deliveries++; award('delivery');
           const got = t.n - t.left;
           toast(p.name + ' GOT ' + got + (t.left ? ' (' + t.left + ' more to go)' : '. THAT IS ALL OF THEM!'));
           blip(880); setTimeout(function () { blip(1100); }, 80);
@@ -2655,9 +2920,10 @@ if (typeof module !== 'undefined' && module.exports) {
     car.y = Math.max(0.5, Math.min(ISLE.N - 0.5, car.y));
     arcadeCheck();
     deliveryCheck();
+    if (chase) { chaseStep(chase, dt); if (chaseCatch(chase, car)) chaseWin(); else if (chase.gone) { endChase(); toast('The gull got away with it. Next drive, try again.'); } }
     if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) {
-      car.vz = 3.6; blip(880); toast('BIG AIR!');
-      noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.', 'ramp', 'geometry');
+      car.vz = 3.6; blip(880); award('air', 'BIG AIR!');
+      noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.', 'ramp', 'geometry'); trophyCheck();
     }
     const tcx = W / 2 - isoX(car.x, car.y) * cam.zoom;
     const tcy = H * 0.52 - (isoY(car.x, car.y, 0) + ZH) * cam.zoom;
@@ -2672,12 +2938,13 @@ if (typeof module !== 'undefined' && module.exports) {
           const t = performance.now() - lapStart;
           if (!bestLap || t < bestLap) {
             const old = bestLap;
-            bestLap = t; toast('NEW RECORD ' + fmtLap(t) + '! Share it.');
+            bestLap = t; award('record', 'NEW RECORD ' + fmtLap(t) + '!');
             noteLearned('Going round the flag the short way makes the number smaller, and a smaller number is faster.', 'lap', 'number');
             if (old) { journal.lapBeaten = true; journal.lapBeatenEver = (journal.lapBeatenEver || 0) + 1; journal.lapGainToday = Math.max(journal.lapGainToday || 0, old - t); noteLearned('You beat your own record by ' + ((old - t) / 1000).toFixed(1) + ' seconds. Smaller number, faster lap.', 'lap', 'number'); }
             sayPersonal('race');
           }
-          else toast('LAP ' + fmtLap(t));
+          else award('lap', 'LAP ' + fmtLap(t));
+          trophyCheck();
           blip(900); setTimeout(() => blip(1150), 100);
           lapStart = performance.now(); lapArmed = false;
         } else if (!lapStart) { lapStart = performance.now(); toast('GO! Drive a lap.'); blip(700); }
@@ -2728,8 +2995,10 @@ if (typeof module !== 'undefined' && module.exports) {
       const hs1 = houses(world.ref), st1 = hs1.length ? { x: hs1[0].x, y: hs1[0].y } : { x: ISLE.N / 2, y: ISLE.N / 2 };
       cam.x = W / 2 - isoX(st1.x, st1.y) * cam.zoom; cam.y = H * 0.5 - (isoY(st1.x, st1.y, 0) + ZH) * cam.zoom; clampCam(); syncDial();
     }
+    if (!on) endChase();
     if (on) {
       spawnCar();
+      if (houses(world.ref).length >= 1 && (journal.chaseWinsToday || 0) < 3) chaseT = setTimeout(startChase, 4000);
       toast(flags(world.ref).length ? 'DRIVE THROUGH YOUR FLAG TO START THE LAP!' : 'DRIVE! Build a FLAG to race a lap.');
     if (PRO && !driveSaid) { driveSaid = true; setTimeout(function () { toast('YOUR ' + CARS[carIdx].name + ', IN ' + PROFILE.COLOURS[PRO.colour].name + '.'); }, 2400); }
     }
@@ -2968,7 +3237,7 @@ if (typeof module !== 'undefined' && module.exports) {
       journal.lastQuestDone = journal.quest.done;
       journal.doneId = journal.quest.id; journal.doneSkill = journal.quest.skill || '';
       journal.quest = null; journal.questDay = '';
-      saveJournal(journal);
+      saveJournal(journal); award('quest'); trophyCheck();
       if (OWNER) { if (islanders.length) islanders[0].cheer = 3; } else { cleo.spin = 1.6; cleo.mood = 'sit'; }
       blip(700); setTimeout(function () { blip(950); }, 110);
       setTimeout(function () { toast('QUEST DONE! Read it tonight at story time.'); }, 1500);
@@ -3007,6 +3276,7 @@ if (typeof module !== 'undefined' && module.exports) {
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
       bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
       word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard, weather: weatherAt(today(), 12),
+      chaseWins: journal.chaseWinsToday || 0, coinsToday: journal.coinsToday || 0, trophyNew: journal.trophyNew || '',
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
     });
@@ -3018,7 +3288,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!journal.quest) journal.questDay = today();
     journal.quest = q;
     journal.arcadePlays = 0; journal.prevStats = st; journal.newIslanders = []; journal.learned = []; journal.keys = [];
-    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
+    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
     journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
@@ -3153,6 +3423,7 @@ if (typeof module !== 'undefined' && module.exports) {
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE,
     setWalk, walking: () => walking, walker: () => walker, walkInput: winp, walkKeys: wkeys, glOk: () => !!gl, meshCount: () => meshCount, walkProj: () => lastProj, walkTap,
     meshDirty: () => meshDirty, meshBuilds: () => meshBuilds, walkShadows: () => shadowsDrawn, cleoPose: () => cleoPose, cleoFlip: () => cleoFlip,
+    purse, award, trophyCheck, chase: () => chase, startChase, endChase, chaseWin, showWin, openBoard, trophySpots, linkRec: () => linkRec, boardRowsHere,
     garden: () => garden, applyGrowth, boatArrive, setVisitor, visitor: () => visitor, boatAt: () => boatAt(hourNow()), boatGift: () => boatGift(today()), boatSpot, dockCell, chocoDay };
   boot();
 })();
