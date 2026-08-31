@@ -28,8 +28,8 @@ const back = decode(enc);
 ok('roundtrip keeps new ids', back && back.cols[idx(10, 10, 0)] === 10 && back.cols[idx(20, 20, 0)] === 11);
 const old = makeWorld(); place(old, 1, 1, 1); place(old, 2, 2, 9);
 ok('old style link still decodes', decode(encode(old)).count === 2);
-const bad = Buffer.from([1, 0, 5, 5, 12]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-ok('id 12 rejected by decoder', decode(bad) === null);
+const bad = Buffer.from([1, 0, 5, 5, 15]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+ok('id 15 rejected by decoder (12 to 14 are the garden now)', decode(bad) === null);
 const full = makeWorld();
 let lastR = null;
 for (let i = 0; i < ISLE.MAX_BLOCKS; i++) { lastR = place(full, i % 64, Math.floor(i / 64), 11); if (!lastR.ok) break; }
