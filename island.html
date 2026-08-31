@@ -135,6 +135,13 @@
   .brow .nm { font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .brow .beat { color:var(--coral); }
   .bnote { color:var(--cream); font-size:14px; font-weight:600; line-height:1.5; opacity:0.85; }
+  #agame { position:fixed; inset:0; z-index:23; display:none; flex-direction:column; background:linear-gradient(180deg,#1C102C,#2A1B3D 30%,#5C3A6E); }
+  #agame.on { display:flex; }
+  #ag-top { display:flex; align-items:center; gap:10px; padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 8px; }
+  #ag-name { flex:1; color:var(--yellow); font-weight:900; font-size:16px; letter-spacing:0.14em; }
+  #ag-score { color:var(--cream); font-weight:900; font-size:16px; font-variant-numeric:tabular-nums; }
+  #ag-exit { width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--coral); color:var(--cream); font-size:20px; font-weight:900; box-shadow:0 4px 0 rgba(10,4,18,0.6); }
+  #agc { flex:1; width:100%; touch-action:none; }
   #lapbest { color:#8FD8E8; font-size:12px; }
   #lineage { position:fixed; top:calc(env(safe-area-inset-top,0px) + 54px); left:50%;
     transform:translateX(-50%); display:none; background:rgba(42,27,61,0.9); color:#8FD8E8;
@@ -245,6 +252,7 @@
 <div id="chasebar">CATCH THAT GULL!</div>
 <div id="win"><div class="wincard"><canvas id="wincv" width="360" height="240"></canvas><h3 id="wintitle"></h3><div class="sub" id="winsub"></div><div class="tro" id="wintro"></div><button class="bigbtn" id="wclose">HOORAY!</button></div></div>
 <div id="board"><div id="boardcard"><h3>THE BOARD</h3><div id="boardbody"></div><button class="bigbtn" id="bdclose" style="margin-top:12px">BACK TO THE ISLAND</button></div></div>
+<div id="agame"><div id="ag-top"><span id="ag-name"></span><span id="ag-score">0</span><button id="ag-exit" aria-label="Back to the island">&#10005;</button></div><canvas id="agc"></canvas></div>
 <div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="knob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
 <canvas id="mini" width="192" height="192" aria-label="Map of the island"></canvas>
 <div id="quest"></div>
@@ -811,6 +819,8 @@ function chapter(o) {
   if (o.chaseWins > 0) page1.push('A gull swooped on the dock and flew off with a crate. ' + cap + ' jumped in the car and chased it round the island, and caught it' + (o.chaseWins > 1 ? ' ' + o.chaseWins + ' times' : '') + '. Crate back on the dock.');
   if (o.coinsToday > 0) page1.push('The purse grew by ' + o.coinsToday + ' coin' + (o.coinsToday === 1 ? '' : 's') + ' today. Ten points is a coin, and coins hire the crew.');
   if (o.trophyNew) page1.push('A new trophy stands by the front door now: ' + o.trophyNew + '.');
+  const cab = Object.keys(o.cabinet || {});
+  if (cab.length) page1.push('The arcade was switched on: ' + cab.map(function (k) { return k + ' best ' + o.cabinet[k]; }).join(', ') + '. Ten points is a coin, every time.');
   if (o.word) page1.push('The word of the island today was ' + o.word.w + '. It means ' + o.word.d + '. ' + cap + (o.wordHeard ? ' heard it from an islander.' : ' can go and find out who says it.'));
   if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
   const page2 = [];
@@ -948,7 +958,7 @@ function nextThing(st) {
   const spare = [
     { key: 'tall', line: 'Build something tall. Eight blocks is the very top!' },
     { key: 'share', line: 'Send your island to someone. Tap SHARE and it all fits in one link.' },
-    { key: 'arcade', line: 'Build an ARCADE and drive past it. Twenty points a go.' },
+    { key: 'arcade', line: 'Build an ARCADE and tap it. Three games live inside, and they pay coins.' },
     { key: 'palm', line: 'Plant some PALM trees so the islanders have shade.' },
     { key: 'mirror', line: 'Try building a house that is the same on both sides. Tap me and I will show the missing half.', ghost: 'mirror' },
     { key: 'compass', line: 'Look at the corners of the island. N is north. Try building something north of your flag.' },
@@ -1227,6 +1237,26 @@ function chaseCatch(g, car) {
   if (Math.hypot(g.x - car.x, g.y - car.y) > CHASE.CATCH) return false;
   g.won = true; return true;
 }
+/* THE CABINETS. Each arcade block runs one of three games, decided by where it stands, so three cabinets get all three.
+   Ten points is a coin, here like everywhere. The whale sings a seeded pattern that never repeats a note twice running,
+   the gull window shrinks but never below what a five year old can hit, and a crate keeps only the part that overlaps. */
+const CABINETS = ['WHALE SONG', 'SEAGULL BONK', 'CARGO STACK'];
+function cabinetGame(x, y) { return ((x * 7 + y * 13) % 3 + 3) % 3; }
+function coinsForScore(p) { return Math.max(0, Math.floor((p || 0) / 10)); }
+function whaleSeq(seed, len) {
+  let s = ((seed | 0) * 16807 + 13) % 2147483647; if (s <= 0) s += 2147483646;
+  const out = [s % 3];
+  for (let i = 1; i < len; i++) { s = (s * 48271) % 2147483647; out.push((out[i - 1] + 1 + s % 2) % 3); }
+  return out;
+}
+function bonkUpTime(elapsed) { return Math.max(0.55, 1.05 - elapsed * 0.012); }
+function stackLand(prev, x, w) {
+  const a0 = x - w / 2, a1 = x + w / 2, b0 = prev.x - prev.w / 2, b1 = prev.x + prev.w / 2;
+  const o0 = Math.max(a0, b0), o1 = Math.min(a1, b1);
+  if (o1 - o0 < 0.05) return null;
+  const perfect = Math.abs(x - prev.x) < 0.08;
+  return perfect ? { x: prev.x, w: prev.w, perfect: true } : { x: (o0 + o1) / 2, w: o1 - o0, perfect: false };
+}
 /* The board: rows sorted by coins, then the faster lap, then trophies. A row is { name, coins, lap, trophies, houses, me }. */
 function boardRows(rows) {
   return (rows || []).slice().sort(function (a, b) {
@@ -1236,7 +1266,7 @@ function boardRows(rows) {
   });
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
+  module.exports = { COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
 }
 </script>
 <script>
@@ -1708,6 +1738,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (hit) { chat(hit); return; }
     const c = cellAt(sx, sy);
     if (!c) return;
+    if (tool !== -1 && arcadeCells.some(function (a) { return a.x === c.x && a.y === c.y; })) { openCabinet(c.x, c.y); return; }
     let r;
     if (tool === -1) r = erase(world.ref, c.x, c.y);
     else r = place(world.ref, c.x, c.y, tool);
@@ -1738,7 +1769,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const GROUPS = [['GROUND', [1, 2]], ['WALLS', [3, 4, 5, 6, 7]], ['THINGS', [8, 9, 10, 11, 12]]];
   const TIPS = { 1: 'Soft ground. Ten of them make a garden.', 2: 'One block high in a line makes a ramp.', 3: 'Walls. Four in a ring and a door, and somebody moves in.',
     4: 'Strong walls, same as wood but red.', 5: 'Put it in a wall.', 6: 'Put it in a wall and somebody moves in.', 7: 'Goes on top.', 8: 'Shade for the islanders. They love it.',
-    9: 'Drive through it to time a lap.', 10: 'Drive past it for 20 points.', 11: 'Three houses make one appear, or build it yourself.', 12: 'Plant it on bare sand. Tomorrow it sprouts, in three days it is a tree.', '-1': 'Tap a block to take it away.' };
+    9: 'Drive through it to time a lap.', 10: 'Tap it to play a game. Driving past pays 20 points too.', 11: 'Three houses make one appear, or build it yourself.', 12: 'Plant it on bare sand. Tomorrow it sprouts, in three days it is a tree.', '-1': 'Tap a block to take it away.' };
   const iconCache = {};
   function iconFor(id) { // a real prism, drawn by the engine, on a tiny canvas
     if (iconCache[id]) return icon2(id);
@@ -2646,14 +2677,15 @@ if (typeof module !== 'undefined' && module.exports) {
   const purse = loadPurse();
   function savePurse() { if (!canSave()) return; try { localStorage.setItem(PKEY, JSON.stringify(purse)); } catch (e) {} }
   function syncCoins() { document.getElementById('coinn').textContent = String(purse.coins); }
-  function award(reason, why) {
-    const n = coinsFor(reason); if (!n) return 0;
+  function awardCoins(n, why) {
+    if (!(n > 0)) return 0;
     purse.coins += n; journal.coinsToday = (journal.coinsToday || 0) + n; saveJournal(journal); savePurse(); syncCoins();
     const b = document.getElementById('coins'); b.classList.add('pop'); setTimeout(function () { b.classList.remove('pop'); }, 220);
     if (why) toast(why + ' +' + n + ' COIN' + (n === 1 ? '' : 'S'));
     if (!journal.coinSaid) { journal.coinSaid = true; noteLearned('Ten points is one coin. The arcade pays twenty points, so that is two coins.', 'coin', 'counting'); }
     return n;
   }
+  function award(reason, why) { return awardCoins(coinsFor(reason), why); }
   function trophyStats() { const s = questStats(); s.chaseWins = purse.chaseWins; s.arcadeGoes = purse.arcadeGoes; s.coins = purse.coins; return s; }
   function trophyCheck(quiet) {
     const fresh = trophiesEarned(trophyStats()).filter(function (id) { return purse.trophies.indexOf(id) === -1; });
@@ -2795,6 +2827,181 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   document.getElementById('btn-board').addEventListener('click', openBoard);
   document.getElementById('bdclose').addEventListener('click', function () { document.getElementById('board').classList.remove('on'); blip(400); });
+  // ===== THE CABINETS: three games drawn by the engine, one X out, coins at the end =====
+  const AGC = { INK: '#2A1B3D', CREAM: '#FFF3E2', YELLOW: '#FFD447', CORAL: '#FF6E6C', SKY: '#8FD8E8', SEA: '#2F7F9A', PALM: '#3FA96B', CHOC: '#96602F' };
+  let ag = null, agRaf = null, agLast = 0;
+  const agEl = document.getElementById('agame'), agc = document.getElementById('agc'), agg = agc.getContext('2d');
+  function agSize() { const d = Math.min(2, devicePixelRatio || 1), r = agc.getBoundingClientRect(); agc.width = r.width * d; agc.height = r.height * d; agg.setTransform(d, 0, 0, d, 0, 0); return { w: r.width, h: r.height }; }
+  function agScore(n) { document.getElementById('ag-score').textContent = String(n); }
+  function agEnd(g) {
+    if (g.over) return;
+    g.over = true; g.coins = coinsForScore(g.score);
+    awardCoins(g.coins);
+    journal.cabinetToday = journal.cabinetToday || {};
+    journal.cabinetToday[g.name] = Math.max(journal.cabinetToday[g.name] || 0, g.score); saveJournal(journal);
+    trophyCheck();
+    blip(g.score > 0 ? 900 : 400); if (g.score > 0) setTimeout(function () { blip(1150); }, 110);
+  }
+  function agEndCard(k, msg) {
+    const w = k.w, h = k.h;
+    agg.fillStyle = 'rgba(28,16,44,0.82)'; agg.fillRect(0, 0, w, h);
+    agg.textAlign = 'center'; agg.fillStyle = AGC.CREAM; agg.font = '900 20px system-ui';
+    agg.fillText(msg, w / 2, h * 0.34);
+    agg.fillStyle = AGC.YELLOW; agg.font = '900 40px system-ui'; agg.fillText(String(ag.score), w / 2, h * 0.44);
+    agg.font = '900 17px system-ui'; agg.fillText('+' + ag.coins + ' COIN' + (ag.coins === 1 ? '' : 'S'), w / 2, h * 0.51);
+    agg.fillStyle = AGC.CREAM; agg.font = '800 15px system-ui'; agg.fillText('TAP TO PLAY AGAIN', w / 2, h * 0.62);
+    agg.textAlign = 'left';
+  }
+  function crate(g, x, y, w2, h2) { g.fillStyle = '#C9834E'; g.fillRect(x, y, w2, h2); g.fillStyle = AGC.CHOC; g.fillRect(x, y + h2 / 2 - 1.5, w2, 3); g.fillRect(x + w2 / 2 - 1.5, y, 3, h2); }
+  function gullFace(g, x, y, s, up) {
+    g.fillStyle = AGC.CREAM; g.beginPath(); g.ellipse(x, y, 16 * s, 12 * s, 0, 0, 6.29); g.fill();
+    g.beginPath(); g.arc(x + 8 * s, y - 12 * s, 8 * s, 0, 6.29); g.fill();
+    g.fillStyle = AGC.YELLOW; g.beginPath(); g.moveTo(x + 14 * s, y - 13 * s); g.lineTo(x + 24 * s, y - 10 * s); g.lineTo(x + 14 * s, y - 8 * s); g.fill();
+    g.fillStyle = AGC.INK; g.beginPath(); g.arc(x + 9 * s, y - 14 * s, 2 * s, 0, 6.29); g.fill();
+    if (up) { g.strokeStyle = AGC.CREAM; g.lineWidth = 4 * s; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 14 * s, y - 2 * s); g.quadraticCurveTo(x - 24 * s, y - 12 * s, x - 28 * s, y - 4 * s); g.stroke(); }
+  }
+  const GAMES = {};
+  GAMES[0] = { // WHALE SONG: hear the pattern, hold it, sing it back on the shells
+    reset: function (g) { g.round = 1; g.seed = (Date.now() % 100000) | 0; g.seq = whaleSeq(g.seed, 2); g.phase = 'listen'; g.pi = 0; g.at = 0.6; g.lit = -1; g.spout = 0; },
+    shells: function (k) { const w = k.w; return [0, 1, 2].map(function (i) { return { x: w * (0.22 + i * 0.28), y: k.h * 0.78, r: Math.min(46, w * 0.11) }; }); },
+    step: function (g, dt, k) {
+      g.spout = Math.max(0, g.spout - dt);
+      if (g.phase === 'listen') {
+        g.at -= dt;
+        if (g.at <= 0) {
+          if (g.lit === -1 && g.pi < g.seq.length) { g.lit = g.seq[g.pi]; g.at = 0.34; blip(660 + g.lit * 220); g.spout = 0.3; }
+          else if (g.lit !== -1) { g.lit = -1; g.at = 0.2; g.pi++; if (g.pi >= g.seq.length) { g.phase = 'sing'; g.pi = 0; } }
+        }
+      }
+    },
+    input: function (g, i, k) {
+      if (g.phase !== 'sing' || i < 0 || i > 2) return;
+      g.lit = i; setTimeout(function () { if (ag === g) g.lit = -1; }, 200);
+      if (i === g.seq[g.pi]) {
+        blip(660 + i * 220); g.pi++;
+        if (g.pi >= g.seq.length) {
+          g.score += g.round * 10; agScore(g.score); g.round++;
+          if (g.round > 8) { agEnd(g); g.msg = 'THE WHOLE SONG! EIGHT ROUNDS!'; return; }
+          g.seq = whaleSeq(g.seed + g.round * 101, g.round + 1); g.phase = 'listen'; g.pi = 0; g.at = 0.9;
+        }
+      } else { agEnd(g); g.msg = 'The whale sang ' + (g.round - 1) + ' round' + (g.round === 2 ? '' : 's') + ' with you'; blip(300); }
+    },
+    tap: function (g, x, y, k) { const sh = this.shells(k); for (let i = 0; i < 3; i++) if (Math.hypot(x - sh[i].x, y - sh[i].y) < sh[i].r + 12) return this.input(g, i, k); },
+    draw: function (g, k) {
+      const w = k.w, h = k.h;
+      agg.fillStyle = AGC.SEA; agg.fillRect(0, h * 0.42, w, h * 0.26);
+      agg.fillStyle = AGC.INK; agg.beginPath(); agg.ellipse(w / 2, h * 0.44, w * 0.2, h * 0.07, 0, 3.14, 6.29); agg.fill();
+      agg.fillStyle = AGC.CREAM; agg.beginPath(); agg.arc(w / 2 + w * 0.13, h * 0.415, 5, 0, 6.29); agg.fill();
+      if (g.spout > 0) { agg.strokeStyle = AGC.SKY; agg.lineWidth = 5; agg.lineCap = 'round'; agg.beginPath(); agg.moveTo(w / 2, h * 0.37); agg.lineTo(w / 2 - 10, h * 0.31); agg.moveTo(w / 2, h * 0.37); agg.lineTo(w / 2 + 10, h * 0.31); agg.stroke(); }
+      agg.textAlign = 'center'; agg.fillStyle = AGC.CREAM; agg.font = '800 15px system-ui';
+      agg.fillText(g.phase === 'listen' ? 'LISTEN...' : 'SING IT BACK! ROUND ' + g.round, w / 2, h * 0.14);
+      const cols = [AGC.CORAL, AGC.SKY, AGC.YELLOW];
+      this.shells(k).forEach(function (s, i) {
+        agg.fillStyle = cols[i]; agg.globalAlpha = g.lit === i ? 1 : 0.55;
+        agg.beginPath(); agg.arc(s.x, s.y, s.r * (g.lit === i ? 1.12 : 1), 3.14, 6.29); agg.fill();
+        agg.globalAlpha = 1; agg.fillStyle = AGC.INK; agg.fillRect(s.x - s.r, s.y - 2, s.r * 2, 5);
+      });
+      agg.textAlign = 'left';
+    }
+  };
+  GAMES[1] = { // SEAGULL BONK: tap the gulls, and the chocolate trunk is twenty
+    reset: function (g) { g.t = 0; g.left = 30; g.pops = []; g.next = 0.5; g.stars = []; },
+    cellAt: function (i, k) { const w = k.w, h = k.h; return { x: w * (0.24 + (i % 3) * 0.26), y: h * (0.3 + Math.floor(i / 3) * 0.22) }; },
+    step: function (g, dt, k) {
+      g.t += dt; g.left -= dt;
+      if (g.left <= 0) { agEnd(g); g.msg = 'TIME, CAPTAIN! GULLS BONKED:'; return; }
+      g.next -= dt;
+      if (g.next <= 0) {
+        const free = []; for (let i = 0; i < 9; i++) if (!g.pops.some(function (p) { return p.cell === i; })) free.push(i);
+        if (free.length) g.pops.push({ cell: free[(Math.random() * free.length) | 0], born: g.t, life: bonkUpTime(g.t), kind: Math.random() < 0.14 ? 'choc' : 'gull' });
+        g.next = Math.max(0.42, 0.85 - g.t * 0.01);
+      }
+      g.pops = g.pops.filter(function (p) { return g.t - p.born < p.life; });
+      g.stars = g.stars.filter(function (s) { return g.t - s.at < 0.4; });
+    },
+    input: function (g, i, k) {
+      const p = g.pops.find(function (q) { return q.cell === i; }); if (!p) return;
+      g.pops = g.pops.filter(function (q) { return q !== p; });
+      const pts = p.kind === 'choc' ? 20 : 10; g.score += pts; agScore(g.score);
+      g.stars.push({ cell: i, at: g.t, pts: pts }); blip(p.kind === 'choc' ? 1200 : 880);
+    },
+    tap: function (g, x, y, k) { for (let i = 0; i < 9; i++) { const c = this.cellAt(i, k); if (Math.hypot(x - c.x, y - c.y) < 42) return this.input(g, i, k); } },
+    draw: function (g, k) {
+      const w = k.w, h = k.h, self = this;
+      agg.fillStyle = AGC.YELLOW; agg.fillRect(0, 8, w * Math.max(0, g.left / 30), 6);
+      for (let i = 0; i < 9; i++) {
+        const c = self.cellAt(i, k), p = g.pops.find(function (q) { return q.cell === i; });
+        if (p) { p.kind === 'choc' ? (crate(agg, c.x - 18, c.y - 34, 36, 26), agg.fillStyle = AGC.YELLOW, agg.fillRect(c.x - 18, c.y - 26, 36, 9)) : gullFace(agg, c.x, c.y - 16, 1, true); }
+        crate(agg, c.x - 24, c.y - 10, 48, 30);
+        const s = g.stars.find(function (q) { return q.cell === i; });
+        if (s) { agg.textAlign = 'center'; agg.fillStyle = AGC.YELLOW; agg.font = '900 18px system-ui'; agg.fillText('+' + s.pts, c.x, c.y - 40); agg.textAlign = 'left'; }
+      }
+      agg.textAlign = 'center'; agg.fillStyle = AGC.CREAM; agg.font = '800 12px system-ui';
+      agg.fillText('BONK THE GULLS! THE CHOCOLATE TRUNK IS 20!', w / 2, h * 0.12); agg.textAlign = 'left';
+    }
+  };
+  GAMES[2] = { // CARGO STACK: tap to drop the swinging crate, keep what overlaps
+    reset: function (g) { g.stack = [{ x: 0.5, w: 0.42 }]; g.swing = { x: 0.5, w: 0.42, t: 0 }; g.drop = null; g.perfects = 0; },
+    step: function (g, dt, k) {
+      if (g.drop) {
+        g.drop.y += dt * 2.6;
+        if (g.drop.y >= 1) {
+          const land = stackLand(g.stack[g.stack.length - 1], g.drop.x, g.drop.w);
+          if (!land) { agEnd(g); g.msg = 'SPLASH! CRATES ABOARD:'; blip(300); }
+          else {
+            g.stack.push(land); g.score += land.perfect ? 15 : 10; if (land.perfect) { g.perfects++; blip(1200); } else blip(700);
+            agScore(g.score);
+            if (g.stack.length >= 13) { agEnd(g); g.msg = 'SHIP FULL! TWELVE HIGH!'; }
+            else { g.swing = { x: 0.5, w: land.w, t: 0 }; }
+          }
+          g.drop = null;
+        }
+      } else g.swing.t += dt;
+    },
+    input: function (g) { if (!g.drop && !g.over) { g.drop = { x: this.swingX(g), w: g.swing.w, y: 0 }; } },
+    swingX: function (g) { return 0.5 + Math.sin(g.swing.t * (2 + g.stack.length * 0.12)) * 0.34; },
+    tap: function (g) { this.input(g); },
+    draw: function (g, k) {
+      const w = k.w, h = k.h, top = h * 0.16, bot = h * 0.9, ch = Math.min(26, (bot - top) / 14);
+      agg.fillStyle = AGC.SEA; agg.fillRect(0, bot, w, h - bot);
+      g.stack.forEach(function (c, i) { crate(agg, w * (c.x - c.w / 2), bot - (i + 1) * ch, w * c.w, ch - 2); });
+      const sx = g.drop ? g.drop.x : this.swingX(g), sy = g.drop ? top + (bot - (g.stack.length + 1) * ch - top) * g.drop.y : top;
+      agg.strokeStyle = AGC.CREAM; agg.lineWidth = 3; agg.beginPath(); agg.moveTo(w * sx, 0); agg.lineTo(w * sx, sy); agg.stroke();
+      crate(agg, w * (sx - g.swing.w / 2), sy, w * g.swing.w, ch - 2);
+      agg.textAlign = 'center'; agg.fillStyle = AGC.CREAM; agg.font = '800 14px system-ui';
+      agg.fillText('TAP TO DROP. LAND IT STRAIGHT!', w / 2, h * 0.1); agg.textAlign = 'left';
+    }
+  };
+  function agFrame(now) {
+    if (!ag) return;
+    const dt = Math.min(0.05, (now - agLast) / 1000); agLast = now;
+    const k = ag.k;
+    agg.clearRect(0, 0, k.w, k.h);
+    if (!ag.over) GAMES[ag.game].step(ag, dt, k);
+    GAMES[ag.game].draw(ag, k);
+    if (ag.over) agEndCard(k, ag.msg || 'SCORE');
+    agRaf = requestAnimationFrame(agFrame);
+  }
+  function openCabinet(x, y) {
+    const game = cabinetGame(x, y);
+    ag = { game: game, name: CABINETS[game], score: 0, over: false, coins: 0, msg: '' };
+    journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal); purse.arcadeGoes++; savePurse();
+    document.getElementById('ag-name').textContent = ag.name; agScore(0);
+    agEl.classList.add('on'); ag.k = agSize();
+    GAMES[game].reset(ag);
+    blip(700); setTimeout(function () { blip(950); }, 110);
+    agLast = performance.now(); cancelAnimationFrame(agRaf); agRaf = requestAnimationFrame(agFrame);
+  }
+  function closeCabinet() { cancelAnimationFrame(agRaf); ag = null; agEl.classList.remove('on'); blip(400); }
+  function agReplay() { ag.score = 0; ag.over = false; ag.msg = ''; agScore(0); GAMES[ag.game].reset(ag); journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal); purse.arcadeGoes++; savePurse(); }
+  agc.addEventListener('pointerdown', function (e) {
+    if (!ag) return; e.preventDefault();
+    const r = agc.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    if (ag.over) { agReplay(); return; }
+    GAMES[ag.game].tap(ag, x, y, ag.k);
+  });
+  document.getElementById('ag-exit').addEventListener('click', closeCabinet);
+  function agInput(i) { if (ag && !ag.over) GAMES[ag.game].input(ag, i, ag.k); }
   syncCoins();
   const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
   let lapStart = 0, lapNow = 0, lapArmed = false, bestLap = 0, ghostLap = 0;
@@ -3276,7 +3483,7 @@ if (typeof module !== 'undefined' && module.exports) {
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
       bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
       word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard, weather: weatherAt(today(), 12),
-      chaseWins: journal.chaseWinsToday || 0, coinsToday: journal.coinsToday || 0, trophyNew: journal.trophyNew || '',
+      chaseWins: journal.chaseWinsToday || 0, coinsToday: journal.coinsToday || 0, trophyNew: journal.trophyNew || '', cabinet: journal.cabinetToday || {},
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
     });
@@ -3288,7 +3495,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!journal.quest) journal.questDay = today();
     journal.quest = q;
     journal.arcadePlays = 0; journal.prevStats = st; journal.newIslanders = []; journal.learned = []; journal.keys = [];
-    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
+    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; journal.cabinetToday = {}; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
     journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
@@ -3424,6 +3631,8 @@ if (typeof module !== 'undefined' && module.exports) {
     setWalk, walking: () => walking, walker: () => walker, walkInput: winp, walkKeys: wkeys, glOk: () => !!gl, meshCount: () => meshCount, walkProj: () => lastProj, walkTap,
     meshDirty: () => meshDirty, meshBuilds: () => meshBuilds, walkShadows: () => shadowsDrawn, cleoPose: () => cleoPose, cleoFlip: () => cleoFlip,
     purse, award, trophyCheck, chase: () => chase, startChase, endChase, chaseWin, showWin, openBoard, trophySpots, linkRec: () => linkRec, boardRowsHere,
+    openCabinet, closeCabinet, agInput, tapAt, cellScreen: (x, y) => ({ sx: isoX(x + 0.5, y + 0.5) * cam.zoom + cam.x, sy: (isoY(x + 0.5, y + 0.5, 0) + ZH / 2) * cam.zoom + cam.y }),
+    agState: () => ag ? { name: ag.name, game: ag.game, score: ag.score, over: ag.over, coins: ag.coins, phase: ag.phase, seq: ag.seq ? ag.seq.slice() : null, pi: ag.pi, round: ag.round, pops: ag.pops ? ag.pops.map(p => ({ cell: p.cell, kind: p.kind })) : null, stack: ag.stack ? ag.stack.length : 0, left: ag.left, swing: (ag.game === 2 && ag.swing && !ag.drop) ? GAMES[2].swingX(ag) : null, topX: ag.stack ? ag.stack[ag.stack.length - 1].x : null } : null,
     garden: () => garden, applyGrowth, boatArrive, setVisitor, visitor: () => visitor, boatAt: () => boatAt(hourNow()), boatGift: () => boatGift(today()), boatSpot, dockCell, chocoDay };
   boot();
 })();
