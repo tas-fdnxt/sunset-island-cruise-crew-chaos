@@ -206,7 +206,7 @@
 /* CAPTAIN'S ISLAND core: world model + link codec. Pure logic, headless-testable. */
 'use strict';
 const ISLE = {
-  N: 64, ZMAX: 4, MAX_BLOCKS: 400, VER: 1,
+  N: 128, ZMAX: 8, MAX_BLOCKS: 1000, VER: 2, OLD_N: 64, OLD_ZMAX: 4, LINK_MAX: 1900,
   AIR: 0,
   TYPES: [
     null,
@@ -228,22 +228,34 @@ function makeWorld() {
 }
 function idx(x, y, z) { return (y * ISLE.N + x) * ISLE.ZMAX + z; }
 function inBounds(x, y) { return x >= 0 && y >= 0 && x < ISLE.N && y < ISLE.N; }
+/* THE SHORE. The island is a blob in the middle of a 128 grid; everything outside is sea, the ring inside is beach.
+   Pure function of x and y, so it is never stored and every link agrees on it. */
+function shoreR(x, y) {
+  const dx = x + 0.5 - ISLE.N / 2, dy = y + 0.5 - ISLE.N / 2;
+  const th = Math.atan2(dy, dx);
+  return 56 + 4 * Math.sin(3 * th + 1) + 3 * Math.sin(7 * th) - Math.hypot(dx, dy);
+}
+function isLand(x, y) { return inBounds(x, y) && (ISLE.ALL_LAND || shoreR(x, y) > 0); } // ALL_LAND is a test-only switch, never set by the game
+function isBeach(x, y) { const r = shoreR(x, y); return r > 0 && r <= 4; }
 function topZ(w, x, y) {
   for (let z = ISLE.ZMAX - 1; z >= 0; z--) if (w.cols[idx(x, y, z)]) return z;
   return -1;
 }
 function place(w, x, y, id) {
   if (!inBounds(x, y) || id < 1 || id >= ISLE.TYPES.length) return { ok:false, why:'bounds' };
+  if (!isLand(x, y)) return { ok:false, why:'water' };
   const t = topZ(w, x, y);
   if (t >= ISLE.ZMAX - 1) return { ok:false, why:'height' };
   if (w.count >= ISLE.MAX_BLOCKS) return { ok:false, why:'cargo' };
   const z = t + 1;
   w.cols[idx(x, y, z)] = id;
   w.count++;
+  if (w.count > 600 && linkLength(w) > ISLE.LINK_MAX) { w.cols[idx(x, y, z)] = 0; w.count--; return { ok:false, why:'link' }; }
   w.undo.push({ op:'place', x, y, z });
   if (w.undo.length > 500) w.undo.shift();
   return { ok:true, x, y, z, id };
 }
+function linkLength(w) { return encode(w).length; }
 function erase(w, x, y) {
   if (!inBounds(x, y)) return { ok:false, why:'bounds' };
   const t = topZ(w, x, y);
@@ -265,13 +277,25 @@ function undo(w) {
 /* Codec: 3 bytes per block: x(6b)+y(2b hi) | y(4b lo)+z(2b)+id(2b hi) | id(2b lo)+spare.
    Simpler and safer: x(1 byte), y(1 byte), z<<4|id (1 byte). 400*3=1200 bytes.
    base64url of 1200+2 header bytes = 1604 chars worst case, deterministically under budget. */
+/* Codec v2: one entry per occupied column. A varint gap to the next column, then a nibble for the stack height and one
+   nibble per block id, bottom to top. A house that is two walls and a roof costs about two bytes a column instead of nine. */
 function encode(w) {
-  const blocks = [];
-  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++)
-    for (let z = 0; z < ISLE.ZMAX; z++) { const v = w.cols[idx(x, y, z)]; if (v) blocks.push([x, y, z, v]); }
-  const buf = new Uint8Array(2 + blocks.length * 3);
-  buf[0] = ISLE.VER; buf[1] = 0;
-  blocks.forEach((b, i) => { const o = 2 + i * 3; buf[o] = b[0]; buf[o+1] = b[1]; buf[o+2] = (b[2] << 4) | b[3]; });
+  const gaps = [], nib = [];
+  let prev = -1, ncol = 0;
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
+    let h = 0;
+    for (let z = ISLE.ZMAX - 1; z >= 0; z--) if (w.cols[idx(x, y, z)]) { h = z + 1; break; }
+    if (!h) continue;
+    const k = y * ISLE.N + x;
+    let d = k - prev; prev = k; ncol++;
+    while (d >= 128) { gaps.push((d & 127) | 128); d >>= 7; }
+    gaps.push(d);
+    nib.push(h);
+    for (let z = 0; z < h; z++) nib.push(w.cols[idx(x, y, z)] || 0);
+  }
+  const bytes = [ISLE.VER, nib.length & 1, ncol >> 8, ncol & 255].concat(gaps);
+  for (let i = 0; i < nib.length; i += 2) bytes.push((nib[i] << 4) | (nib[i + 1] || 0));
+  const buf = new Uint8Array(bytes);
   let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
   const b64 = (typeof btoa !== 'undefined' ? btoa(bin) : Buffer.from(buf).toString('base64'));
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -283,16 +307,50 @@ function decode(str) {
     if (typeof atob !== 'undefined') { const s = atob(b64); raw = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) raw[i] = s.charCodeAt(i); }
     else raw = new Uint8Array(Buffer.from(b64, 'base64'));
   } catch (e) { return null; }
-  if (raw.length < 2 || raw[0] !== ISLE.VER) return null;
-  if ((raw.length - 2) % 3 !== 0) return null;
+  if (raw.length < 2) return null;
   const w = makeWorld();
-  for (let o = 2; o < raw.length; o += 3) {
-    const x = raw[o], y = raw[o+1], z = raw[o+2] >> 4, id = raw[o+2] & 15;
-    if (!inBounds(x, y) || z >= ISLE.ZMAX || id < 1 || id >= ISLE.TYPES.length) return null;
-    if (w.cols[idx(x, y, z)]) return null;
-    w.cols[idx(x, y, z)] = id; w.count++;
+  if (raw[0] === 1) { // the first island format: 64 by 64, three bytes a block. Centred on the bigger island.
+    if ((raw.length - 2) % 3 !== 0) return null;
+    const off = (ISLE.N - ISLE.OLD_N) / 2;
+    for (let o = 2; o < raw.length; o += 3) {
+      const x = raw[o] + off, y = raw[o+1] + off, z = raw[o+2] >> 4, id = raw[o+2] & 15;
+      if (raw[o] >= ISLE.OLD_N || raw[o+1] >= ISLE.OLD_N || z >= ISLE.OLD_ZMAX || id < 1 || id >= ISLE.TYPES.length) return null;
+      if (w.cols[idx(x, y, z)]) return null;
+      w.cols[idx(x, y, z)] = id; w.count++;
+      if (w.count > ISLE.MAX_BLOCKS) return null;
+    }
+    return w;
+  }
+  if (raw[0] !== ISLE.VER || raw.length < 4) return null;
+  const ncol = (raw[2] << 8) | raw[3];
+  if (ncol > ISLE.N * ISLE.N) return null;
+  let o = 4, k = -1;
+  const cols = [];
+  for (let c = 0; c < ncol; c++) {
+    let d = 0, sh = 0, b;
+    do { if (o >= raw.length) return null; b = raw[o++]; d |= (b & 127) << sh; sh += 7; if (sh > 21) return null; } while (b & 128);
+    if (d <= 0) return null;
+    k += d; if (k >= ISLE.N * ISLE.N) return null;
+    cols.push(k);
+  }
+  const nibs = [];
+  for (let i = o; i < raw.length; i++) { nibs.push(raw[i] >> 4); nibs.push(raw[i] & 15); }
+  if (raw[1] === 1) nibs.pop();
+  let p = 0;
+  for (let c = 0; c < cols.length; c++) {
+    if (p >= nibs.length) return null;
+    const h = nibs[p++];
+    if (h < 1 || h > ISLE.ZMAX) return null;
+    const x = cols[c] % ISLE.N, y = Math.floor(cols[c] / ISLE.N);
+    for (let z = 0; z < h; z++) {
+      if (p >= nibs.length) return null;
+      const id = nibs[p++];
+      if (id >= ISLE.TYPES.length) return null;
+      if (id) { w.cols[idx(x, y, z)] = id; w.count++; }
+    }
     if (w.count > ISLE.MAX_BLOCKS) return null;
   }
+  if (p !== nibs.length) return null;
   return w;
 }
 /* House detection: a DOOR with a real structure around it makes a home.
@@ -465,6 +523,7 @@ const LADDERS = {
     { need: 'ramps', n: 1, tell: 'build a ramp one block high and fly off it', done: 'The ramp worked, one block high.', skill: 'one block high is a ramp' },
     { need: 'tallest', n: 4, tell: 'build a tower four blocks tall', done: 'A tower reached the top.', skill: 'four blocks is the limit' },
     { need: 'symmetry', n: 1, tell: 'build a house that is the same on both sides', done: 'Both sides matched. Symmetry.', skill: 'symmetry' },
+    { need: 'tallest', n: 8, tell: 'build a lighthouse eight blocks tall, right to the top', done: 'The lighthouse touched the sky at eight.', skill: 'eight blocks is the limit' },
   ],
   number: [
     { need: 'laps', n: 1, tell: 'plant a flag and drive one whole lap', done: 'The first lap was timed.', skill: 'a lap has a time' },
@@ -675,7 +734,7 @@ function bedtimeQuestion(o) {
   else if (keys.indexOf('lap') !== -1 && o.bestLap > 0) q = { ask: 'Which lap is the faster one?', right: fmtLap(o.bestLap), wrong: fmtLap(o.bestLap + 7000) };
   else if (keys.indexOf('arcade') !== -1) q = { ask: 'One arcade machine pays 20 points. Two machines pay?', right: '40 points', wrong: '20 points' };
   else if (keys.indexOf('factory') !== -1) q = { ask: 'How many houses make the chocolate factory open?', right: 'Three houses', wrong: 'Ten houses' };
-  else if (keys.indexOf('tall') !== -1) q = { ask: 'How tall can a tower go on the island?', right: 'Four blocks', wrong: 'Twenty blocks' };
+  else if (keys.indexOf('tall') !== -1) q = { ask: 'How tall can a tower go on the island?', right: 'Eight blocks', wrong: 'Twenty blocks' };
   else if (keys.indexOf('house') !== -1 || keys.indexOf('count') !== -1) q = { ask: 'What makes an islander move in?', right: 'Walls with a door', wrong: 'A palm tree' };
   else if (st.houses > 0) q = { ask: 'How many houses are on your island right now?', right: String(st.houses), wrong: String(st.houses + 2) };
   else q = { ask: 'What does a house need before somebody moves in?', right: 'A door', wrong: 'A window' };
@@ -723,7 +782,7 @@ function nextThing(st) {
   if (!st.ramp) return { key: 'ramp', line: 'Line up SAND one block high and drive at it. You will fly.', ghost: 'ramp' };
   if (h >= 18 || h < 5) return { key: 'moon', line: 'It is nearly bedtime. Tap the moon and I will read tonight\u2019s chapter.' };
   const spare = [
-    { key: 'tall', line: 'Build something tall. Four blocks is the very top!' },
+    { key: 'tall', line: 'Build something tall. Eight blocks is the very top!' },
     { key: 'share', line: 'Send your island to someone. Tap SHARE and it all fits in one link.' },
     { key: 'arcade', line: 'Build an ARCADE and drive past it. Twenty points a go.' },
     { key: 'palm', line: 'Plant some PALM trees so the islanders have shade.' },
@@ -775,7 +834,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion };
 }
 </script>
 <script>
@@ -788,6 +847,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   let CREW = 'OLLIE';
   let builder = '', chain = [];
+  try { if (window.__FLAT) ISLE.ALL_LAND = true; } catch (e) {} // test-only: the older robots build on a flat grid
   let PRO = null, TITLE = 'CAPTAIN', FLAGCOL = '#FFF3E2';
   try { const q = new URLSearchParams(location.search).get('crew');
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); } } catch (e) {}
@@ -826,7 +886,8 @@ if (typeof module !== 'undefined' && module.exports) {
   const world = { ref: null };
   let arcadeCells = [], factoryCells = [];
 
-  const off = document.createElement('canvas');
+  const off = document.createElement('canvas'); // kept for width and height; the world itself lives in chunks below
+  const CHUNK_S = 32; const chunks = [];
   const octx = off.getContext('2d');
   const ORIGIN = { x: ISLE.N * TW / 2 + TW, y: TH * 2 };
   function isoX(x, y) { return ORIGIN.x + (x - y) * TW / 2; }
@@ -903,31 +964,54 @@ if (typeof module !== 'undefined' && module.exports) {
       g.fillStyle = '#FFD447'; g.beginPath(); g.arc(cx - 3, fy + 3, 2.4, 0, 6.29); g.arc(cx + 4, fy + 2, 2.4, 0, 6.29); g.fill();
     }
   }
-  function redrawWorld() {
-    off.width = ISLE.N * TW + TW * 2; off.height = ISLE.N * TH + ZH * (ISLE.ZMAX + 2) + TH * 4;
-    octx.clearRect(0, 0, off.width, off.height);
-    const w = world.ref;
-    for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
-      diamond(octx, isoX(x, y), isoY(x, y, -1) + ZH, ((x + y) % 2 ? '#F5D98E' : '#FFE49E'), 'rgba(200,160,90,0.35)');
-    }
-    for (let s = 0; s < ISLE.N * 2 - 1; s++) {
+  /* The world cache is split into bands of diagonals (x + y). Each band is its own canvas, drawn in order, so the
+     isometric overlap stays right across band edges and a single placed block only redraws its own band. */
+  function groundColour(x, y) {
+    if (!isLand(x, y)) return [(x + y) % 2 ? '#3F8AA3' : '#3A7E95', 'rgba(255,243,226,0.14)'];
+    if (isBeach(x, y)) return [(x + y) % 2 ? '#FFEDBF' : '#FFF3CC', 'rgba(200,160,90,0.28)'];
+    return [(x + y) % 2 ? '#F5D98E' : '#FFE49E', 'rgba(200,160,90,0.35)'];
+  }
+  function drawChunk(ci) {
+    const c = chunks[ci], g = c.ctx, w = world.ref;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.canvas.width, c.canvas.height); g.translate(0, -c.top);
+    for (let s = c.s0; s <= c.s1; s++) {
       for (let x = Math.max(0, s - ISLE.N + 1); x <= Math.min(s, ISLE.N - 1); x++) {
-        const y = s - x;
-        for (let z = 0; z < ISLE.ZMAX; z++) {
-          const v = w.cols[idx(x, y, z)];
-          if (v) prism(octx, x, y, z, ISLE.TYPES[v]);
-        }
+        const y = s - x, gc = groundColour(x, y);
+        diamond(g, isoX(x, y), isoY(x, y, -1) + ZH, gc[0], gc[1]);
+        if (!isLand(x, y) && (x * 7 + y * 3) % 5 === 0) { g.strokeStyle = 'rgba(255,243,226,0.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(isoX(x, y) - 9, isoY(x, y, -1) + ZH + 1); g.quadraticCurveTo(isoX(x, y), isoY(x, y, -1) + ZH - 3, isoX(x, y) + 9, isoY(x, y, -1) + ZH + 1); g.stroke(); }
       }
     }
-    arcadeCells = arcades(w); factoryCells = factories(w);
-    // the compass: four letters at the four corners of the island, drawn once into the cache
-    octx.save(); octx.font = 'bold 26px system-ui'; octx.textAlign = 'center'; octx.textBaseline = 'middle';
+    for (let s = c.s0; s <= c.s1; s++) {
+      for (let x = Math.max(0, s - ISLE.N + 1); x <= Math.min(s, ISLE.N - 1); x++) {
+        const y = s - x;
+        for (let z = 0; z < ISLE.ZMAX; z++) { const v = w.cols[idx(x, y, z)]; if (v) prism(g, x, y, z, ISLE.TYPES[v]); }
+      }
+    }
+  }
+  function redrawWorld(cell) {
+    off.width = ISLE.N * TW + TW * 2; off.height = ISLE.N * TH + ZH * (ISLE.ZMAX + 2) + TH * 4;
+    if (!chunks.length) {
+      for (let s0 = 0; s0 < ISLE.N * 2 - 1; s0 += CHUNK_S) {
+        const s1 = Math.min(ISLE.N * 2 - 2, s0 + CHUNK_S - 1);
+        const top = Math.max(0, Math.floor(ORIGIN.y + s0 * TH / 2 - ZH * ISLE.ZMAX - 48));
+        const bottom = Math.ceil(ORIGIN.y + (s1 + 1) * TH / 2 + ZH + TH + 8);
+        const cv = document.createElement('canvas'); cv.width = off.width; cv.height = bottom - top;
+        chunks.push({ s0: s0, s1: s1, top: top, canvas: cv, ctx: cv.getContext('2d') });
+      }
+    }
+    if (cell) { const s = cell.x + cell.y; chunks.forEach(function (c, i) { if (s >= c.s0 && s <= c.s1) drawChunk(i); }); }
+    else chunks.forEach(function (c, i) { drawChunk(i); });
+    arcadeCells = arcades(world.ref); factoryCells = factories(world.ref);
+  }
+  function drawCompass() {
+    ctx.save(); ctx.font = 'bold ' + Math.round(26 * Math.max(0.6, cam.zoom)) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     [['N', 0, 0, 0, -30], ['E', ISLE.N - 1, 0, 34, 0], ['S', ISLE.N - 1, ISLE.N - 1, 0, 34], ['W', 0, ISLE.N - 1, -34, 0]].forEach(function (c) {
-      const cx = isoX(c[1], c[2]) + c[3], cy = isoY(c[1], c[2], -1) + ZH + c[4];
-      octx.fillStyle = 'rgba(42,27,61,0.28)'; octx.beginPath(); octx.arc(cx, cy, 17, 0, 6.29); octx.fill();
-      octx.fillStyle = '#FFF3E2'; octx.fillText(c[0], cx, cy + 1);
+      const cx = (isoX(c[1], c[2]) + c[3]) * cam.zoom + cam.x, cy = (isoY(c[1], c[2], -1) + ZH + c[4]) * cam.zoom + cam.y;
+      if (cx < -40 || cx > W + 40 || cy < -40 || cy > H + 40) return;
+      ctx.fillStyle = 'rgba(42,27,61,0.32)'; ctx.beginPath(); ctx.arc(cx, cy, 17 * Math.max(0.6, cam.zoom), 0, 6.29); ctx.fill();
+      ctx.fillStyle = '#FFF3E2'; ctx.fillText(c[0], cx, cy + 1);
     });
-    octx.restore();
+    ctx.restore();
   }
   let t0 = performance.now(), tPrev = 0;
   function frame(now) {
@@ -948,8 +1032,13 @@ if (typeof module !== 'undefined' && module.exports) {
     }
     ctx.save();
     ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom);
-    ctx.drawImage(off, 0, 0);
+    for (let i = 0; i < chunks.length; i++) {
+      const c = chunks[i], sy0 = c.top * cam.zoom + cam.y, sy1 = (c.top + c.canvas.height) * cam.zoom + cam.y;
+      if (sy1 < 0 || sy0 > H) continue;
+      ctx.drawImage(c.canvas, 0, c.top);
+    }
     ctx.restore();
+    drawCompass();
     drawGhost();
     stepIslanders(dt, t);
     drawIslanders(t);
@@ -1002,10 +1091,12 @@ if (typeof module !== 'undefined' && module.exports) {
       if (tool === -1 && r.id === 9) toast('THAT WAS YOUR FLAG! The race line is gone.');
       if (tool === 10 && arcades(world.ref).length === 1) { toast('ARCADE MACHINE! Drive past it for 20 points.'); sayPersonal('arcade'); }
       if (tool === 11 && factories(world.ref).length === 1) { toast('CHOCOLATE FACTORY OPEN! The islanders are queueing.'); sayPersonal('choco'); }
-      redrawWorld(); syncCargo(); popCheck(); saveSoon();
+      redrawWorld({ x: c.x, y: c.y }); syncCargo(); popCheck(); saveSoon();
       lastPlaced = { x: c.x, y: c.y };
-      if (r.z === 3) noteLearned('Four blocks is as tall as the island lets you build. Any higher and it would topple.', 'tall', 'geometry');
+      if (r.z === ISLE.ZMAX - 1) noteLearned('Eight blocks is as tall as the island lets you build. Any higher and it would topple.', 'tall', 'geometry');
     }
+    else if (r.why === 'water') toast('That is the sea! Build on the sand.');
+    else if (r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.');
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
     else if (r.why === 'height') toast('MAX HEIGHT! Four blocks tall is the limit.');
   }
@@ -1122,11 +1213,10 @@ if (typeof module !== 'undefined' && module.exports) {
     else if (w) toast(builder && builder !== CREW ? 'WELCOME TO ' + builder + "'S ISLAND! Tap REMIX to make it yours."
       : (ghostLap ? 'CHALLENGE! Beat the lap record of ' + fmtLap(ghostLap) : 'WELCOME ABOARD! This island travelled inside the link.'));
     fit();
-    cam.zoom = Math.min(1, (W - 20) / off.width || 1);
     redrawWorld();
-    cam.zoom = Math.max(0.45, Math.min(1.1, (W * 0.95) / off.width));
-    cam.x = (W - off.width * cam.zoom) / 2;
-    cam.y = Math.max(40, (H - off.height * cam.zoom) / 2 - 20);
+    cam.zoom = W < 600 ? 0.9 : 1.0;
+    const mid = { x: isoX(ISLE.N / 2, ISLE.N / 2), y: isoY(ISLE.N / 2, ISLE.N / 2, 0) };
+    cam.x = W / 2 - mid.x * cam.zoom; cam.y = H * 0.5 - mid.y * cam.zoom;
     syncCargo();
     rebuildIslanders();
     requestAnimationFrame(frame);
@@ -1204,7 +1294,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
   }
   /* Cleo. A Yorkshire Terrier show dog. Black and tan, silky, a bow and a rosette in the child's colour, the book in her mouth. Crew edition only. */
-  const cleo = { x: 34.5, y: 36.5, tx: 34.5, ty: 36.5, mood: 'sit', spin: 0, bark: 0, seed: 0.7, moving: false, hint: null, face: -1 };
+  const cleo = { x: 66.5, y: 68.5, tx: 66.5, ty: 68.5, mood: 'sit', spin: 0, bark: 0, seed: 0.7, moving: false, hint: null, face: -1 };
   let lastPlaced = null, ghost = null, hintOn = true;
   try { hintOn = localStorage.getItem('captains-island-hints') !== 'off'; } catch (e) {}
   function cleoTarget() {
@@ -1533,7 +1623,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   /* DELIVERIES. Crates wait at the dock. Drive over the dock to load, drive to the islander's door to drop. The game counts. */
   const CRATE_CAP = 5;
-  function dockCell() { const f = flags(world.ref); return f.length ? { x: f[0].x + 0.5, y: f[0].y + 2.5 } : { x: 34.5, y: 38.5 }; }
+  function dockCell() { const f = flags(world.ref); return f.length ? { x: f[0].x + 0.5, y: f[0].y + 2.5 } : { x: 66.5, y: 70.5 }; }
   function startJob(q) {
     if (!q || !q.job) return;
     journal.job = { id: q.id, to: q.job.map(function (j) { return { name: j.name, n: j.n, left: j.left == null ? j.n : j.left }; }), day: today() };
@@ -1685,8 +1775,8 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
     document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
     if (!on) {
-      cam.x = (W - off.width * cam.zoom) / 2;
-      cam.y = Math.max(40, (H - off.height * cam.zoom) / 2 - 20);
+      const mid = { x: isoX(ISLE.N / 2, ISLE.N / 2), y: isoY(ISLE.N / 2, ISLE.N / 2, 0) };
+      cam.x = W / 2 - mid.x * cam.zoom; cam.y = H * 0.5 - mid.y * cam.zoom;
     }
     if (on) {
       spawnCar();
@@ -2097,7 +2187,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
-    owner: OWNER, cleo, questStats, compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
+    owner: OWNER, cleo, questStats, isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
