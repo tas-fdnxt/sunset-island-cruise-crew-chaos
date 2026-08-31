@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. Two hundred and eighty checks across eleven files.
+The safety net. Run these before every deploy. Three hundred and nine checks across twelve files. The building suites run on a flat test grid with no sea (extract-core.js sets ISLE.ALL_LAND, which the game never does); test-shore.js turns the sea back on.
 
 ## Running them
 
@@ -18,6 +18,7 @@ From the repo root:
     node tests/test-cleo.js
     node tests/test-ladders.js
     node tests/test-compass.js
+    node tests/test-shore.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -57,6 +58,10 @@ so the suites always test the real shipped code rather than a copy that can drif
   at bedtime, and the mastery lines on the grown-ups page.
 - **test-compass.js** the compass (north is the top corner, measured from the first flag), the space ladder that
   uses it, thirty words of the island with meanings, the word in the chapter, and the word question every third night.
+- **test-shore.js** the bigger island: 128 wide, eight high, a thousand blocks. The shore is a pure function, the middle is
+  land, the corners are sea, the old 64 grid centred is all land, building on the sea is refused, first-format links
+  open centred, the v2 column-run codec roundtrips a full island of houses under the link budget, hostile v2 bytes are
+  rejected, and a scattered carpet is refused by the link gate rather than the cargo cap.
 
 ## The rule
 
