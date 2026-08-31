@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. Three hundred and nine checks across twelve files. The building suites run on a flat test grid with no sea (extract-core.js sets ISLE.ALL_LAND, which the game never does); test-shore.js turns the sea back on.
+The safety net. Run these before every deploy. Three hundred and thirty three checks across thirteen files. The building suites run on a flat test grid with no sea (extract-core.js sets ISLE.ALL_LAND, which the game never does); test-shore.js turns the sea back on.
 
 ## Running them
 
@@ -19,6 +19,7 @@ From the repo root:
     node tests/test-ladders.js
     node tests/test-compass.js
     node tests/test-shore.js
+    node tests/test-living.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -62,6 +63,9 @@ so the suites always test the real shipped code rather than a copy that can drif
   land, the corners are sea, the old 64 grid centred is all land, building on the sea is refused, first-format links
   open centred, the v2 column-run codec roundtrips a full island of houses under the link budget, hostile v2 bytes are
   rejected, and a scattered carpet is refused by the link gate rather than the cargo cap.
+- **test-living.js** the living island. The sky by the real hour (day, night, dawn, sunset, sun east to west, continuous
+  across midnight), weather decided by the date (about a quarter of days, two hours of rain then an hour of rainbow),
+  the tide, islander routines (asleep at night, arcade after school), the rainy day in the chapter, the advisor in the rain.
 
 ## The rule
 
