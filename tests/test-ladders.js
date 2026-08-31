@@ -3,7 +3,7 @@ let pass = 0, fail = 0;
 function ok(n, c, i) { if (c) pass++; else { fail++; console.log('FAIL', n, i || ''); } }
 
 // tables
-ok('three ladders', Object.keys(LADDERS).join() === 'counting,geometry,number');
+ok('four ladders', Object.keys(LADDERS).join() === 'counting,geometry,number,space');
 ok('every rung has need, n, tell, done, skill', Object.keys(LADDERS).every(k => LADDERS[k].every(r => r.need && r.n > 0 && r.tell && r.done && r.skill)));
 ok('rungs climb: counting totals go up', LADDERS.counting.map(r => r.n).join() === '3,5,7,10,9' && LADDERS.counting[4].job.length === 3);
 ok('counting jobs sum to n', LADDERS.counting.every(r => r.job.reduce((a, b) => a + b, 0) === r.n));
@@ -38,7 +38,7 @@ const st0 = { houses: 1, delivered: 0 };
 ok('day 0: counting first', pickQuest(st0, null, -1, newMastery(), 0, names).ladder === 'counting');
 ok('day 1: geometry', pickQuest(st0, null, -1, newMastery(), 1, names).ladder === 'geometry' && pickQuest(st0, null, -1, newMastery(), 1, names).rung === 1);
 ok('day 2: number', pickQuest(st0, null, -1, newMastery(), 2, names).ladder === 'number');
-ok('day 3 wraps to counting', pickQuest(st0, null, -1, newMastery(), 3, names).ladder === 'counting');
+ok('day 3 is space, day 4 wraps to counting', pickQuest(st0, null, -1, newMastery(), 3, names).ladder === 'space' && pickQuest(st0, null, -1, newMastery(), 4, names).ladder === 'counting');
 const mm = newMastery(); mm.counting.rung = 2;
 ok('rung two asks for two deliveries', pickQuest(st0, null, -1, mm, 0, names).tell.indexOf('4 crates to PEARL and 3 to MANGO') !== -1);
 ok('no islanders: counting skipped, geometry chosen', pickQuest(st0, null, -1, newMastery(), 0, []).ladder === 'geometry');
