@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. Two hundred and sixty checks across ten files.
+The safety net. Run these before every deploy. Two hundred and eighty checks across eleven files.
 
 ## Running them
 
@@ -17,6 +17,7 @@ From the repo root:
     node tests/test-book.js
     node tests/test-cleo.js
     node tests/test-ladders.js
+    node tests/test-compass.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -54,6 +55,8 @@ so the suites always test the real shipped code rather than a copy that can drif
   up, two misses drops back, never below zero), ladder quests with islander names, one rung above with rungs the
   child already proved skipped, rotation by day, dream quest first, deliveries told as sums in the chapter and asked
   at bedtime, and the mastery lines on the grown-ups page.
+- **test-compass.js** the compass (north is the top corner, measured from the first flag), the space ladder that
+  uses it, thirty words of the island with meanings, the word in the chapter, and the word question every third night.
 
 ## The rule
 
