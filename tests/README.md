@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. One hundred and ninety four checks across eight files.
+The safety net. Run these before every deploy. Two hundred and twenty one checks across nine files.
 
 ## Running them
 
@@ -15,6 +15,7 @@ From the repo root:
     node tests/test-shop.js
     node tests/test-profile.js
     node tests/test-book.js
+    node tests/test-cleo.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -45,6 +46,9 @@ so the suites always test the real shipped code rather than a copy that can drif
   400 chapter cap, symmetry detection (mirrored house yes, lopsided house no, lone door no), bedtime questions
   built from what actually happened today with the answers flipping on odd chapters, chapters that remember last
   night's answer and the waiting Storykeeper, and the grown-ups summary counting only the last seven days.
+- **test-cleo.js** the advisor and the keeper. nextThing priorities (tap, house, door, quest, flag, ramp, moon, then
+  rotating ideas), one sentence every time, ghost shapes offered, seventeen facts all short and unique with the
+  dog lines skipped on Ollie's edition, coat growth every ten chapters, and the keeper's fact on page three.
 
 ## The rule
 
