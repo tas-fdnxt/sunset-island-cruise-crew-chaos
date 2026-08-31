@@ -17,7 +17,7 @@ ok('counts palms', st.palms === 2, st.palms);
 ok('counts flags', st.flags === 1, st.flags);
 ok('counts tallest', st.tallest === 2, st.tallest);
 const t = questTable();
-ok('quests all map to real stats', t.every(q => ['houses','palms','flags','tallest','arcades','factories'].indexOf(q.need) !== -1));
+ok('quests all map to real stats', t.every(q => ['houses','palms','flags','tallest','arcades','factories','plants'].indexOf(q.need) !== -1));
 ok('quests all have a told line and a done line', t.every(q => q.tell.length > 10 && q.done.length > 5));
 const q = pickQuest(st, null);
 ok('picks an unmet quest', !questMet(q, st), JSON.stringify(q));
