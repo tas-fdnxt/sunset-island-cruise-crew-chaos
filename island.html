@@ -258,6 +258,9 @@ const ISLE = {
     { id:9, name:'FLAG',   top:'#FFF3E2', side:'#2A1B3D', side2:'#3E2650' },
     { id:10, name:'ARCADE',  top:'#FFD447', side:'#2A1B3D', side2:'#3E2650' },
     { id:11, name:'FACTORY', top:'#8A5A3C', side:'#5A3320', side2:'#6E4028' },
+    { id:12, name:'SEED',    top:'#8B5A2B', side:'#6B4423', side2:'#7A4E29' },
+    { id:13, name:'SPROUT',  top:'#7ED957', side:'#3FA96B', side2:'#4FB877' },
+    { id:14, name:'TREE',    top:'#2F8354', side:'#96602F', side2:'#B06E3C' },
   ],
 };
 function makeWorld() {
@@ -282,6 +285,9 @@ function place(w, x, y, id) {
   if (!inBounds(x, y) || id < 1 || id >= ISLE.TYPES.length) return { ok:false, why:'bounds' };
   if (!isLand(x, y)) return { ok:false, why:'water' };
   const t = topZ(w, x, y);
+  if (id === 13 || id === 14) return { ok:false, why:'grow' };
+  if (id === 12 && t >= 0) return { ok:false, why:'soil' };
+  if (t >= 0 && isPlant(w.cols[idx(x, y, t)])) return { ok:false, why:'plant' };
   if (t >= ISLE.ZMAX - 1) return { ok:false, why:'height' };
   if (w.count >= ISLE.MAX_BLOCKS) return { ok:false, why:'cargo' };
   const z = t + 1;
@@ -406,6 +412,54 @@ function cellsOf(w, id) {
 }
 function arcades(w) { return cellsOf(w, 10); }
 function factories(w) { return cellsOf(w, 11); }
+/* GROWING THINGS. A seed sprouts after one real day and becomes a tree after three. The stage is a block id, so it travels
+   in the link like a house does. The planting day lives only on the child's device (the garden map). A plant with no
+   planting day (a remixed island) is adopted today and grows from here. Nothing ever grows backwards. */
+function isPlant(id) { return id === 12 || id === 13 || id === 14; }
+function plantStage(age) { return age >= 3 ? 14 : age >= 1 ? 13 : 12; }
+function grow(w, garden, day) {
+  const changes = [], live = {};
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
+    const id = w.cols[idx(x, y, 0)];
+    if (!isPlant(id)) continue;
+    const k = x + ',' + y;
+    if (!garden[k]) garden[k] = day;
+    live[k] = true;
+    const want = plantStage(daysBetween(garden[k], day));
+    if (want > id) { w.cols[idx(x, y, 0)] = want; changes.push({ x: x, y: y, from: id, to: want }); }
+  }
+  Object.keys(garden).forEach(function (k) { if (!live[k]) delete garden[k]; });
+  return changes;
+}
+function seedSpot(w, near) {
+  for (let r = 2; r <= 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    const x = Math.floor(near.x) + dx, y = Math.floor(near.y) + dy;
+    if (isLand(x, y) && topZ(w, x, y) < 0) return { x: x, y: y };
+  }
+  return null;
+}
+/* THE MORNING BOAT. Sails in at half past six, ties up until midday, sails out by half past twelve. Decided by the clock
+   and the date, so every child sees the same boat and it needs no server. It brings one thing a day. */
+const VISITORS = ['MARINA', 'OLD FINN', 'SKIPPER JO', 'LULU', 'NELL', 'PIP THE POSTIE', 'GRANDPA GULL'];
+function boatAt(hour) {
+  const h = ((hour % 24) + 24) % 24;
+  if (h < 6.5 || h >= 12.5) return { state: 'away', u: 0 };
+  if (h < 7) return { state: 'coming', u: (h - 6.5) / 0.5 };
+  if (h < 12) return { state: 'in', u: 1 };
+  return { state: 'going', u: (h - 12) / 0.5 };
+}
+function boatGift(day) {
+  const h = dayHash(String(day) + ':boat');
+  const kind = ['visitor', 'seed', 'chocolate'][h % 3];
+  return { kind: kind, name: kind === 'visitor' ? VISITORS[Math.floor(h / 3) % VISITORS.length] : '' };
+}
+function boatLine(boat) {
+  if (!boat) return '';
+  if (boat.kind === 'visitor') return 'a visitor called ' + boat.name + ', who stayed for the whole day.';
+  if (boat.kind === 'seed') return boat.landed ? 'a seed, and left it on the sand by the dock.' : 'a seed for the island.';
+  return 'a parcel of chocolate bars, one for every islander.';
+}
 /* The chocolate factory arrives by itself when the village reaches three houses.
    It lands on open ground five to twelve cells from a house, never inside one. */
 function factorySpot(w) {
@@ -521,6 +575,8 @@ function questTableBase() {
   return [
     { id: 'houses3', need: 'houses', n: 3, tell: 'build a third house so the island has a proper village',
       done: 'The village grew to three houses.' },
+    { id: 'garden', need: 'plants', n: 3, tell: 'plant three seeds and see what they do tomorrow',
+      done: 'Three seeds went into the sand, and the waiting began.' },
     { id: 'palms', need: 'palms', n: 4, tell: 'plant four palm trees so the beach has shade',
       done: 'Four palms now shade the beach.' },
     { id: 'flag', need: 'flags', n: 1, tell: 'plant a racing flag and drive the very first lap',
@@ -536,13 +592,14 @@ function questTableBase() {
   ];
 }
 function worldStats(w) {
-  const st = { blocks: w.count, houses: houses(w).length, flags: flags(w).length, palms: 0, tallest: 0,
+  const st = { blocks: w.count, houses: houses(w).length, flags: flags(w).length, palms: 0, tallest: 0, seeds: 0, sprouts: 0, trees: 0, plants: 0,
     arcades: arcades(w).length, factories: factories(w).length, grass: 0 };
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
     const t = topZ(w, x, y);
     if (t + 1 > st.tallest) st.tallest = t + 1;
-    for (let z = 0; z < ISLE.ZMAX; z++) { const v = w.cols[idx(x, y, z)]; if (v === 8) st.palms++; else if (v === 1) st.grass++; }
+    for (let z = 0; z < ISLE.ZMAX; z++) { const v = w.cols[idx(x, y, z)]; if (v === 8) st.palms++; else if (v === 1) st.grass++; else if (v === 12) st.seeds++; else if (v === 13) st.sprouts++; else if (v === 14) st.trees++; }
   }
+  st.plants = st.seeds + st.sprouts + st.trees;
   return st;
 }
 /* THE LADDERS. Kumon's method without the worksheets: one rung above yesterday, fluent after three days, drop back quietly after two misses.
@@ -682,6 +739,13 @@ function chapter(o) {
   const newFac = Math.max(0, (s.factories || 0) - (prev.factories || 0));
   if (newArc > 0) page1.push('An arcade machine lit up on the beach, and the islanders queued up for a go.');
   if (newFac > 0) page1.push('A chocolate factory opened its doors and puffed its very first puff of smoke.');
+  if (o.boat) page1.push('The morning boat came in with a long low horn, and brought ' + boatLine(o.boat));
+  if (o.garden) {
+    const g = o.garden;
+    if (g.planted > 0) page1.push(cap + ' planted ' + g.planted + ' seed' + (g.planted === 1 ? '' : 's') + ' and patted the sand down flat.');
+    if (g.sprouted > 0) page1.push('While ' + cap + ' was away, ' + (g.sprouted === 1 ? 'a seed pushed up a little green sprout.' : g.sprouted + ' seeds pushed up little green sprouts.'));
+    if (g.treed > 0) page1.push((g.treed === 1 ? 'A sprout grew into a whole tree' : g.treed + ' sprouts grew into whole trees') + ', three days after the planting.');
+  }
   if (o.arcadePlays > 0) page1.push('The arcade machine went DING ' + o.arcadePlays + ' time' + (o.arcadePlays === 1 ? '' : 's') + ', twenty points a go.');
   if (o.job && o.job.length) {
     const parts = o.job.map(function (j) { return (j.n - j.left) + ' to ' + j.name; });
@@ -768,6 +832,8 @@ function bedtimeQuestion(o) {
     q = { ask: 'You took ' + o.job.map(function (j) { return j.n + ' to ' + j.name; }).join(' and ') + '. How many altogether?', right: String(total), wrong: String(total + (n % 2 ? 1 : -1)) };
   }
   else if (o.job && o.job.length === 1 && o.job[0].left === 0) q = { ask: 'How many crates did ' + o.job[0].name + ' get today?', right: String(o.job[0].n), wrong: String(o.job[0].n + 2) };
+  else if (keys.indexOf('grow') !== -1) q = { ask: 'How long does a seed take to sprout?', right: 'One whole day', wrong: 'One minute' };
+  else if (keys.indexOf('plant') !== -1) q = { ask: 'Where does a seed have to go?', right: 'On bare ground', wrong: 'On a roof' };
   else if (keys.indexOf('sym') !== -1) q = { ask: 'When both sides of a building match, what is that called?', right: 'Symmetry', wrong: 'Gravity' };
   else if (keys.indexOf('lap') !== -1 && o.bestLap > 0) q = { ask: 'Which lap is the faster one?', right: fmtLap(o.bestLap), wrong: fmtLap(o.bestLap + 7000) };
   else if (keys.indexOf('arcade') !== -1) q = { ask: 'One arcade machine pays 20 points. Two machines pay?', right: '40 points', wrong: '20 points' };
@@ -828,6 +894,7 @@ function nextThing(st) {
     { key: 'palm', line: 'Plant some PALM trees so the islanders have shade.' },
     { key: 'mirror', line: 'Try building a house that is the same on both sides. Tap me and I will show the missing half.', ghost: 'mirror' },
     { key: 'compass', line: 'Look at the corners of the island. N is north. Try building something north of your flag.' },
+    { key: 'seed', line: st.plants ? 'Your garden is growing. Seeds take a whole day to sprout, so come back tomorrow.' : 'Plant a SEED on bare sand. Come back tomorrow and something will have happened.' },
   ];
   return spare[(st.tick || 0) % spare.length];
 }
@@ -921,7 +988,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
 }
 </script>
 <script>
@@ -962,6 +1029,7 @@ if (typeof module !== 'undefined' && module.exports) {
     builder = '';
     updateLineage();
     toast('REMIXED! This island is yours now, ' + TITLE + ' ' + CREW + '.');
+    garden = {}; grow(world.ref, garden, today()); setVisitor();
     saveNow();
     noteLearned('You can start with somebody else\u2019s island and make it your own, and their name stays on it because they built it first.', 'remix', 'sharing');
     blip(660); setTimeout(function () { blip(880); }, 100); setTimeout(function () { blip(1180); }, 200);
@@ -996,6 +1064,31 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function prism(g, x, y, z, t) {
     const cx = isoX(x, y), cy = isoY(x, y, z);
+    if (t.id === 12) { // seed: a little mound of turned earth with the seed showing
+      g.fillStyle = '#B07A4A'; g.beginPath(); g.ellipse(cx, cy + TH / 2 + ZH - 2, 12, 6, 0, 0, 6.29); g.fill();
+      g.fillStyle = t.top; g.beginPath(); g.ellipse(cx, cy + TH / 2 + ZH - 5, 4, 5, 0.5, 0, 6.29); g.fill();
+      g.fillStyle = '#FFF3E2'; g.beginPath(); g.ellipse(cx - 1.2, cy + TH / 2 + ZH - 6.5, 1.2, 1.8, 0.5, 0, 6.29); g.fill();
+      return;
+    }
+    if (t.id === 13) { // sprout: a stem and two leaves
+      const by = cy + TH / 2 + ZH - 2;
+      g.fillStyle = '#B07A4A'; g.beginPath(); g.ellipse(cx, by, 10, 5, 0, 0, 6.29); g.fill();
+      g.strokeStyle = '#3FA96B'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(cx, by); g.quadraticCurveTo(cx + 2, by - 10, cx, by - 18); g.stroke();
+      g.fillStyle = t.top;
+      g.beginPath(); g.ellipse(cx - 7, by - 12, 7, 3.5, -0.6, 0, 6.29); g.fill();
+      g.beginPath(); g.ellipse(cx + 7, by - 15, 7, 3.5, 0.6, 0, 6.29); g.fill();
+      return;
+    }
+    if (t.id === 14) { // tree: a trunk and a round leafy top
+      const by = cy + TH / 2 + ZH - 2;
+      g.fillStyle = 'rgba(42,27,61,0.22)'; g.beginPath(); g.ellipse(cx, by, 13, 6, 0, 0, 6.29); g.fill();
+      g.fillStyle = t.side; g.fillRect(cx - 3, by - 24, 6, 24);
+      g.fillStyle = t.top; g.beginPath(); g.arc(cx, by - 32, 15, 0, 6.29); g.fill();
+      g.beginPath(); g.arc(cx - 10, by - 25, 10, 0, 6.29); g.arc(cx + 10, by - 25, 10, 0, 6.29); g.fill();
+      g.fillStyle = '#3FA96B'; g.beginPath(); g.arc(cx - 4, by - 36, 8, 0, 6.29); g.fill();
+      g.fillStyle = '#FF6E6C'; g.beginPath(); g.arc(cx + 6, by - 30, 2.2, 0, 6.29); g.arc(cx - 9, by - 22, 2.2, 0, 6.29); g.arc(cx + 1, by - 40, 2.2, 0, 6.29); g.fill();
+      return;
+    }
     // left face
     g.beginPath();
     g.moveTo(cx - TW / 2, cy); g.lineTo(cx, cy + TH / 2); g.lineTo(cx, cy + TH / 2 + ZH); g.lineTo(cx - TW / 2, cy + ZH);
@@ -1175,6 +1268,7 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.restore();
     drawCompass();
     drawTide(hour);
+    drawBoat(t, hour);
     if (SKY.night > 0.05) { ctx.fillStyle = 'rgba(20,26,60,' + (0.45 * SKY.night) + ')'; ctx.fillRect(0, 0, W, H); drawLamps(SKY.night); }
     if (WX.kind === 'rain') drawRain(t);
     drawGulls(t, hour);
@@ -1373,11 +1467,15 @@ if (typeof module !== 'undefined' && module.exports) {
       if (tool === -1 && r.id === 9) toast('THAT WAS YOUR FLAG! The race line is gone.');
       if (tool === 10 && arcades(world.ref).length === 1) { toast('ARCADE MACHINE! Drive past it for 20 points.'); sayPersonal('arcade'); }
       if (tool === 11 && factories(world.ref).length === 1) { toast('CHOCOLATE FACTORY OPEN! The islanders are queueing.'); sayPersonal('choco'); }
+      if (tool === 12) { garden[c.x + ',' + c.y] = today(); journal.planted = (journal.planted || 0) + 1; saveJournal(journal); toast('SEED PLANTED! Come back tomorrow and see.'); noteLearned('A seed goes on bare ground, and then you have to wait. Tomorrow it will be different.', 'plant', 'time'); }
+      if (tool === -1 && isPlant(r.id)) delete garden[c.x + ',' + c.y];
       redrawWorld({ x: c.x, y: c.y }); syncCargo(); popCheck(); saveSoon();
       lastPlaced = { x: c.x, y: c.y };
       if (r.z === ISLE.ZMAX - 1) noteLearned('Eight blocks is as tall as the island lets you build. Any higher and it would topple.', 'tall', 'geometry');
     }
     else if (r.why === 'water') toast('That is the sea! Build on the sand.');
+    else if (r.why === 'soil') toast('A seed needs bare ground. Find an empty patch of sand.');
+    else if (r.why === 'plant') toast('Something is growing there! Build next to it, not on it.');
     else if (r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.');
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
     else if (r.why === 'height') toast('MAX HEIGHT! Eight blocks tall is the limit.');
@@ -1385,10 +1483,10 @@ if (typeof module !== 'undefined' && module.exports) {
 
   // UI: the dock and the drawer
   const bar = document.getElementById('bottombar'), drawer = document.getElementById('drawer'), tipEl = document.getElementById('tip');
-  const GROUPS = [['GROUND', [1, 2]], ['WALLS', [3, 4, 5, 6, 7]], ['THINGS', [8, 9, 10, 11]]];
+  const GROUPS = [['GROUND', [1, 2]], ['WALLS', [3, 4, 5, 6, 7]], ['THINGS', [8, 9, 10, 11, 12]]];
   const TIPS = { 1: 'Soft ground. Ten of them make a garden.', 2: 'One block high in a line makes a ramp.', 3: 'Walls. Four in a ring and a door, and somebody moves in.',
     4: 'Strong walls, same as wood but red.', 5: 'Put it in a wall.', 6: 'Put it in a wall and somebody moves in.', 7: 'Goes on top.', 8: 'Shade for the islanders. They love it.',
-    9: 'Drive through it to time a lap.', 10: 'Drive past it for 20 points.', 11: 'Three houses make one appear, or build it yourself.', '-1': 'Tap a block to take it away.' };
+    9: 'Drive through it to time a lap.', 10: 'Drive past it for 20 points.', 11: 'Three houses make one appear, or build it yourself.', 12: 'Plant it on bare sand. Tomorrow it sprouts, in three days it is a tree.', '-1': 'Tap a block to take it away.' };
   const iconCache = {};
   function iconFor(id) { // a real prism, drawn by the engine, on a tiny canvas
     if (iconCache[id]) return icon2(id);
@@ -1456,7 +1554,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (driving) return;
     const k = e.key.toLowerCase();
     if (k >= '1' && k <= '9') { setTool(Number(k)); }
-    else if (k === '0') setTool(10); else if (k === 'f') setTool(11);
+    else if (k === '0') setTool(10); else if (k === 'f') setTool(11); else if (k === 'p') setTool(12);
     else if (k === 'e') setTool(-1); else if (k === 'u') document.getElementById('btn-undo').click();
     else if (k === 'd') document.getElementById('btn-drive').click(); else if (k === 's') share();
     else if (k === 'escape') drawer.classList.remove('on');
@@ -1568,7 +1666,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let restored = false;
     if (!w) {
       const sv = loadSave();
-      if (sv && sv.w.count > 0) { w = sv.w; bestLap = sv.t; chain = sv.c; carIdx = PRO ? PRO.ride : (sv.car || 0); restored = true; }
+      if (sv && sv.w.count > 0) { w = sv.w; bestLap = sv.t; chain = sv.c; carIdx = PRO ? PRO.ride : (sv.car || 0); garden = sv.g || {}; restored = true; }
     }
     world.ref = w || makeWorld();
     updateLineage();
@@ -1583,6 +1681,9 @@ if (typeof module !== 'undefined' && module.exports) {
     clampCam(); syncDial();
     syncCargo();
     rebuildIslanders();
+    applyGrowth();
+    setVisitor();
+    setTimeout(function () { boatArrive(restored ? 2600 : 1800); }, 50);
     requestAnimationFrame(frame);
     let seen = null;
     try { seen = localStorage.getItem('captains-island-seen-v1'); } catch (e) {}
@@ -1598,7 +1699,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!hp) return;
     const w = decode(hp.enc);
     if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; updateLineage(); }
-    if (w) { world.ref = w; redrawWorld(); syncCargo(); rebuildIslanders(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
+    if (w) { world.ref = w; garden = {}; redrawWorld(); syncCargo(); rebuildIslanders(); setVisitor(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
   });
   // ISLANDERS: derived from houses, never stored. Curated names and phrases only.
   const I_NAMES = ['COCO', 'BARNACLE BOB', 'PEARL', 'MANGO', 'SALTY SAM', 'CAPTAIN CRUMB', 'SHELLY', 'BISCUIT'];
@@ -1652,7 +1753,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
   }
   function stepIslanders(dt, t) {
-    for (const p of islanders) {
+    for (const p of allFolk()) {
       p.wait -= dt;
       if (p.wait <= 0) { wanderTarget(p); p.wait = 2.5 + Math.random() * 3.5; }
       const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
@@ -1665,7 +1766,7 @@ if (typeof module !== 'undefined' && module.exports) {
   try { hintOn = localStorage.getItem('captains-island-hints') !== 'off'; } catch (e) {}
   function cleoTarget() {
     if (driving) { return { x: car.x - Math.cos(car.h) * 2.2, y: car.y - Math.sin(car.h) * 2.2 }; }
-    if (lastPlaced && Math.hypot(lastPlaced.x - cleo.x, lastPlaced.y - cleo.y) < 14) return { x: lastPlaced.x + 1.5, y: lastPlaced.y + 1.5 };
+    if (lastPlaced && Math.hypot(lastPlaced.x - cleo.x, lastPlaced.y - cleo.y) < 14) return { x: lastPlaced.x + 2.5, y: lastPlaced.y - 0.5 };
     const c = cellAt(innerWidth / 2, innerHeight / 2);
     return c ? { x: c.x + 0.5, y: c.y + 0.5 } : { x: cleo.x, y: cleo.y };
   }
@@ -1744,7 +1845,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (cleo.spin > 0) { ctx.fillStyle = '#FFD447'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(sx + Math.cos(t * 6 + k * 1.57) * 16 * s, sy - 24 * s + Math.sin(t * 6 + k * 1.57) * 6 * s, 2 * s, 0, 6.29); ctx.fill(); } }
   }
   function cleoAt(sx, sy) {
-    if (OWNER) return null;
+    if (OWNER || cleo.moving) return null;
     const wx = isoX(cleo.x, cleo.y), wy = isoY(cleo.x, cleo.y, 0) + ZH;
     const px = wx * cam.zoom + cam.x, py = wy * cam.zoom + cam.y - 12 * cam.zoom;
     return Math.hypot(sx - px, sy - py) < 26 * cam.zoom ? { px, py } : null;
@@ -1821,7 +1922,7 @@ if (typeof module !== 'undefined' && module.exports) {
     clearTimeout(bubbleT); bubbleT = setTimeout(function () { el.classList.remove('on'); }, 4200);
   }
   function drawIslanders(t) {
-    for (const p of islanders) {
+    for (const p of allFolk()) {
       const wx = isoX(p.x, p.y), wy = isoY(p.x, p.y, 0) + ZH;
       const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y;
       const s = Math.max(cam.zoom, 0.8), bob = Math.sin(t * 5 + p.seed) * 2.2 * s;
@@ -1858,7 +1959,11 @@ if (typeof module !== 'undefined' && module.exports) {
         ctx.fillStyle = '#FFF3E2'; ctx.fillRect(sx + 7 * s, sy - 12 * s + bob, 4 * s, 6 * s);
         ctx.fillStyle = '#5C3A6E'; ctx.fillRect(sx + 8.5 * s, sy - 12 * s + bob, 1 * s, 6 * s);
         if (p.cheer > 0) { p.cheer -= 0.016; ctx.fillStyle = '#FFD447'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(sx + (k - 1) * 10 * s, sy - 34 * s - Math.sin(t * 9 + k) * 4 * s, 2 * s, 0, 6.29); ctx.fill(); } }
-      } else if (factoryCells.length) { // chocolate in hand, straight from the factory
+      } else if (p.visitor) { // the day's visitor wears a sun hat
+        ctx.fillStyle = '#FFD447'; ctx.beginPath(); ctx.ellipse(sx, sy - 25 * s + bob, 10 * s, 3 * s, 0, 0, 6.29); ctx.fill();
+        ctx.fillRect(sx - 5 * s, sy - 31 * s + bob, 10 * s, 6 * s);
+        ctx.fillStyle = '#FF6E6C'; ctx.fillRect(sx - 5 * s, sy - 27 * s + bob, 10 * s, 1.6 * s);
+      } else if (factoryCells.length || chocoDay()) { // chocolate in hand, from the factory or the morning boat
         ctx.fillStyle = '#6E4028'; ctx.fillRect(sx + 6 * s, sy - 12 * s + bob, 4.5 * s, 8 * s);
         ctx.fillStyle = '#FFD447'; ctx.fillRect(sx + 6 * s, sy - 9 * s + bob, 4.5 * s, 2 * s);
       }
@@ -1866,7 +1971,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   let bubbleT = null;
   function islanderAt(sx, sy) {
-    for (const p of islanders) {
+    for (const p of allFolk()) {
       const wx = isoX(p.x, p.y), wy = isoY(p.x, p.y, 0) + ZH;
       const px = wx * cam.zoom + cam.x, py = wy * cam.zoom + cam.y - 14 * cam.zoom;
       if (Math.hypot(sx - px, sy - py) < 26 * cam.zoom) return { p, px, py };
@@ -1885,6 +1990,7 @@ if (typeof module !== 'undefined' && module.exports) {
       ph = ['Word of the island: ' + wd.w + '! It means ' + wd.d + '.']; saidWord = true;
     } else if (journal.wordHeard && Math.random() < 0.25) { ph = ['Say it with me: ' + wd.w + '. It means ' + wd.d + '.']; saidWord = true; }
     if (saidWord) {}
+    else if (hit.p.visitor) ph = ['I came on the morning boat!', 'Only here for today. Show me your best thing!', 'What a SPLENDID island!', 'Back on the boat tomorrow. I will tell everyone about this place.', 'Is that a whale? It IS a whale!'];
     else if (hit.p.play) ph = ['WATCH ME! High score!', 'One more go on the arcade!', 'DING DING! Twenty points!', 'This machine is the BEST.'];
     else if (factoryCells.length && Math.random() < 0.35) ph = ['The chocolate factory smells AMAZING!', 'Chocolate bars for everybody!', 'I work at the chocolate factory now!'];
     el.innerHTML = '<b>' + hit.p.name + '</b><br>' + ph[Math.floor(Math.random() * ph.length)];
@@ -1895,6 +2001,83 @@ if (typeof module !== 'undefined' && module.exports) {
     clearTimeout(bubbleT); bubbleT = setTimeout(() => el.classList.remove('on'), 3200);
   }
 
+  // ===== THE GARDEN, THE MORNING BOAT AND THE VISITOR =====
+  let garden = {};
+  function applyGrowth() {
+    if (!canSave()) return [];
+    const ch = grow(world.ref, garden, today());
+    if (!ch.length) return ch;
+    let sp = 0, tr = 0;
+    ch.forEach(function (c) { redrawWorld({ x: c.x, y: c.y }); if (c.to === 13) sp++; else if (c.to === 14) tr++; });
+    journal.sprouted = (journal.sprouted || 0) + sp; journal.treed = (journal.treed || 0) + tr;
+    if (sp || tr) noteLearned('A seed takes one whole day to sprout and three days to become a tree. Growing is mostly waiting.', 'grow', 'time');
+    saveJournal(journal); saveSoon();
+    setTimeout(function () { toast(tr ? (tr === 1 ? 'A TREE GREW WHILE YOU WERE AWAY!' : tr + ' TREES GREW WHILE YOU WERE AWAY!') : (sp === 1 ? 'YOUR SEED SPROUTED OVERNIGHT!' : sp + ' SEEDS SPROUTED OVERNIGHT!')); blip(700); setTimeout(function () { blip(1050); }, 120); }, 1200);
+    try { refreshQuest(); } catch (e) {}
+    return ch;
+  }
+  let visitor = null;
+  function allFolk() { return visitor ? islanders.concat([visitor]) : islanders; }
+  function chocoDay() { return boatGift(today()).kind === 'chocolate'; }
+  function setVisitor() {
+    const g = boatGift(today());
+    if (g.kind !== 'visitor') { visitor = null; return; }
+    if (visitor && visitor.name === g.name) return;
+    const d = dockCell(), home = { x: Math.floor(d.x), y: Math.floor(d.y) };
+    visitor = { home: home, name: g.name, col: '#FFF3E2', visitor: true, x: home.x + 0.5, y: home.y + 0.5, tx: home.x + 0.5, ty: home.y + 0.5, wait: 1, seed: 4.2 };
+  }
+  function horn() { blip(150); setTimeout(function () { blip(120); }, 260); setTimeout(function () { blip(150); }, 560); }
+  function boatArrive(delay) {
+    const d = today();
+    if (journal.boatDay === d) return false;
+    const g = boatGift(d);
+    journal.boatDay = d; journal.boat = { day: d, kind: g.kind, name: g.name || '', landed: false };
+    if (g.kind === 'seed' && canSave() && world.ref.count > 0 && world.ref.count < ISLE.MAX_BLOCKS) {
+      const sp = seedSpot(world.ref, dockCell());
+      if (sp) { const r = place(world.ref, sp.x, sp.y, 12); if (r.ok) { world.ref.undo.pop(); garden[sp.x + ',' + sp.y] = d; journal.boat.landed = true; redrawWorld({ x: sp.x, y: sp.y }); syncCargo(); saveSoon(); } }
+    }
+    saveJournal(journal); setVisitor();
+    const msg = g.kind === 'visitor' ? g.name + ' came for the day. Say hello!' : g.kind === 'seed' ? (journal.boat.landed ? 'It left a SEED on the sand by the dock.' : 'It brought a seed for the island.') : 'A parcel of chocolate bars, one for every islander!';
+    setTimeout(function () { horn(); toast((hourNow() < 12.5 ? 'THE MORNING BOAT IS IN! ' : 'THE MORNING BOAT CAME EARLIER. ') + msg); }, delay || 0);
+    return true;
+  }
+  let boatLast = 'away', dayLast = null;
+  setInterval(function () { const d = today(); if (dayLast && d !== dayLast) { applyGrowth(); boatArrive(400); setVisitor(); } dayLast = d; }, 30000);
+  function boatSpot() {
+    const c = ISLE.N / 2, d = dockCell();
+    let vx = d.x - c, vy = d.y - c, L = Math.hypot(vx, vy);
+    if (L < 8) { vx = 1; vy = 1; L = Math.SQRT2; }
+    vx /= L; vy /= L;
+    let r = 40; while (r < 90 && shoreR(c + vx * r, c + vy * r) > -5) r += 1;
+    return { x: Math.max(2, Math.min(ISLE.N - 2, c + vx * r)), y: Math.max(2, Math.min(ISLE.N - 2, c + vy * r)), vx: vx, vy: vy };
+  }
+  function drawBoat(t, hour) {
+    const b = boatAt(hour);
+    if (b.state !== boatLast) { if (b.state === 'in' && boatLast === 'coming') horn(); boatLast = b.state; }
+    if (b.state === 'away') return;
+    const sp = boatSpot();
+    const far = b.state === 'coming' ? 14 * (1 - b.u) : b.state === 'going' ? 14 * b.u : 0;
+    const bx = sp.x + sp.vx * far, by = sp.y + sp.vy * far;
+    const wx = isoX(bx, by), wy = isoY(bx, by, -1) + ZH + Math.sin(t * 1.6) * 2.2;
+    const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y, s = Math.max(cam.zoom, 0.7);
+    if (sx < -120 || sx > W + 120 || sy < -120 || sy > H + 120) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,243,226,0.45)'; ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.moveTo(sx - 30 * s, sy + 6 * s); ctx.quadraticCurveTo(sx - 46 * s, sy + 10 * s, sx - 60 * s, sy + 6 * s); ctx.stroke();
+    ctx.fillStyle = '#C74744'; ctx.beginPath(); ctx.moveTo(sx - 26 * s, sy - 6 * s); ctx.lineTo(sx + 28 * s, sy - 6 * s); ctx.lineTo(sx + 20 * s, sy + 8 * s); ctx.lineTo(sx - 18 * s, sy + 8 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#FF6E6C'; ctx.fillRect(sx - 26 * s, sy - 9 * s, 54 * s, 4 * s);
+    ctx.fillStyle = '#FFF3E2'; ctx.fillRect(sx - 8 * s, sy - 22 * s, 20 * s, 13 * s);
+    ctx.fillStyle = '#8FD8E8'; ctx.fillRect(sx - 4 * s, sy - 19 * s, 5 * s, 5 * s); ctx.fillRect(sx + 4 * s, sy - 19 * s, 5 * s, 5 * s);
+    ctx.fillStyle = '#2A1B3D'; ctx.fillRect(sx + 12 * s, sy - 30 * s, 4 * s, 8 * s);
+    if (b.state === 'coming' || b.state === 'in') { ctx.fillStyle = 'rgba(255,243,226,0.55)'; ctx.beginPath(); ctx.arc(sx + 14 * s + Math.sin(t * 2) * 2 * s, sy - 36 * s - ((t * 6) % 10) * s, 3.5 * s, 0, 6.29); ctx.fill(); }
+    ctx.fillStyle = '#2A1B3D'; ctx.fillRect(sx - 14 * s, sy - 34 * s, 1.5 * s, 26 * s);
+    ctx.fillStyle = FLAGCOL; ctx.beginPath(); ctx.moveTo(sx - 12.5 * s, sy - 34 * s); ctx.lineTo(sx - 2 * s, sy - 30 * s); ctx.lineTo(sx - 12.5 * s, sy - 26 * s); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = '#C9834E'; ctx.fillRect(sx - 24 * s + i * 8 * s, sy - 16 * s, 7 * s, 7 * s); ctx.fillStyle = '#96602F'; ctx.fillRect(sx - 21 * s + i * 8 * s, sy - 16 * s, 1.2 * s, 7 * s); }
+    ctx.fillStyle = '#FFF3E2'; ctx.font = 'bold ' + Math.round(9 * s) + 'px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(b.state === 'in' ? 'THE MORNING BOAT' : b.state === 'coming' ? 'HERE IT COMES' : 'SEE YOU TOMORROW', sx, sy + 20 * s); ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
   // ===== SAVE: his island lives on his own device. Nothing leaves the phone. =====
   const SAVEKEY = 'captains-island-save-v1-' + CREW;
   try { if (CREW === 'OLLIE' && !localStorage.getItem(SAVEKEY) && localStorage.getItem('captains-island-save-v1')) localStorage.setItem(SAVEKEY, localStorage.getItem('captains-island-save-v1')); } catch (e) {}
@@ -1902,9 +2085,10 @@ if (typeof module !== 'undefined' && module.exports) {
   function canSave() { return !builder || builder === CREW; }
   function saveNow() {
     if (!canSave()) return false;
+    Object.keys(garden).forEach(function (k) { const p = k.split(','); if (!isPlant(world.ref.cols[idx(+p[0], +p[1], 0)])) delete garden[k]; });
     try {
       localStorage.setItem(SAVEKEY, JSON.stringify({
-        v: 1, crew: CREW, i: encode(world.ref), t: Math.round(bestLap) || 0, c: chain, car: carIdx, at: Date.now()
+        v: 1, crew: CREW, i: encode(world.ref), t: Math.round(bestLap) || 0, c: chain, car: carIdx, g: garden, at: Date.now()
       }));
       return true;
     } catch (e) { return false; }
@@ -1918,7 +2102,8 @@ if (typeof module !== 'undefined' && module.exports) {
       if (!s || s.v !== 1 || typeof s.i !== 'string') return null;
       const w = decode(s.i);
       if (!w) return null;
-      return { w: w, t: s.t > 0 ? s.t : 0, c: Array.isArray(s.c) ? s.c.slice(0, 3) : [], car: (s.car >= 0 && s.car < 3) ? s.car : 0 };
+      const g = {}; if (s.g && typeof s.g === 'object') Object.keys(s.g).forEach(function (k) { if (/^\d{1,3},\d{1,3}$/.test(k) && /^\d{4}-\d{2}-\d{2}$/.test(String(s.g[k]))) g[k] = String(s.g[k]); });
+      return { w: w, t: s.t > 0 ? s.t : 0, c: Array.isArray(s.c) ? s.c.slice(0, 3) : [], car: (s.car >= 0 && s.car < 3) ? s.car : 0, g: g };
     } catch (e) { return null; }
   }
 
@@ -2429,6 +2614,7 @@ if (typeof module !== 'undefined' && module.exports) {
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
       bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
       word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard, weather: weatherAt(today(), 12),
+      boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
@@ -2438,7 +2624,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!journal.quest) journal.questDay = today();
     journal.quest = q;
     journal.arcadePlays = 0; journal.prevStats = st; journal.newIslanders = []; journal.learned = []; journal.keys = [];
-    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
+    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
     journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
@@ -2471,6 +2657,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const lines = ['Good morning, ' + TITLE.charAt(0) + TITLE.slice(1).toLowerCase() + ' ' + CREW + '.'];
     if (last.quest) lines.push('Last night the book said: today you are going to ' + last.quest.tell + '.');
     lines.push(OWNER ? (islanders.length ? keeperName() + ' is carrying the book. Tap them if you forget.' : 'Build a house and somebody will move in to carry the book.') : 'Cleo the show dog is carrying the book. Tap her any time and she will tell you what to do next.');
+    if ((journal.sprouted || 0) + (journal.treed || 0) > 0) lines.push('Go and look at the garden. Something grew while you slept.');
     lines.push('Tonight, tap the moon and the next chapter will be about what you did.');
     storyPages = [{ title: 'GOOD MORNING', lines: lines }];
     storyIdx = 0;
@@ -2569,7 +2756,8 @@ if (typeof module !== 'undefined' && module.exports) {
     profile: () => PRO, title: () => TITLE, flagCol: () => FLAGCOL, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
-    encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE };
+    encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE,
+    garden: () => garden, applyGrowth, boatArrive, setVisitor, visitor: () => visitor, boatAt: () => boatAt(hourNow()), boatGift: () => boatGift(today()), boatSpot, dockCell, chocoDay };
   boot();
 })();
 </script>
