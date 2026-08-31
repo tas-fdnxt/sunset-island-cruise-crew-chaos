@@ -1,6 +1,6 @@
 # Captain's Island test suites
 
-The safety net. Run these before every deploy. Four hundred and sixteen checks across fifteen files. The building suites run on a flat test grid with no sea (extract-core.js sets ISLE.ALL_LAND, which the game never does); test-shore.js turns the sea back on.
+The safety net. Run these before every deploy. Four hundred and twenty five checks across fifteen files. The building suites run on a flat test grid with no sea (extract-core.js sets ISLE.ALL_LAND, which the game never does); test-shore.js turns the sea back on.
 
 ## Running them
 
@@ -78,4 +78,5 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   growing thing; the boat's clock and its three daily gifts; the chapter, bedtime questions and advisor lines about the garden.
 - **test-walk.js** the island on foot. Floors from the stack, seeds and sprouts walked over, one block is a step and two is a
   wall, a jump is for fun not for climbing, the sea and the grid edge are walls, spawning near home facing the door, and the
-  mesh that draws the world: every exposed face and no hidden one.
+  mesh that draws the world: every exposed face and no hidden one, with doors and windows drawn as faces (a frame, a leaf
+  or a pane, a handle or mullions, a sill) that sit just outside the wall and never further than 0.04.
