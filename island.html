@@ -8,7 +8,7 @@
 <meta name="description" content="Build your own island. Houses with people in them, cars and ramps, an arcade machine, a chocolate factory. Then send the whole island inside one link. No app, no account, no ads.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Ollie's Arcade">
-<meta property="og:title" content="Captain's Island">
+<meta property="og:title" content="Sunset Island">
 <meta property="og:description" content="Build an island. Houses with people in them, cars and ramps, an arcade machine, a chocolate factory. Then send the whole island inside one link. No app, no account, no ads.">
 <meta property="og:url" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/island.html">
 <meta property="og:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-island.png">
@@ -16,7 +16,7 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="An isometric sunset island with little houses, a palm tree, a racing flag and a red car flying off a ramp.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Captain's Island">
+<meta name="twitter:title" content="Sunset Island">
 <meta name="twitter:description" content="Build an island, then send the whole thing inside one link. No app, no account, no ads.">
 <meta name="twitter:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-island.png">
 <style>
@@ -114,6 +114,12 @@
     z-index:5; display:none; background:rgba(42,27,61,0.92); color:var(--yellow); border:2px solid rgba(255,243,226,0.5);
     border-radius:999px; padding:7px 15px; font-weight:900; font-size:12px; max-width:90vw; text-align:center; }
   #quest.on { display:block; }
+  #next { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 86px);
+    z-index:5; display:none; background:rgba(255,243,226,0.94); color:var(--ink); border:2px solid var(--ink);
+    border-radius:999px; padding:6px 14px 6px 10px; font-weight:800; font-size:12px; max-width:88vw; text-align:left; line-height:1.3; }
+  #next.on { display:block; }
+  #next b { color:#8C4A78; }
+  #quest.on ~ #next.on { bottom:calc(env(safe-area-inset-bottom,0px) + 148px); }
   #story { position:fixed; inset:0; z-index:21; display:none; align-items:center; justify-content:center;
     background:rgba(28,16,44,0.92); padding:14px; }
   #story.on { display:flex; }
@@ -132,7 +138,7 @@
   .sq button.right { background:#7BD8A0; } .sq button.wrong { background:#FFB0AE; }
   .sq .fb { margin-top:6px; font-weight:900; font-size:14px; color:var(--yellow); }
   #shelf { display:none; } #shelf.on { display:block; }
-  #shelf button, #sgrown { display:block; width:100%; text-align:left; margin-bottom:6px; padding:10px 12px; border:2px solid rgba(255,243,226,0.45);
+  #shelf button, #sgrown, #shints { display:block; width:100%; text-align:left; margin-bottom:6px; padding:10px 12px; border:2px solid rgba(255,243,226,0.45);
     border-radius:12px; background:rgba(255,243,226,0.08); color:var(--cream); font-weight:800; font-size:14px; cursor:pointer; }
   #shelf button.cur { border-color:var(--yellow); color:var(--yellow); }
   #shelf a { display:block; margin-bottom:6px; padding:10px 12px; border:2px solid rgba(255,243,226,0.45); border-radius:12px; color:#8FD8E8; font-weight:800; font-size:14px; text-decoration:none; }
@@ -156,6 +162,7 @@
 <button id="btn-book" aria-label="How to play">?</button>
 <button id="btn-story" aria-label="Story time">&#9789;</button>
 <div id="quest"></div>
+<div id="next"></div>
 <div id="story">
   <div id="storycard">
     <div id="storyhead">STORY TIME</div>
@@ -362,7 +369,7 @@ function buildHash(enc, t, b, chain) {
    Nickname plus tap choices only. Nothing else is ever asked. */
 const PROFILE = {
   VER: 1,
-  TITLES: ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT'],
+  TITLES: ['CAPTAIN', 'PIRATE', 'PRINCESS', 'EXPLORER', 'MERMAID', 'KNIGHT', 'ASTRONAUT', 'INVENTOR'],
   COLOURS: [
     { name: 'CORAL', hex: '#FF6E6C' }, { name: 'SUNSET', hex: '#FFB067' }, { name: 'SUNSHINE', hex: '#FFD447' },
     { name: 'PALM', hex: '#3FA96B' }, { name: 'SKY', hex: '#8FD8E8' }, { name: 'OCEAN', hex: '#2F7F9A' },
@@ -490,6 +497,7 @@ function chapter(o) {
   }
   const page3 = [];
   if (o.lastQuestDone) page3.push('The thing ' + cap + ' set out to do got done. ' + o.lastQuestDone);
+  if (o.fact) { const kn = o.keeper ? (o.keeper.charAt(0) + o.keeper.slice(1).toLowerCase()) : 'Cleo'; page3.push(kn + '\u2019s fact for tonight: ' + o.fact); }
   if (o.quest && o.questDays >= 2 && o.keeper) page3.push(o.keeper + ' has been waiting ' + o.questDays + ' days for that one, and is still smiling about it.');
   if (o.quest) {
     page3.push('Tonight the island is quiet.');
@@ -580,6 +588,53 @@ function parentSummary(journal, today, name) {
   if (!ledger.length && !book.length) lines.push('Nothing on this device yet. Chapters appear after the first bedtime story.');
   return lines;
 }
+/* THE ADVISOR. One sentence about the single most useful thing right now. Never a list, never a lesson. */
+function nextThing(st) {
+  st = st || {};
+  const h = st.hour == null ? 12 : st.hour;
+  if (!st.blocks) return { key: 'tap', line: 'Tap the sand and a block pops up. Go on, try it!' };
+  if (!st.houses) {
+    if (st.walls >= 6 && !st.doors) return { key: 'door', line: 'Put a DOOR in that wall and somebody will move in.', ghost: 'door' };
+    return { key: 'house', line: 'Build walls in a ring and put a DOOR in one. Somebody will move in!', ghost: 'house' };
+  }
+  if (st.quest && !st.questMet) return { key: 'quest', line: 'The book says: today you ' + st.quest.tell + '.' };
+  if (!st.flags) return { key: 'flag', line: 'Plant a FLAG, then press DRIVE. Zoom!' };
+  if (!st.ramp) return { key: 'ramp', line: 'Line up SAND one block high and drive at it. You will fly.', ghost: 'ramp' };
+  if (h >= 18 || h < 5) return { key: 'moon', line: 'It is nearly bedtime. Tap the moon and I will read tonight\u2019s chapter.' };
+  const spare = [
+    { key: 'tall', line: 'Build something tall. Four blocks is the very top!' },
+    { key: 'share', line: 'Send your island to someone. Tap SHARE and it all fits in one link.' },
+    { key: 'arcade', line: 'Build an ARCADE and drive past it. Twenty points a go.' },
+    { key: 'palm', line: 'Plant some PALM trees so the islanders have shade.' },
+    { key: 'mirror', line: 'Try building a house that is the same on both sides.' },
+  ];
+  return spare[(st.tick || 0) % spare.length];
+}
+/* THE KEEPER'S FACT: one true thing a night, small enough for a five year old, tied to something on the island. */
+const CLEO_FACTS = [
+  'A whale is not a fish. It breathes air, which is why it blows a spout.',
+  'A palm tree grows from one bud at the very top. Cut that and the whole tree stops.',
+  'The sunset is red because the light has to travel further through the air to reach you.',
+  'A Yorkshire Terrier like me was bred to chase rats in mills. Now we mostly chase ribbons.',
+  'A show dog is judged on how she trots, how she stands, and how shiny her coat is. Watch me trot.',
+  'Chocolate comes from a bean that grows in pods on a tree. The pods are as big as a football.',
+  'Sand is made of tiny broken bits of rock and shells. Every grain used to be something bigger.',
+  'The sea is salty because rivers carry tiny bits of salt out of the rocks and down to it.',
+  'A dog can smell about ten thousand times better than a person. I know exactly where the chocolate is.',
+  'Islands are the tops of mountains that are mostly under the sea.',
+  'The moon does not make its own light. It is just the sun bouncing off it.',
+  'Racing cars have wings that push them DOWN so they stick to the track in corners.',
+  'A seagull can drink sea water. It has a tiny tap above its eyes that drips the salt out.',
+  'Coins used to be weighed to see what they were worth. Heavier meant more.',
+  'North is the same direction all over the world. That is why every map puts it at the top.',
+  'Your heart is about the size of your fist and it beats about a hundred thousand times a day.',
+  'Bricks are made of clay that is baked until it goes hard, like a very serious biscuit.',
+];
+function cleoFact(n, dog) {
+  const pool = dog === false ? CLEO_FACTS.filter(function (f) { return !/like me|Watch me|I know exactly/.test(f); }) : CLEO_FACTS;
+  return pool[((n || 1) - 1) % pool.length];
+}
+function coatLevel(chapters) { return Math.min(3, Math.floor((chapters || 0) / 10)); }
 function houses(w) {
   const found = [];
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
@@ -598,7 +653,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS };
 }
 </script>
 <script>
@@ -616,6 +671,8 @@ if (typeof module !== 'undefined' && module.exports) {
     if (q) { const c = q.replace(/[^\w \-']/g, '').trim().slice(0, 16); if (c) CREW = c.toUpperCase(); } } catch (e) {}
   try { PRO = parseProfile(new URLSearchParams(location.search).get('p')); } catch (e) { PRO = null; }
   if (PRO) { CREW = PRO.name; TITLE = PROFILE.TITLES[PRO.title]; FLAGCOL = PRO.hex; }
+  /* Two editions, one engine. Ollie and Sibella's edition has no Cleo: Ollie is the captain and an islander keeps the book. */
+  const OWNER = !PRO && (CREW === 'OLLIE' || CREW === 'SIBELLA');
   function updateLineage() {
     const own = !builder || builder === CREW;
     document.getElementById('title-badge').textContent =
@@ -763,10 +820,13 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom);
     ctx.drawImage(off, 0, 0);
     ctx.restore();
+    drawGhost();
     stepIslanders(dt, t);
     drawIslanders(t);
     stepCar(dt);
     drawCar();
+    stepCleo(dt, t);
+    drawCleo(t);
     requestAnimationFrame(frame);
   }
 
@@ -795,6 +855,8 @@ if (typeof module !== 'undefined' && module.exports) {
   let tool = 3; // wood first: house building starts with walls
   function tapAt(sx, sy) {
     if (driving) return;
+    const ch = cleoAt(sx, sy);
+    if (ch) { talkToKeeper(ch); return; }
     const hit = islanderAt(sx, sy);
     if (hit) { chat(hit); return; }
     const c = cellAt(sx, sy);
@@ -809,6 +871,7 @@ if (typeof module !== 'undefined' && module.exports) {
       if (tool === 10 && arcades(world.ref).length === 1) { toast('ARCADE MACHINE! Drive past it for 20 points.'); sayPersonal('arcade'); }
       if (tool === 11 && factories(world.ref).length === 1) { toast('CHOCOLATE FACTORY OPEN! The islanders are queueing.'); sayPersonal('choco'); }
       redrawWorld(); syncCargo(); popCheck(); saveSoon();
+      lastPlaced = { x: c.x, y: c.y };
       if (r.z === 3) noteLearned('Four blocks is as tall as the island lets you build. Any higher and it would topple.', 'tall', 'geometry');
     }
     else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
@@ -842,6 +905,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
   function popCheck() {
     try { refreshQuest(); } catch (e) {}
+    try { refreshNext(); } catch (e) {}
     try {
       const sy = symmetry(world.ref);
       if (sy > (journal.symSeen || 0)) { journal.symSeen = sy; noteLearned('You built something that is the same on both sides. That is called symmetry, and castles love it.', 'sym', 'geometry'); toast('SYMMETRY! Both sides match.'); }
@@ -938,6 +1002,8 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!seen) setTimeout(function () { openBook(0); }, 700);
     else if (journal.morning && journal.book && journal.book.length && journal.book[journal.book.length - 1].day !== today()) setTimeout(openMorning, 900);
     refreshQuest();
+    const cc = cellAt(innerWidth / 2, innerHeight / 2); if (cc) { cleo.x = cc.x + 0.5; cleo.y = cc.y + 0.5; }
+    setTimeout(refreshNext, 200);
   }
   addEventListener('hashchange', () => {
     if (!location.hash.startsWith('#i=')) return;
@@ -1004,6 +1070,151 @@ if (typeof module !== 'undefined' && module.exports) {
       if (d > 0.05) { const sp = Math.min(d, 1.1 * dt); p.x += dx / d * sp; p.y += dy / d * sp; }
     }
   }
+  /* Cleo. A Yorkshire Terrier show dog. Black and tan, silky, a bow and a rosette in the child's colour, the book in her mouth. Crew edition only. */
+  const cleo = { x: 34.5, y: 36.5, tx: 34.5, ty: 36.5, mood: 'sit', spin: 0, bark: 0, seed: 0.7, moving: false, hint: null, face: -1 };
+  let lastPlaced = null, ghost = null, hintOn = true;
+  try { hintOn = localStorage.getItem('captains-island-hints') !== 'off'; } catch (e) {}
+  function cleoTarget() {
+    if (driving) { return { x: car.x - Math.cos(car.h) * 2.2, y: car.y - Math.sin(car.h) * 2.2 }; }
+    if (lastPlaced && Math.hypot(lastPlaced.x - cleo.x, lastPlaced.y - cleo.y) < 14) return { x: lastPlaced.x + 1.5, y: lastPlaced.y + 1.5 };
+    const c = cellAt(innerWidth / 2, innerHeight / 2);
+    return c ? { x: c.x + 0.5, y: c.y + 0.5 } : { x: cleo.x, y: cleo.y };
+  }
+  function stepCleo(dt, t) {
+    if (OWNER || cleo.mood === 'sleep') return;
+    if (cleo.spin > 0) { cleo.spin = Math.max(0, cleo.spin - dt); return; }
+    const tg = cleoTarget();
+    const d = Math.hypot(tg.x - cleo.x, tg.y - cleo.y);
+    const speed = driving ? 5.5 : 2.4;
+    if (d > 0.35) {
+      const stp = Math.min(d, speed * dt);
+      cleo.x += (tg.x - cleo.x) / d * stp; cleo.y += (tg.y - cleo.y) / d * stp;
+      cleo.moving = true; cleo.face = (tg.x - tg.y) < (cleo.x - cleo.y) ? -1 : 1;
+    } else cleo.moving = false;
+    cleo.x = Math.max(0.5, Math.min(ISLE.N - 0.5, cleo.x)); cleo.y = Math.max(0.5, Math.min(ISLE.N - 0.5, cleo.y));
+    if (cleo.bark > 0) cleo.bark -= dt;
+  }
+  function drawCleo(t) {
+    if (OWNER) return;
+    const wx = isoX(cleo.x, cleo.y), wy = isoY(cleo.x, cleo.y, 0) + ZH;
+    const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y;
+    const s = Math.max(cam.zoom, 0.8), coat = coatLevel(journal.book ? journal.book.length : 0);
+    const INK = '#2A1B3D', TAN = '#C9834E', CREAM = '#FFF3E2';
+    const bow = PRO ? PRO.hex : '#FF6E6C';
+    ctx.save();
+    ctx.fillStyle = 'rgba(42,27,61,0.3)'; ctx.beginPath(); ctx.ellipse(sx, sy + 1.5 * s, 10 * s, 4 * s, 0, 0, 6.29); ctx.fill();
+    if (cleo.mood === 'sleep') { // curled up, nose under tail
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(sx, sy - 4 * s, 11 * s, 6 * s, 0, 0, 6.29); ctx.fill();
+      ctx.fillStyle = TAN; ctx.beginPath(); ctx.ellipse(sx - 5 * s, sy - 5 * s, 4.5 * s, 3.5 * s, 0, 0, 6.29); ctx.fill();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(sx - 7 * s, sy - 5 * s, 1 * s, 0, 6.29); ctx.fill();
+      ctx.fillStyle = CREAM; ctx.font = 'bold ' + Math.round(9 * s) + 'px system-ui';
+      const zz = (t * 1.5) % 3; ctx.globalAlpha = 0.8; ctx.fillText('z', sx + 10 * s, sy - 12 * s - zz * 6 * s); ctx.globalAlpha = 1;
+      ctx.restore(); return;
+    }
+    const spinScale = cleo.spin > 0 ? Math.cos(cleo.spin * 12) : 1;
+    ctx.translate(sx, sy); ctx.scale(cleo.face * spinScale, 1);
+    const trot = cleo.moving ? Math.sin(t * 14 + cleo.seed) : 0;
+    const bob = cleo.moving ? Math.abs(trot) * 1.5 * s : 0;
+    const sit = cleo.mood === 'sit' && !cleo.moving;
+    ctx.fillStyle = INK;
+    [[-6, trot], [-2, -trot], [3, trot], [7, -trot]].forEach(function (l, i) {
+      const ly = sit && i < 2 ? 2 : 0;
+      ctx.fillRect(l[0] * s, -5 * s + ly * s, 2.6 * s, (6 - Math.abs(l[1]) * 1.5) * s);
+    });
+    ctx.fillStyle = TAN; [[-6], [-2], [3], [7]].forEach(function (l) { ctx.fillRect(l[0] * s, -0.5 * s, 2.6 * s, 1.5 * s); });
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(1 * s, -9 * s - bob + (sit ? 1 * s : 0), (9 + coat * 1.2) * s, (5 + coat * 0.8) * s, 0, 0, 6.29); ctx.fill();
+    if (coat >= 1) { ctx.fillStyle = TAN; ctx.beginPath(); ctx.ellipse(1 * s, -6 * s - bob, (8 + coat) * s, 2.2 * s, 0, 0, 3.14); ctx.fill(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.4 * s; ctx.lineCap = 'round';
+    const wag = Math.sin(t * 16 + cleo.seed) * 2.5 * s;
+    ctx.beginPath(); ctx.moveTo(9 * s, -11 * s - bob); ctx.quadraticCurveTo(13 * s, -17 * s - bob, 12 * s + wag, -20 * s - bob); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-8 * s, -14 * s - bob, 6 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = TAN; ctx.beginPath(); ctx.ellipse(-10 * s, -12.5 * s - bob, 4 * s, 3.4 * s, 0, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(-6.2 * s, -17.5 * s - bob, 1.3 * s, 0, 6.29); ctx.arc(-9.8 * s, -17.5 * s - bob, 1.3 * s, 0, 6.29); ctx.fill();
+    const flop = cleo.moving ? Math.abs(trot) * 2 * s : 0;
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.moveTo(-12 * s, -18 * s - bob); ctx.lineTo(-14 * s, -24 * s - bob + flop); ctx.lineTo(-9 * s, -20 * s - bob); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-5 * s, -18.5 * s - bob); ctx.lineTo(-3 * s, -24 * s - bob + flop); ctx.lineTo(-8 * s, -20 * s - bob); ctx.fill();
+    ctx.fillStyle = TAN; ctx.beginPath(); ctx.arc(-13.2 * s, -22.6 * s - bob + flop * 0.7, 1.1 * s, 0, 6.29); ctx.arc(-3.8 * s, -22.6 * s - bob + flop * 0.7, 1.1 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-11 * s, -14.5 * s - bob, 1 * s, 0, 6.29); ctx.arc(-7.2 * s, -14.5 * s - bob, 1 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = CREAM; ctx.beginPath(); ctx.arc(-11.3 * s, -14.8 * s - bob, 0.35 * s, 0, 6.29); ctx.arc(-7.5 * s, -14.8 * s - bob, 0.35 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-13.5 * s, -12 * s - bob, 1.3 * s, 0, 6.29); ctx.fill();
+    const bw = (2.2 + coat * 0.6) * s;
+    ctx.fillStyle = bow;
+    ctx.beginPath(); ctx.moveTo(-8 * s, -20 * s - bob); ctx.lineTo(-8 * s - bw * 1.6, -20 * s - bob - bw); ctx.lineTo(-8 * s - bw * 1.6, -20 * s - bob + bw); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-8 * s, -20 * s - bob); ctx.lineTo(-8 * s + bw * 1.6, -20 * s - bob - bw); ctx.lineTo(-8 * s + bw * 1.6, -20 * s - bob + bw); ctx.fill();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-8 * s, -20 * s - bob, 0.9 * s, 0, 6.29); ctx.fill();
+    // rosette on her collar: a show dog always wears her ribbon
+    ctx.fillStyle = bow; ctx.beginPath(); ctx.arc(-3 * s, -9 * s - bob, 2.6 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = CREAM; ctx.beginPath(); ctx.arc(-3 * s, -9 * s - bob, 1.1 * s, 0, 6.29); ctx.fill();
+    ctx.fillStyle = bow; ctx.fillRect(-4 * s, -7 * s - bob, 2 * s, 3.5 * s);
+    // the book in her mouth
+    ctx.fillStyle = '#5C3A6E'; ctx.fillRect(-19 * s, -12 * s - bob, 7 * s, 5 * s);
+    ctx.fillStyle = CREAM; ctx.fillRect(-18 * s, -11 * s - bob, 5 * s, 3 * s);
+    ctx.restore();
+    if (cleo.bark > 0) { ctx.fillStyle = '#FFD447'; ctx.font = 'bold ' + Math.round(10 * s) + 'px system-ui'; ctx.fillText('!', sx + 2 * s, sy - 30 * s); }
+    if (cleo.spin > 0) { ctx.fillStyle = '#FFD447'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(sx + Math.cos(t * 6 + k * 1.57) * 16 * s, sy - 24 * s + Math.sin(t * 6 + k * 1.57) * 6 * s, 2 * s, 0, 6.29); ctx.fill(); } }
+  }
+  function cleoAt(sx, sy) {
+    if (OWNER) return null;
+    const wx = isoX(cleo.x, cleo.y), wy = isoY(cleo.x, cleo.y, 0) + ZH;
+    const px = wx * cam.zoom + cam.x, py = wy * cam.zoom + cam.y - 12 * cam.zoom;
+    return Math.hypot(sx - px, sy - py) < 26 * cam.zoom ? { px, py } : null;
+  }
+  function adviceState(tick) {
+    const st = worldStats(world.ref);
+    let walls = 0, doors = 0;
+    for (let i = 0; i < world.ref.cols.length; i++) { const v = world.ref.cols[i]; if (v === 3 || v === 4) walls++; else if (v === 6) doors++; }
+    return { blocks: st.blocks, houses: st.houses, flags: st.flags, walls: walls, doors: doors,
+      quest: journal.quest, questMet: journal.quest ? questMet(journal.quest, st) : false,
+      ramp: (journal.ledger || []).some(function (e) { return e.line.indexOf('ramp') !== -1; }),
+      hour: new Date().getHours(), tick: tick || 0 };
+  }
+  let adviceTick = 0;
+  function refreshNext() {
+    const el = document.getElementById('next');
+    const n = nextThing(adviceState(adviceTick));
+    cleo.hint = n;
+    if (!hintOn || document.getElementById('book').classList.contains('on')) { el.classList.remove('on'); return; }
+    el.innerHTML = '<b>' + (OWNER ? 'CAPTAIN\u2019S LOG:' : 'CLEO:') + '</b> ' + n.line.replace(/[<>&]/g, '');
+    el.classList.add('on');
+  }
+  setInterval(function () { adviceTick++; refreshNext(); }, 8000);
+  function showGhost(kind) {
+    const c = cellAt(innerWidth / 2, innerHeight / 2) || { x: Math.round(cleo.x), y: Math.round(cleo.y) };
+    const cells = [];
+    if (kind === 'house') { for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) if (x === 0 || x === 4 || y === 0 || y === 4) cells.push({ x: c.x + x - 2, y: c.y + y - 2, door: x === 2 && y === 4 }); }
+    else if (kind === 'ramp') { for (let x = 0; x < 4; x++) cells.push({ x: c.x + x - 1, y: c.y + 3 }); }
+    else if (kind === 'door') { cells.push({ x: c.x, y: c.y, door: true }); }
+    ghost = { cells: cells.filter(function (q) { return inBounds(q.x, q.y); }), until: performance.now() + 8000, kind: kind };
+  }
+  function drawGhost() {
+    if (!ghost) return;
+    if (performance.now() > ghost.until) { ghost = null; return; }
+    ctx.save(); ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom);
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 2;
+    ghost.cells.forEach(function (q) {
+      const cx = isoX(q.x, q.y), cy = isoY(q.x, q.y, -1) + ZH;
+      ctx.strokeStyle = q.door ? '#FFD447' : 'rgba(42,27,61,0.8)';
+      ctx.beginPath(); ctx.moveTo(cx, cy - TH / 2); ctx.lineTo(cx + TW / 2, cy); ctx.lineTo(cx, cy + TH / 2); ctx.lineTo(cx - TW / 2, cy); ctx.closePath(); ctx.stroke();
+    });
+    ctx.restore();
+  }
+  /* The keeper speaks: Cleo on the crew edition, the first islander on Ollie's. */
+  function talkToKeeper(hit) {
+    const el = document.getElementById('bubble');
+    const n = cleo.hint || nextThing(adviceState(adviceTick));
+    let line = n.line;
+    if (!OWNER && !journal.metCleo) { journal.metCleo = true; saveJournal(journal); line = 'I am Cleo. I am a show dog, and I keep the book. Tap me any time and I will tell you what to do next.'; }
+    else if (journal.lastQuestDone && !journal.quest) line = 'You did it! ' + journal.lastQuestDone + ' That goes in the book tonight.';
+    else if (n.ghost) { showGhost(n.ghost); line = line + ' I drew you the shape.'; }
+    el.innerHTML = '<b>' + (OWNER ? keeperName() : 'CLEO') + '</b><br>'; el.appendChild(document.createTextNode(line));
+    el.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px';
+    el.style.top = Math.max(60, hit.py - 92) + 'px';
+    el.classList.add('on');
+    cleo.mood = 'sit'; cleo.bark = 1.2;
+    blip(980); setTimeout(function () { blip(1240); }, 70);
+    clearTimeout(bubbleT); bubbleT = setTimeout(function () { el.classList.remove('on'); }, 4200);
+  }
   function drawIslanders(t) {
     for (const p of islanders) {
       const wx = isoX(p.x, p.y), wy = isoY(p.x, p.y, 0) + ZH;
@@ -1026,7 +1237,7 @@ if (typeof module !== 'undefined' && module.exports) {
         ctx.beginPath(); ctx.arc(sx - 9 * s, sy - 15 * s + bob - w2, 2.6 * s, 0, 6.29); ctx.arc(sx + 9 * s, sy - 15 * s + bob + w2, 2.6 * s, 0, 6.29); ctx.fill();
         ctx.fillStyle = '#FFD447';
         ctx.beginPath(); ctx.arc(sx + 13 * s, sy - 30 * s + Math.sin(t * 7) * 3 * s, 1.8 * s, 0, 6.29); ctx.fill();
-      } else if (p === islanders[0]) { // the Storykeeper carries the book
+      } else if (OWNER && p === islanders[0]) { // Ollie's edition: the first islander keeps the book
         ctx.fillStyle = '#5C3A6E'; ctx.fillRect(sx + 6 * s, sy - 13 * s + bob, 6 * s, 8 * s);
         ctx.fillStyle = '#FFF3E2'; ctx.fillRect(sx + 7 * s, sy - 12 * s + bob, 4 * s, 6 * s);
         ctx.fillStyle = '#5C3A6E'; ctx.fillRect(sx + 8.5 * s, sy - 12 * s + bob, 1 * s, 6 * s);
@@ -1049,8 +1260,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function chat(hit) {
     const el = document.getElementById('bubble');
     let ph = phrases();
-    if (hit.p === islanders[0] && journal.quest) ph = ['The book says: today you will ' + journal.quest.tell + '!', 'I keep the book. Tonight I will write down what you did.'];
-    else if (hit.p === islanders[0] && journal.lastQuestDone) ph = ['You did it! ' + journal.lastQuestDone + ' That goes in the book tonight.'];
+    if (OWNER && hit.p === islanders[0]) { talkToKeeper(hit); return; }
     else if (hit.p.play) ph = ['WATCH ME! High score!', 'One more go on the arcade!', 'DING DING! Twenty points!', 'This machine is the BEST.'];
     else if (factoryCells.length && Math.random() < 0.35) ph = ['The chocolate factory smells AMAZING!', 'Chocolate bars for everybody!', 'I work at the chocolate factory now!'];
     el.innerHTML = '<b>' + hit.p.name + '</b><br>' + ph[Math.floor(Math.random() * ph.length)];
@@ -1062,7 +1272,8 @@ if (typeof module !== 'undefined' && module.exports) {
   }
 
   // ===== SAVE: his island lives on his own device. Nothing leaves the phone. =====
-  const SAVEKEY = 'captains-island-save-v1';
+  const SAVEKEY = 'captains-island-save-v1-' + CREW;
+  try { if (CREW === 'OLLIE' && !localStorage.getItem(SAVEKEY) && localStorage.getItem('captains-island-save-v1')) localStorage.setItem(SAVEKEY, localStorage.getItem('captains-island-save-v1')); } catch (e) {}
   let saveT = null;
   function canSave() { return !builder || builder === CREW; }
   function saveNow() {
@@ -1269,7 +1480,7 @@ if (typeof module !== 'undefined' && module.exports) {
   });
 
   // ===== HOW TO PLAY: cards drawn live by the game itself, so they can never go stale =====
-  const QKEY = 'captains-island-answers-v1';
+  const QKEY = 'captains-island-answers-v1-' + CREW;
   function loadAnswers() { try { return JSON.parse(localStorage.getItem(QKEY)) || {}; } catch (e) { return {}; } }
   function saveAnswer(id, picked, right) {
     try {
@@ -1399,6 +1610,27 @@ if (typeof module !== 'undefined' && module.exports) {
       qw.appendChild(fb);
     }
   }
+  if (!OWNER) CARDS.push({ title: 'MEET CLEO', text: 'Cleo is a show dog, and she keeps the book. Tap her any time and she tells you the next thing to do. If you are stuck she draws you the shape.',
+    q: 'What is Cleo?', a: ['A show dog', 'A seagull'], right: 0,
+    draw: function (g, t) {
+      const s = 3, cx = 300, cy = 250, trot = Math.sin(t * 6), INK = '#2A1B3D', TAN = '#C9834E', bow = PRO ? PRO.hex : '#FF6E6C';
+      g.fillStyle = 'rgba(42,27,61,0.25)'; g.beginPath(); g.ellipse(cx, cy + 4, 38, 12, 0, 0, 6.29); g.fill();
+      g.fillStyle = INK; [[-6, trot], [-2, -trot], [3, trot], [7, -trot]].forEach(function (l) { g.fillRect(cx + l[0] * s, cy - 5 * s, 2.6 * s, (6 - Math.abs(l[1]) * 1.5) * s); });
+      g.beginPath(); g.ellipse(cx + 1 * s, cy - 9 * s, 10 * s, 5.5 * s, 0, 0, 6.29); g.fill();
+      g.strokeStyle = INK; g.lineWidth = 2.4 * s; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx + 9 * s, cy - 11 * s); g.quadraticCurveTo(cx + 13 * s, cy - 17 * s, cx + 12 * s + trot * 3, cy - 20 * s); g.stroke();
+      g.fillStyle = INK; g.beginPath(); g.arc(cx - 8 * s, cy - 14 * s, 6 * s, 0, 6.29); g.fill();
+      g.fillStyle = TAN; g.beginPath(); g.ellipse(cx - 10 * s, cy - 12.5 * s, 4 * s, 3.4 * s, 0, 0, 6.29); g.fill();
+      g.beginPath(); g.arc(cx - 6.2 * s, cy - 17.5 * s, 1.3 * s, 0, 6.29); g.arc(cx - 9.8 * s, cy - 17.5 * s, 1.3 * s, 0, 6.29); g.fill();
+      g.fillStyle = INK; g.beginPath(); g.moveTo(cx - 12 * s, cy - 18 * s); g.lineTo(cx - 14 * s, cy - 24 * s); g.lineTo(cx - 9 * s, cy - 20 * s); g.fill();
+      g.beginPath(); g.moveTo(cx - 5 * s, cy - 18.5 * s); g.lineTo(cx - 3 * s, cy - 24 * s); g.lineTo(cx - 8 * s, cy - 20 * s); g.fill();
+      g.beginPath(); g.arc(cx - 11 * s, cy - 14.5 * s, 1 * s, 0, 6.29); g.arc(cx - 7.2 * s, cy - 14.5 * s, 1 * s, 0, 6.29); g.fill();
+      g.beginPath(); g.arc(cx - 13.5 * s, cy - 12 * s, 1.3 * s, 0, 6.29); g.fill();
+      g.fillStyle = bow; g.beginPath(); g.moveTo(cx - 8 * s, cy - 20 * s); g.lineTo(cx - 13 * s, cy - 23 * s); g.lineTo(cx - 13 * s, cy - 17 * s); g.fill();
+      g.beginPath(); g.moveTo(cx - 8 * s, cy - 20 * s); g.lineTo(cx - 3 * s, cy - 23 * s); g.lineTo(cx - 3 * s, cy - 17 * s); g.fill();
+      g.beginPath(); g.arc(cx - 3 * s, cy - 9 * s, 2.6 * s, 0, 6.29); g.fill();
+      g.fillStyle = '#5C3A6E'; g.fillRect(cx - 19 * s, cy - 12 * s, 7 * s, 5 * s); g.fillStyle = '#FFF3E2'; g.fillRect(cx - 18 * s, cy - 11 * s, 5 * s, 3 * s);
+      g.fillStyle = INK; g.font = 'bold 18px system-ui'; g.textAlign = 'center'; g.fillText('CLEO \u00B7 SHOW DOG \u00B7 KEEPER OF THE BOOK', 300, 330); g.textAlign = 'left';
+    } });
   function openBook(idx) {
     bookIdx = Math.max(0, Math.min(CARDS.length - 1, idx || 0));
     document.getElementById('book').classList.add('on');
@@ -1407,6 +1639,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!bookRAF) drawBook();
   }
   function closeBook() {
+    setTimeout(refreshNext, 50);
     document.getElementById('book').classList.remove('on');
     if (bookRAF) { cancelAnimationFrame(bookRAF); bookRAF = null; }
     try { localStorage.setItem('captains-island-seen-v1', '1'); } catch (e) {}
@@ -1417,7 +1650,8 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('bprev').addEventListener('click', function () { if (bookIdx > 0) { bookIdx--; renderCard(); bookT0 = performance.now(); blip(560); } });
 
   // ===== STORY TIME: a living chronicle of his island, built from what he actually did =====
-  const JKEY = 'captains-island-journal-v1';
+  const JKEY = 'captains-island-journal-v1-' + CREW;
+  try { if (CREW === 'OLLIE' && !localStorage.getItem(JKEY) && localStorage.getItem('captains-island-journal-v1')) localStorage.setItem(JKEY, localStorage.getItem('captains-island-journal-v1')); } catch (e) {}
   function loadJournal() {
     try {
       const j = JSON.parse(localStorage.getItem(JKEY));
@@ -1441,14 +1675,14 @@ if (typeof module !== 'undefined' && module.exports) {
     if (journal.learned.indexOf(line) === -1) journal.learned.push(line);
     saveJournal(journal);
   }
-  function keeperName() { return islanders.length ? islanders[0].name : ''; }
+  function keeperName() { return OWNER ? (islanders.length ? islanders[0].name : 'THE BOOK') : 'CLEO'; }
   function refreshQuest() {
     const st = worldStats(world.ref);
     if (journal.quest && questMet(journal.quest, st)) {
       journal.lastQuestDone = journal.quest.done;
       journal.quest = null; journal.questDay = '';
       saveJournal(journal);
-      if (islanders.length) { const k = islanders[0]; k.cheer = 3; }
+      if (OWNER) { if (islanders.length) islanders[0].cheer = 3; } else { cleo.spin = 1.6; cleo.mood = 'sit'; }
       blip(700); setTimeout(function () { blip(950); }, 110);
       setTimeout(function () { toast('QUEST DONE! Read it tonight at story time.'); }, 1500);
     }
@@ -1467,7 +1701,7 @@ if (typeof module !== 'undefined' && module.exports) {
       newIslanders: journal.newIslanders, learned: journal.learned,
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
-      bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays,
+      bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
@@ -1496,6 +1730,7 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('shelf').classList.remove('on');
     renderStory();
     document.getElementById('story').classList.add('on');
+    cleo.mood = 'sleep';
     refreshQuest();
   }
   function openMorning() {
@@ -1504,7 +1739,7 @@ if (typeof module !== 'undefined' && module.exports) {
     storyMode = 'morning'; storyEntry = last;
     const lines = ['Good morning, ' + TITLE.charAt(0) + TITLE.slice(1).toLowerCase() + ' ' + CREW + '.'];
     if (last.quest) lines.push('Last night the book said: today you are going to ' + last.quest.tell + '.');
-    if (keeperName()) lines.push(keeperName() + ' is carrying the book. Tap them if you forget.');
+    lines.push(OWNER ? (islanders.length ? keeperName() + ' is carrying the book. Tap them if you forget.' : 'Build a house and somebody will move in to carry the book.') : 'Cleo the show dog is carrying the book. Tap her any time and she will tell you what to do next.');
     lines.push('Tonight, tap the moon and the next chapter will be about what you did.');
     storyPages = [{ title: 'GOOD MORNING', lines: lines }];
     storyIdx = 0;
@@ -1558,6 +1793,11 @@ if (typeof module !== 'undefined' && module.exports) {
     } else if (p.grown) {
       const lines = parentSummary(journal, today(), CREW);
       body.innerHTML = lines.map(function (l) { const d = document.createElement('p'); d.textContent = l; return d.outerHTML; }).join('');
+      const hb = document.createElement('button'); hb.id = 'shints';
+      const hl = function () { return (OWNER ? 'THE CAPTAIN\u2019S LOG IS ' : 'CLEO\u2019S HINTS ARE ') + (hintOn ? 'ON (tap to turn off)' : 'OFF (tap to turn on)'); };
+      hb.textContent = hl();
+      hb.addEventListener('click', function () { hintOn = !hintOn; try { localStorage.setItem('captains-island-hints', hintOn ? 'on' : 'off'); } catch (e) {} hb.textContent = hl(); refreshNext(); });
+      body.appendChild(hb);
       const b = document.createElement('button'); b.id = 'sgrown'; b.textContent = 'SHARE OR PRINT THIS';
       b.addEventListener('click', async function () {
         const text = 'THE BOOK OF ' + TITLE + ' ' + CREW + '\n\n' + lines.join('\n') + '\n\n' + (storyEntry ? storyEntry.pages.map(function (pg) { return pg.title + '\n' + pg.lines.join('\n'); }).join('\n\n') : '');
@@ -1577,7 +1817,7 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('snext').disabled = storyIdx === storyPages.length - 1;
   }
   document.getElementById('btn-story').addEventListener('click', function () { openStory(); blip(520); setTimeout(function () { blip(680); }, 110); });
-  document.getElementById('sclose').addEventListener('click', function () { document.getElementById('story').classList.remove('on'); blip(400); });
+  document.getElementById('sclose').addEventListener('click', function () { document.getElementById('story').classList.remove('on'); cleo.mood = 'sit'; blip(400); });
   document.getElementById('snext').addEventListener('click', function () { if (storyIdx < storyPages.length - 1) { storyIdx++; renderStory(); blip(640); } });
   document.getElementById('sprev').addEventListener('click', function () { if (storyIdx > 0) { storyIdx--; renderStory(); blip(560); } });
 
@@ -1589,6 +1829,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
+    owner: OWNER, cleo, cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
