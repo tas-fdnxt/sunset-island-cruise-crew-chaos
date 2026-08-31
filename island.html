@@ -31,12 +31,13 @@
   body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #drawer { display:none !important; }
   #walkui { display:none; }
   body.walking #walkui { display:block; }
+  body.walking #topbar, body.walking #lineage { z-index:6; }
   #stick { position:fixed; left:22px; bottom:calc(env(safe-area-inset-bottom,0px) + 26px); width:118px; height:118px; border-radius:50%; background:rgba(42,27,61,0.28); border:3px solid rgba(255,243,226,0.7); z-index:6; pointer-events:none; }
   #knob { position:absolute; left:34px; top:34px; width:44px; height:44px; border-radius:50%; background:var(--cream); border:3px solid var(--ink); box-sizing:border-box; }
   #w-jump, #w-exit { position:fixed; right:18px; z-index:7; height:66px; border-radius:18px; border:3px solid var(--ink); background:var(--yellow); color:var(--ink); font:900 13px/1.05 system-ui; box-shadow:0 4px 0 var(--ink); padding:0 14px; }
   #w-jump { bottom:calc(env(safe-area-inset-bottom,0px) + 26px); width:96px; height:96px; border-radius:50%; font-size:15px; }
   #w-exit { bottom:calc(env(safe-area-inset-bottom,0px) + 136px); background:var(--coral); color:var(--cream); }
-  #w-hint { position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 58px); z-index:7; background:rgba(42,27,61,0.75); color:var(--cream); font:800 12px system-ui; padding:8px 14px; border-radius:14px; opacity:0; transition:opacity .4s; pointer-events:none; }
+  #w-hint { position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 92px); z-index:7; background:rgba(42,27,61,0.75); color:var(--cream); font:800 12px system-ui; padding:8px 14px; border-radius:14px; opacity:0; transition:opacity .4s; pointer-events:none; }
   #w-hint.on { opacity:1; }
   #topbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 10px); left:10px; right:10px;
     display:flex; justify-content:space-between; align-items:center; gap:6px; pointer-events:none; }
@@ -1075,6 +1076,28 @@ function buildWalkMesh(w, flagCol) {
     quad([cx - half, cy + half, z0], [cx + half, cy - half, z0], [cx + half, cy - half, z1], [cx - half, cy + half, z1], col, 0.8);
     quad([cx + half, cy - half, z0], [cx - half, cy + half, z0], [cx - half, cy + half, z1], [cx + half, cy - half, z1], col, 0.8);
   }
+  /* A vertical face of cell (x,y) at height z, on side 'S' 'N' 'E' or 'W', covering u0..u1 along the wall and v0..v1 up it,
+     pushed 'out' beyond the wall so panels never fight the wall for depth. Winding matches the plain faces so culling keeps them. */
+  function vface(side, x, y, z, u0, u1, v0, v1, col, shade, out) {
+    const o = out || 0, z0 = z + v0, z1 = z + v1;
+    if (side === 'S') quad([x + u0, y - o, z0], [x + u1, y - o, z0], [x + u1, y - o, z1], [x + u0, y - o, z1], col, shade);
+    else if (side === 'N') quad([x + u1, y + 1 + o, z0], [x + u0, y + 1 + o, z0], [x + u0, y + 1 + o, z1], [x + u1, y + 1 + o, z1], col, shade);
+    else if (side === 'E') quad([x + 1 + o, y + u0, z0], [x + 1 + o, y + u1, z0], [x + 1 + o, y + u1, z1], [x + 1 + o, y + u0, z1], col, shade);
+    else quad([x - o, y + u1, z0], [x - o, y + u0, z0], [x - o, y + u0, z1], [x - o, y + u1, z1], col, shade);
+  }
+  const LEAF = hexRGB('#96602F'), HANDLE = hexRGB('#FFD447'), SILL = hexRGB('#FFF3E2'), MULLION = hexRGB('#FFF3E2');
+  function doorFace(side, x, y, z, frame, shade) {
+    vface(side, x, y, z, 0, 1, 0, 1, frame, shade);
+    vface(side, x, y, z, 0.14, 0.86, 0, 0.88, LEAF, shade * 1.02, 0.015);
+    vface(side, x, y, z, 0.66, 0.76, 0.42, 0.52, HANDLE, 1, 0.03);
+    vface(side, x, y, z, 0.08, 0.92, 0, 0.06, SILL, 0.95, 0.03);
+  }
+  function windowFace(side, x, y, z, frame, pane, shade) {
+    vface(side, x, y, z, 0, 1, 0, 1, frame, shade);
+    vface(side, x, y, z, 0.14, 0.86, 0.14, 0.86, pane, shade * 1.08, 0.015);
+    vface(side, x, y, z, 0.47, 0.53, 0.14, 0.86, MULLION, 0.95, 0.03);
+    vface(side, x, y, z, 0.14, 0.86, 0.47, 0.53, MULLION, 0.95, 0.03);
+  }
   const sand = [hexRGB('#F5D98E'), hexRGB('#FFE49E')], beach = [hexRGB('#FFEDBF'), hexRGB('#FFF3CC')], skirt = hexRGB('#D8B970');
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
     if (!isLand(x, y)) continue;
@@ -1101,12 +1124,14 @@ function buildWalkMesh(w, flagCol) {
       const above = z + 1 < ISLE.ZMAX ? w.cols[idx(x, y, z + 1)] : 0;
       if (!above) quad([x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1], top, 1);
       const open = function (nx, ny) { return !inBounds(nx, ny) || !w.cols[idx(nx, ny, z)]; };
-      if (open(x, y - 1)) quad([x, y, z], [x + 1, y, z], [x + 1, y, z + 1], [x, y, z + 1], side, 0.86);
-      if (open(x, y + 1)) quad([x + 1, y + 1, z], [x, y + 1, z], [x, y + 1, z + 1], [x + 1, y + 1, z + 1], side, 0.86);
-      if (open(x + 1, y)) quad([x + 1, y, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x + 1, y, z + 1], side2, 0.72);
-      if (open(x - 1, y)) quad([x, y + 1, z], [x, y, z], [x, y, z + 1], [x, y + 1, z + 1], side2, 0.72);
+      const face = function (sd, nx, ny, col, shade) {
+        if (!open(nx, ny)) return;
+        if (id === 6) doorFace(sd, x, y, z, col, shade);
+        else if (id === 5) windowFace(sd, x, y, z, col, top, shade);
+        else vface(sd, x, y, z, 0, 1, 0, 1, col, shade);
+      };
+      face('S', x, y - 1, side, 0.86); face('N', x, y + 1, side, 0.86); face('E', x + 1, y, side2, 0.72); face('W', x - 1, y, side2, 0.72);
       if (id === 11) box(x + 0.55, y + 0.15, z + 1, z + 1.9, hexRGB('#FF6E6C'), hexRGB('#2A1B3D'), hexRGB('#3E2650'), 0.35);
-      if (id === 6 && !above) {} // a door is a door: its own colour, a handle is for the 2D view
     }
   }
   return { pos: new Float32Array(P), col: new Float32Array(C), count: P.length / 3 };
@@ -1293,6 +1318,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
   }
   function redrawWorld(cell) {
+    meshDirty = true;
     off.width = ISLE.N * TW + TW * 2; off.height = ISLE.N * TH + ZH * (ISLE.ZMAX + 2) + TH * 4;
     if (!chunks.length) {
       for (let s0 = 0; s0 < ISLE.N * 2 - 1; s0 += CHUNK_S) {
@@ -1891,7 +1917,7 @@ if (typeof module !== 'undefined' && module.exports) {
   let lastPlaced = null, ghost = null, hintOn = true;
   try { hintOn = localStorage.getItem('captains-island-hints') !== 'off'; } catch (e) {}
   function cleoTarget() {
-    if (walking) { return { x: walker.x + Math.cos(walker.yaw) * 2.2 - Math.sin(walker.yaw) * 1.1, y: walker.y + Math.sin(walker.yaw) * 2.2 + Math.cos(walker.yaw) * 1.1 }; }
+    if (walking) { return { x: walker.x + Math.cos(walker.yaw) * 2.6 - Math.sin(walker.yaw) * 0.6, y: walker.y + Math.sin(walker.yaw) * 2.6 + Math.cos(walker.yaw) * 0.6 }; }
     if (driving) { return { x: car.x - Math.cos(car.h) * 2.2, y: car.y - Math.sin(car.h) * 2.2 }; }
     if (lastPlaced && Math.hypot(lastPlaced.x - cleo.x, lastPlaced.y - cleo.y) < 14) return { x: lastPlaced.x + 2.5, y: lastPlaced.y - 0.5 };
     const c = cellAt(innerWidth / 2, innerHeight / 2);
@@ -1902,11 +1928,14 @@ if (typeof module !== 'undefined' && module.exports) {
     if (cleo.spin > 0) { cleo.spin = Math.max(0, cleo.spin - dt); return; }
     const tg = cleoTarget();
     const d = Math.hypot(tg.x - cleo.x, tg.y - cleo.y);
-    const speed = driving ? 5.5 : 2.4;
+    const speed = driving ? 5.5 : walking ? (winp.run ? 6.8 : 4.4) : 2.4;
     if (d > 0.35) {
       const stp = Math.min(d, speed * dt);
-      cleo.x += (tg.x - cleo.x) / d * stp; cleo.y += (tg.y - cleo.y) / d * stp;
-      cleo.moving = true; cleo.face = (tg.x - tg.y) < (cleo.x - cleo.y) ? -1 : 1;
+      const nx = cleo.x + (tg.x - cleo.x) / d * stp, ny = cleo.y + (tg.y - cleo.y) / d * stp;
+      let can = true;
+      if (walking) { const cf = floorAt(world.ref, cleo.x, cleo.y), fz = floorAt(world.ref, nx, ny); can = fz !== null && (cf === null || fz <= cf + 1.05); }
+      if (can) { cleo.vx = nx - cleo.x; cleo.vy = ny - cleo.y; cleo.x = nx; cleo.y = ny; cleo.moving = true; cleo.face = (tg.x - tg.y) < (cleo.x - cleo.y) ? -1 : 1; }
+      else cleo.moving = false;
     } else cleo.moving = false;
     cleo.x = Math.max(0.5, Math.min(ISLE.N - 0.5, cleo.x)); cleo.y = Math.max(0.5, Math.min(ISLE.N - 0.5, cleo.y));
     if (cleo.bark > 0) cleo.bark -= dt;
@@ -2131,6 +2160,7 @@ if (typeof module !== 'undefined' && module.exports) {
   // ===== WALK: the island in first person. Raw WebGL, one file, no server. =====
   let walking = false, walker = null, gl = null, glc = document.getElementById('gl');
   let progW = null, progB = null, meshBuf = null, meshCount = 0, seaBuf = null, skyBuf = null, bbBuf = null, texCache = {};
+  let meshDirty = true, meshBuilds = 0, shadowsDrawn = 0, cleoPose = 'sit', cleoFlip = false;
   const winp = { fwd: 0, side: 0, jump: false, run: false }, wkeys = {};
   let wStick = null, wLook = null, walkDist0 = 0, hintT = null, walkPtrs = 0;
   function colRGB(c) { if (c[0] === '#') return hexRGB(c); const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(c); return m ? [m[1] / 255, m[2] / 255, m[3] / 255] : [0.5, 0.5, 0.5]; }
@@ -2145,7 +2175,8 @@ if (typeof module !== 'undefined' && module.exports) {
       'precision mediump float; varying vec3 vC; varying float vD; uniform vec3 uFog; uniform float uLight; uniform float uFogFar; void main(){ float f = clamp((vD - 18.0) / uFogFar, 0.0, 1.0); vec3 c = mix(vC * uLight, uFog, f); gl_FragColor = vec4(c, 1.0); }');
     progB = glProgram(
       'attribute vec3 aP; attribute vec2 aT; uniform mat4 uM; varying vec2 vT; void main(){ gl_Position = uM * vec4(aP,1.0); vT = aT; }',
-      'precision mediump float; varying vec2 vT; uniform sampler2D uS; uniform float uLight; void main(){ vec4 c = texture2D(uS, vT); if (c.a < 0.5) discard; gl_FragColor = vec4(c.rgb * uLight, 1.0); }');
+      'precision mediump float; varying vec2 vT; uniform sampler2D uS; uniform float uLight; uniform float uCut; void main(){ vec4 c = texture2D(uS, vT); if (c.a < uCut) discard; gl_FragColor = vec4(c.rgb * uLight, c.a); }');
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     meshBuf = gl.createBuffer(); seaBuf = gl.createBuffer(); skyBuf = gl.createBuffer(); bbBuf = gl.createBuffer();
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
     return true;
@@ -2156,6 +2187,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const inter = new Float32Array(m.count * 6);
     for (let i = 0; i < m.count; i++) { inter[i * 6] = m.pos[i * 3]; inter[i * 6 + 1] = m.pos[i * 3 + 1]; inter[i * 6 + 2] = m.pos[i * 3 + 2]; inter[i * 6 + 3] = m.col[i * 3]; inter[i * 6 + 4] = m.col[i * 3 + 1]; inter[i * 6 + 5] = m.col[i * 3 + 2]; }
     gl.bindBuffer(gl.ARRAY_BUFFER, meshBuf); gl.bufferData(gl.ARRAY_BUFFER, inter, gl.STATIC_DRAW); meshCount = m.count;
+    meshDirty = false; meshBuilds++;
   }
   function mat4Mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
   function viewProj(eye, f, aspect) {
@@ -2188,24 +2220,45 @@ if (typeof module !== 'undefined' && module.exports) {
       if (OWNER && p === islanders[0]) { g.fillStyle = '#5C3A6E'; g.fillRect(44, 52, 14, 18); g.fillStyle = '#FFF3E2'; g.fillRect(46, 54, 10, 14); }
     });
   }
-  function cleoTex() {
-    return spriteTex('cleo:' + (PRO ? PRO.hex : ''), function (g) {
-      g.fillStyle = '#2A1B3D'; g.beginPath(); g.ellipse(32, 66, 22, 14, 0, 0, 6.29); g.fill();
-      g.fillStyle = '#C9834E'; g.beginPath(); g.ellipse(32, 74, 20, 8, 0, 0, 6.29); g.fill();
-      g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(46, 48, 13, 0, 6.29); g.fill();
-      g.fillStyle = '#C9834E'; g.beginPath(); g.ellipse(48, 54, 9, 7, 0, 0, 6.29); g.fill();
-      g.fillStyle = '#2A1B3D'; g.beginPath(); g.moveTo(36, 40); g.lineTo(40, 26); g.lineTo(46, 40); g.fill(); g.beginPath(); g.moveTo(50, 40); g.lineTo(56, 26); g.lineTo(58, 40); g.fill();
-      g.fillStyle = PRO ? PRO.hex : '#FF7EB6'; g.beginPath(); g.arc(40, 30, 5, 0, 6.29); g.fill();
-      g.fillStyle = '#FFF3E2'; g.beginPath(); g.arc(50, 46, 2.4, 0, 6.29); g.fill(); g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(57, 52, 2.6, 0, 6.29); g.fill();
-      g.fillStyle = '#5C3A6E'; g.fillRect(4, 58, 14, 18); g.fillStyle = '#FFF3E2'; g.fillRect(6, 60, 10, 14);
+  function cleoTex(pose) {
+    const coat = coatLevel(journal.book ? journal.book.length : 0), bow = PRO ? PRO.hex : '#FF7EB6';
+    return spriteTex('cleo:' + pose + ':' + coat + ':' + bow, function (g) {
+      const INK = '#2A1B3D', TAN = '#C9834E', CREAM = '#FFF3E2';
+      const sit = pose === 'sit', k = pose === 'trot1' ? -1 : 1, sw = sit ? 0 : 5 * k;
+      g.fillStyle = INK; // legs: back pair, front pair, swung apart on the trot, tucked on the sit
+      [[12, sw, sit ? 6 : 0], [20, -sw, sit ? 6 : 0], [38, sw, 0], [46, -sw, 0]].forEach(function (l) { g.fillRect(l[0] + l[1] * 0.4, 66 + l[2], 6, 26 - l[2] - Math.abs(l[1])); });
+      g.fillStyle = TAN; [[12, sw], [20, -sw], [38, sw], [46, -sw]].forEach(function (l) { g.fillRect(l[0] + l[1] * 0.4, 88, 6, 4); });
+      g.fillStyle = INK; g.beginPath(); g.ellipse(30, sit ? 64 : 60, 22 + coat * 1.5, 13 + coat, 0, 0, 6.29); g.fill(); // body
+      g.fillStyle = TAN; g.beginPath(); g.ellipse(30, sit ? 72 : 68, 20 + coat, 5, 0, 0, 3.14); g.fill(); // tan underbelly
+      g.strokeStyle = INK; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(10, 52); g.quadraticCurveTo(2, 40, 6 + (sit ? 0 : 3 * k), 32); g.stroke(); // tail up
+      g.fillStyle = INK; g.beginPath(); g.arc(48, 42, 14, 0, 6.29); g.fill(); // head
+      g.fillStyle = TAN; g.beginPath(); g.ellipse(52, 47, 9, 7, 0, 0, 6.29); g.fill(); // muzzle
+      g.fillStyle = INK; g.beginPath(); g.moveTo(38, 34); g.lineTo(40, 16); g.lineTo(48, 32); g.fill(); g.beginPath(); g.moveTo(52, 32); g.lineTo(60, 16); g.lineTo(62, 34); g.fill(); // ears up
+      g.fillStyle = TAN; g.beginPath(); g.arc(42, 22, 2.2, 0, 6.29); g.arc(58, 22, 2.2, 0, 6.29); g.fill();
+      g.fillStyle = INK; g.beginPath(); g.arc(61, 50, 3, 0, 6.29); g.fill(); // nose
+      g.fillStyle = CREAM; g.beginPath(); g.arc(52, 40, 2.6, 0, 6.29); g.fill(); g.fillStyle = INK; g.beginPath(); g.arc(52.6, 40, 1.4, 0, 6.29); g.fill(); // eye
+      g.fillStyle = bow; g.beginPath(); g.moveTo(44, 28); g.lineTo(36, 22); g.lineTo(36, 34); g.fill(); g.beginPath(); g.moveTo(44, 28); g.lineTo(52, 22); g.lineTo(52, 34); g.fill(); g.beginPath(); g.arc(44, 28, 2.5, 0, 6.29); g.fill(); // the bow
+      g.beginPath(); g.arc(24, 52, 5 + coat, 0, 6.29); g.fill(); g.fillStyle = CREAM; g.beginPath(); g.arc(24, 52, 2, 0, 6.29); g.fill(); // the rosette
+      g.fillStyle = '#5C3A6E'; g.fillRect(2, 62, 12, 16); g.fillStyle = CREAM; g.fillRect(4, 64, 8, 12); // the book
     });
+  }
+  function shadowTex() {
+    return spriteTex('shadow', function (g) { const r = g.createRadialGradient(32, 48, 2, 32, 48, 30); r.addColorStop(0, 'rgba(42,27,61,0.42)'); r.addColorStop(1, 'rgba(42,27,61,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 96); });
+  }
+  function drawFlat(tex, x, y, z, r) {
+    const v = new Float32Array([x - r, y - r, z, 0, 0, x + r, y - r, z, 1, 0, x + r, y + r, z, 1, 1, x - r, y - r, z, 0, 0, x + r, y + r, z, 1, 1, x - r, y + r, z, 0, 1]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bbBuf); gl.bufferData(gl.ARRAY_BUFFER, v, gl.DYNAMIC_DRAW);
+    const aP = gl.getAttribLocation(progB, 'aP'), aT = gl.getAttribLocation(progB, 'aT');
+    gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 20, 0);
+    gl.enableVertexAttribArray(aT); gl.vertexAttribPointer(aT, 2, gl.FLOAT, false, 20, 12);
+    gl.bindTexture(gl.TEXTURE_2D, tex); gl.drawArrays(gl.TRIANGLES, 0, 6); shadowsDrawn++;
   }
   function discTex(key, col) { return spriteTex(key, function (g) { g.fillStyle = col; g.beginPath(); g.arc(32, 48, 28, 0, 6.29); g.fill(); }); }
   function whaleTex() { return spriteTex('whale', function (g) { g.fillStyle = '#5C3A6E'; g.beginPath(); g.ellipse(30, 70, 30, 12, 0, 0, 6.29); g.fill(); g.beginPath(); g.moveTo(56, 66); g.lineTo(64, 56); g.lineTo(64, 78); g.fill(); g.fillStyle = 'rgba(255,243,226,0.85)'; g.beginPath(); g.arc(22, 46, 4, 0, 6.29); g.arc(18, 36, 5, 0, 6.29); g.arc(26, 30, 6, 0, 6.29); g.fill(); }); }
-  function drawBillboard(vp, eye, tex, x, y, z, wdt, hgt, fixed) {
+  function drawBillboard(vp, eye, tex, x, y, z, wdt, hgt, flip) {
     const dx = x - eye[0], dy = y - eye[1], L = Math.hypot(dx, dy) || 1;
-    const rx = -dy / L * wdt / 2, ry = dx / L * wdt / 2;
-    const v = new Float32Array([x - rx, y - ry, z, 0, 0, x + rx, y + ry, z, 1, 0, x + rx, y + ry, z + hgt, 1, 1, x - rx, y - ry, z, 0, 0, x + rx, y + ry, z + hgt, 1, 1, x - rx, y - ry, z + hgt, 0, 1]);
+    const rx = -dy / L * wdt / 2, ry = dx / L * wdt / 2, a = flip ? 1 : 0, b = flip ? 0 : 1;
+    const v = new Float32Array([x - rx, y - ry, z, a, 0, x + rx, y + ry, z, b, 0, x + rx, y + ry, z + hgt, b, 1, x - rx, y - ry, z, a, 0, x + rx, y + ry, z + hgt, b, 1, x - rx, y - ry, z + hgt, a, 1]);
     gl.bindBuffer(gl.ARRAY_BUFFER, bbBuf); gl.bufferData(gl.ARRAY_BUFFER, v, gl.DYNAMIC_DRAW);
     const aP = gl.getAttribLocation(progB, 'aP'), aT = gl.getAttribLocation(progB, 'aT');
     gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 20, 0);
@@ -2218,7 +2271,7 @@ if (typeof module !== 'undefined' && module.exports) {
       drawer.classList.remove('on'); tipEl.classList.remove('on');
       if (driving) setDrive(false);
       walker = walkSpawn(world.ref); walkDist0 = 0;
-      glResize(); uploadMesh();
+      glResize(); if (meshDirty || !meshCount) uploadMesh();
       walking = true; document.body.classList.add('walking');
       const hint = document.getElementById('w-hint'); hint.textContent = (matchMedia && matchMedia('(pointer: coarse)').matches) ? 'Left thumb walks. Right thumb looks. Tap an islander to talk.' : 'W A S D walk, drag to look, space jumps, Esc to stop. Click an islander to talk.'; hint.classList.add('on'); clearTimeout(hintT); hintT = setTimeout(function () { hint.classList.remove('on'); }, 5000);
       journal.walkedToday = journal.walkedToday || 0; journal.jumpedToday = journal.jumpedToday || 0;
@@ -2275,6 +2328,7 @@ if (typeof module !== 'undefined' && module.exports) {
       if (wkeys['q']) walker.yaw -= 1.8 * dt; if (wkeys['e']) walker.yaw += 1.8 * dt;
     }
     walkStep(world.ref, walker, winp, dt); winp.jump = false;
+    if (meshDirty) uploadMesh();
     const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
     const light = 1 - 0.55 * SKY.night, fog = colRGB(SKY.low).map(function (c) { return c * (1 - 0.35 * SKY.night); });
     const eye = [walker.x, walker.y, walker.z + WALK.EYE];
@@ -2303,6 +2357,15 @@ if (typeof module !== 'undefined' && module.exports) {
     gl.disable(gl.CULL_FACE);
     // sprites: islanders, the visitor, Cleo, the whale, the sun and the moon
     gl.useProgram(progB); gl.uniformMatrix4fv(gl.getUniformLocation(progB, 'uM'), false, VP.m); gl.uniform1f(gl.getUniformLocation(progB, 'uLight'), light);
+    gl.enable(gl.BLEND);
+    // shadows first: soft discs on the floor under the walker, every islander and Cleo. They never write depth.
+    const uCut = gl.getUniformLocation(progB, 'uCut');
+    gl.uniform1f(uCut, 0.02); gl.depthMask(false); shadowsDrawn = 0;
+    const shTex = shadowTex();
+    const wf = footprintFloor(world.ref, walker.x, walker.y); if (wf !== null) { const lift = Math.max(0, walker.z - wf); drawFlat(shTex, walker.x, walker.y, wf + 0.012, 0.34 * Math.max(0.35, 1 - lift * 0.25)); }
+    allFolk().forEach(function (p) { const fz = floorAt(world.ref, p.x, p.y); if (fz !== null) drawFlat(shTex, p.x, p.y, fz + 0.012, 0.3); });
+    if (!OWNER) { const fz = floorAt(world.ref, cleo.x, cleo.y); if (fz !== null) drawFlat(shTex, cleo.x, cleo.y, fz + 0.012, 0.28); }
+    gl.depthMask(true); gl.uniform1f(uCut, 0.5);
     lastProj = [];
     const proj = function (x, y, z) { const m = VP.m; const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15]; if (cw <= 0.05) return null; return { sx: (cx / cw * 0.5 + 0.5) * innerWidth, sy: (0.5 - cy / cw * 0.5) * innerHeight }; };
     const folk = allFolk().slice().sort(function (a, b) { return Math.hypot(b.x - eye[0], b.y - eye[1]) - Math.hypot(a.x - eye[0], a.y - eye[1]); });
@@ -2312,12 +2375,21 @@ if (typeof module !== 'undefined' && module.exports) {
       drawBillboard(VP, eye, folkTex(p), p.x, p.y, fz + bob, 0.9, 1.35);
       const s = proj(p.x, p.y, fz + 0.8); if (s) lastProj.push({ p: p, sx: s.sx, sy: s.sy });
     });
-    if (!OWNER) { const fz = floorAt(world.ref, cleo.x, cleo.y); if (fz !== null) { drawBillboard(VP, eye, cleoTex(), cleo.x, cleo.y, fz, 0.9, 1.35 * 0.72); const s = proj(cleo.x, cleo.y, fz + 0.5); if (s) lastProj.push({ cleo: true, sx: s.sx, sy: s.sy }); } }
+    if (!OWNER) {
+      const fz = floorAt(world.ref, cleo.x, cleo.y);
+      if (fz !== null) {
+        cleoPose = cleo.moving ? (Math.sin(t * 14 + cleo.seed) > 0 ? 'trot0' : 'trot1') : 'sit';
+        if (cleo.moving) cleoFlip = (cleo.vx || 0) * VP.s[0] + (cleo.vy || 0) * VP.s[1] < 0;
+        const bob = cleo.moving ? Math.abs(Math.sin(t * 14 + cleo.seed)) * 0.06 : 0;
+        drawBillboard(VP, eye, cleoTex(cleoPose), cleo.x, cleo.y, fz + bob, 0.78, 1.17, cleoFlip);
+        const s = proj(cleo.x, cleo.y, fz + 0.5); if (s) lastProj.push({ cleo: true, sx: s.sx, sy: s.sy });
+      }
+    }
     const wh = (t % 18) / 18; if (wh > 0.35 && wh < 0.7) { const wx = ISLE.N / 2 + 78 * Math.cos(t * 0.05), wy = ISLE.N / 2 + 78 * Math.sin(t * 0.05); drawBillboard(VP, eye, whaleTex(), wx, wy, -0.4 + Math.sin((wh - 0.35) / 0.35 * Math.PI) * 0.8, 6, 5); }
     gl.disable(gl.DEPTH_TEST);
     if (SKY.sun) { const a = (SKY.sun.x - 0.5) * 3.2; drawBillboard(VP, eye, discTex('sun', WX.kind === 'rain' ? '#E8D9B8' : '#FFE49E'), eye[0] + Math.cos(a) * 180, eye[1] + Math.sin(a) * 180, 20 + (0.5 - SKY.sun.y) * 260, 18, 27); }
     if (SKY.moon) { const a = (SKY.moon.x - 0.5) * 3.2 + Math.PI; drawBillboard(VP, eye, discTex('moon', '#FFF3E2'), eye[0] + Math.cos(a) * 180, eye[1] + Math.sin(a) * 180, 90, 12, 18); }
-    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     // a footstep tick as the island goes by
     if (walker.steps - walkDist0 > 1.4 && walker.onGround) { walkDist0 = walker.steps; blip(180 + Math.random() * 40); }
   }
@@ -3080,6 +3152,7 @@ if (typeof module !== 'undefined' && module.exports) {
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE,
     setWalk, walking: () => walking, walker: () => walker, walkInput: winp, walkKeys: wkeys, glOk: () => !!gl, meshCount: () => meshCount, walkProj: () => lastProj, walkTap,
+    meshDirty: () => meshDirty, meshBuilds: () => meshBuilds, walkShadows: () => shadowsDrawn, cleoPose: () => cleoPose, cleoFlip: () => cleoFlip,
     garden: () => garden, applyGrowth, boatArrive, setVisitor, visitor: () => visitor, boatAt: () => boatAt(hourNow()), boatGift: () => boatGift(today()), boatSpot, dockCell, chocoDay };
   boot();
 })();
