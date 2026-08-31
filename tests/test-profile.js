@@ -3,7 +3,7 @@ let pass = 0, fail = 0;
 function ok(n, c, i) { if (c) pass++; else { fail++; console.log('FAIL', n, i || ''); } }
 
 // tables
-ok('seven titles', PROFILE.TITLES.length === 7);
+ok('eight titles', PROFILE.TITLES.length === 8);
 ok('eight colours with hex', PROFILE.COLOURS.length === 8 && PROFILE.COLOURS.every(c => /^#[0-9A-F]{6}$/.test(c.hex)));
 ok('three rides match the garage', PROFILE.RIDES.join() === 'RED ROCKET,SAND BUGGY,SEA CRUISER');
 ok('seven dreams', PROFILE.DREAMS.length === 7);
@@ -27,13 +27,13 @@ ok('self made profile', self && self.grownup === false && self.name === 'OLLIE')
 ok('name sanitised on build', parseProfile(buildProfile({ name: '<img src=x>Zoe!', title: 0 })).name === 'IMG SRCXZO');
 ok('ten char cap', parseProfile(buildProfile({ name: 'ABCDEFGHIJKLMNOP' })).name.length === 10);
 ok('empty name refused', buildProfile({ name: '   ' }) === '');
-ok('out of range clamped', parseProfile(buildProfile({ name: 'A', title: 99, colour: -5, ride: 7, dream: 40, age: 9 })).title === 6);
+ok('out of range clamped', parseProfile(buildProfile({ name: 'A', title: 99, colour: -5, ride: 7, dream: 40, age: 9 })).title === 7);
 ok('garbage rejected', parseProfile('not base64 at all!!') === null);
 ok('empty rejected', parseProfile('') === null && parseProfile(null) === null);
 ok('overlong rejected', parseProfile('A'.repeat(41)) === null);
 const b64 = (arr) => Buffer.from(arr).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 ok('bad version rejected', parseProfile(b64([2, 0, 0, 0, 0, 0, 0, 0, 0, 65])) === null);
-ok('title index too big rejected', parseProfile(b64([1, 0, 7, 0, 0, 0, 0, 0, 0, 65])) === null);
+ok('title index too big rejected', parseProfile(b64([1, 0, 8, 0, 0, 0, 0, 0, 0, 65])) === null);
 ok('colour index too big rejected', parseProfile(b64([1, 0, 0, 8, 0, 0, 0, 0, 0, 65])) === null);
 ok('lowercase name bytes rejected', parseProfile(b64([1, 0, 0, 0, 0, 0, 0, 0, 0, 109, 105, 97])) === null);
 ok('script in name bytes rejected', parseProfile(b64([1, 0, 0, 0, 0, 0, 0, 0, 0, 60, 66, 62])) === null);
