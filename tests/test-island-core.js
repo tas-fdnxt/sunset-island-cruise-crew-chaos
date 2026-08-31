@@ -8,29 +8,35 @@ let r = place(w, 5, 5, 3);
 ok('place ok', r.ok && r.z === 0);
 r = place(w, 5, 5, 4);
 ok('stack z1', r.ok && r.z === 1);
-place(w, 5, 5, 4); place(w, 5, 5, 7);
+for (let z = 2; z < ISLE.ZMAX - 1; z++) place(w, 5, 5, 4); place(w, 5, 5, 7);
 r = place(w, 5, 5, 3);
 ok('height cap', !r.ok && r.why === 'height');
-ok('topZ', topZ(w, 5, 5) === 3);
+ok('topZ', topZ(w, 5, 5) === ISLE.ZMAX - 1);
 r = erase(w, 5, 5);
-ok('erase top', r.ok && r.z === 3 && r.id === 7);
-ok('count after erase', w.count === 3);
+ok('erase top', r.ok && r.z === ISLE.ZMAX - 1 && r.id === 7);
+const T = ISLE.ZMAX - 1;
+ok('count after erase', w.count === T);
 r = undo(w);
-ok('undo erase restores', r.ok && w.count === 4 && w.cols[idx(5,5,3)] === 7);
+ok('undo erase restores', r.ok && w.count === T + 1 && w.cols[idx(5,5,T)] === 7);
 undo(w);
-ok('undo place removes', w.count === 3 && w.cols[idx(5,5,3)] === 0 && w.cols[idx(5,5,2)] !== 0);
+ok('undo place removes', w.count === T && w.cols[idx(5,5,T)] === 0 && w.cols[idx(5,5,T - 1)] !== 0);
 ok('oob rejected', !place(w, -1, 0, 3).ok && !place(w, ISLE.N, 0, 3).ok);
 ok('bad id rejected', !place(w, 0, 0, 0).ok && !place(w, 0, 0, 99).ok);
 ok('erase empty rejected', !erase(w, 40, 40).ok);
 
 w = makeWorld();
-let placed = 0;
-outer: for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) {
-  if (place(w, x, y, 1 + ((x + y) % 8)).ok) placed++;
-  if (placed >= ISLE.MAX_BLOCKS) break outer;
+// a real island: houses two walls high with a roof, packed in rows. This is what a child builds, and it must reach the cap.
+let last = null;
+outer: for (let oy = 2; oy < ISLE.N - 6; oy += 6) for (let ox = 2; ox < ISLE.N - 6; ox += 6) {
+  for (let x = ox; x <= ox + 4; x++) for (let y = oy; y <= oy + 4; y++) {
+    const e = (x === ox || x === ox + 4 || y === oy || y === oy + 4);
+    if (e) { last = place(w, x, y, 3); if (!last.ok) break outer; last = place(w, x, y, (x === ox + 2 && y === oy + 4) ? 6 : 4); if (!last.ok) break outer; }
+    last = place(w, x, y, 7); if (!last.ok) break outer;
+  }
 }
-ok('cargo fills to cap', w.count === ISLE.MAX_BLOCKS);
+ok('cargo fills to cap with real houses', w.count === ISLE.MAX_BLOCKS, w.count + ' ' + JSON.stringify(last));
 ok('cargo overflow rejected', !place(w, ISLE.N - 1, ISLE.N - 1, 3).ok);
+console.log('full island of houses, link:', encode(w).length, 'chars');
 
 w = makeWorld();
 for (let x = 10; x <= 14; x++) for (let y = 10; y <= 14; y++) {
