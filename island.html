@@ -1945,7 +1945,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function renderShelf() {
     const sh = document.getElementById('shelf');
-    const zero = (CREW === 'OLLIE' && !PRO) ? 'storybook.html' : ('captain.html' + (PRO ? '?p=' + encodeURIComponent(new URLSearchParams(location.search).get('p') || '') : ''));
+    const zero = OWNER ? 'storybook.html' : ('voyage.html' + (PRO ? '?p=' + encodeURIComponent(new URLSearchParams(location.search).get('p') || '') : ''));
     let h = '<a href="' + zero + '">CHAPTER 0 \u00B7 HOW IT ALL BEGAN</a>';
     h += (journal.book || []).map(function (e, i) { return '<button data-i="' + i + '" class="' + (e === storyEntry ? 'cur' : '') + '">CHAPTER ' + e.n + ' \u00B7 ' + e.day + (e.questDone ? ' \u00B7 quest done' : '') + '</button>'; }).reverse().join('');
     sh.innerHTML = h;
