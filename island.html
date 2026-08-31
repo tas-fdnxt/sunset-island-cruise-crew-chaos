@@ -471,8 +471,47 @@ const LADDERS = {
     { need: 'beaten', n: 1, tell: 'beat your own lap record', done: 'The record fell. Smaller number, faster lap.', skill: 'smaller is faster' },
     { need: 'gain', n: 2000, tell: 'beat your lap record by two whole seconds', done: 'Two seconds faster than ever.', skill: 'how much faster' },
   ],
+  space: [
+    { need: 'flags', n: 1, tell: 'plant a flag, so the island has a middle', done: 'The flag went in. Now there is a north.', skill: 'a starting point' },
+    { need: 'north', n: 1, tell: 'build a house NORTH of the flag', done: 'A house stands north of the flag.', skill: 'north' },
+    { need: 'east', n: 1, tell: 'plant a palm tree EAST of the flag', done: 'A palm grows east of the flag.', skill: 'east' },
+    { need: 'south', n: 1, tell: 'build something SOUTH of the flag', done: 'Something new stands south of the flag.', skill: 'south' },
+    { need: 'west', n: 1, tell: 'build a house WEST of the flag', done: 'A house stands west of the flag.', skill: 'west' },
+  ],
 };
-const LADDER_NAMES = { counting: 'Counting', geometry: 'Shapes and building', number: 'Number sense' };
+const LADDER_NAMES = { counting: 'Counting', geometry: 'Shapes and building', number: 'Number sense', space: 'Space and direction' };
+/* THE COMPASS. North is the top corner of the island, the way every map does it. Distances are measured from the first flag. */
+function compassOf(from, to) {
+  const dn = (from.x + from.y) - (to.x + to.y), de = (to.x - to.y) - (from.x - from.y);
+  if (Math.abs(dn) < 4 && Math.abs(de) < 4) return '';
+  return Math.abs(dn) >= Math.abs(de) ? (dn > 0 ? 'north' : 'south') : (de > 0 ? 'east' : 'west');
+}
+function compassStats(w) {
+  const st = { north: 0, east: 0, south: 0, west: 0 };
+  const f = flags(w); if (!f.length) return st;
+  const things = houses(w).slice();
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) { if (w.cols[idx(x, y, 0)] === 8) things.push({ x: x, y: y, palm: true }); }
+  things.forEach(function (t) { const d = compassOf(f[0], t); if (d) st[d]++; });
+  return st;
+}
+/* THE WORD OF THE ISLAND. One a day, said by an islander, used in the chapter, asked at bedtime. Small words for small people. */
+const WORDS = [
+  { w: 'SPLENDID', d: 'really, really good' }, { w: 'ENORMOUS', d: 'very, very big' }, { w: 'TINY', d: 'very small' },
+  { w: 'HARBOUR', d: 'a safe place where boats stop' }, { w: 'HORIZON', d: 'the line where the sea meets the sky' }, { w: 'VOYAGE', d: 'a long journey by sea' },
+  { w: 'CARGO', d: 'the things a ship carries' }, { w: 'ANCHOR', d: 'the heavy hook that stops a ship drifting' }, { w: 'DECK', d: 'the floor of a ship' },
+  { w: 'SYMMETRY', d: 'when both sides match' }, { w: 'BALANCE', d: 'staying steady and not falling' }, { w: 'SPEEDY', d: 'very fast' },
+  { w: 'CAUTIOUS', d: 'careful, taking it slowly' }, { w: 'GENEROUS', d: 'happy to share' }, { w: 'CURIOUS', d: 'wanting to find out' },
+  { w: 'DELICIOUS', d: 'tastes wonderful' }, { w: 'GLEAMING', d: 'shiny and bright' }, { w: 'DRIZZLE', d: 'very light rain' },
+  { w: 'LAGOON', d: 'a calm pool of sea water near the shore' }, { w: 'COMPASS', d: 'the thing that shows you north' }, { w: 'FACTORY', d: 'a place where things get made' },
+  { w: 'ISLANDER', d: 'somebody who lives on an island' }, { w: 'NEIGHBOUR', d: 'somebody who lives next door' }, { w: 'FRAGILE', d: 'breaks easily, handle with care' },
+  { w: 'STURDY', d: 'strong and hard to knock over' }, { w: 'CHAPTER', d: 'one part of a book' }, { w: 'PATIENT', d: 'good at waiting' },
+  { w: 'BRILLIANT', d: 'very clever, or very bright' }, { w: 'TREMENDOUS', d: 'huge and wonderful' }, { w: 'MARVELLOUS', d: 'so good it makes you go wow' },
+];
+function wordOfDay(n) { return WORDS[((n || 1) - 1) % WORDS.length]; }
+function wordQuestion(n, word) {
+  const other = WORDS[(n + 7) % WORDS.length];
+  return { ask: 'What does ' + word.w + ' mean?', right: word.d, wrong: other.w === word.w ? WORDS[(n + 11) % WORDS.length].d : other.d };
+}
 function newMastery() { const m = {}; Object.keys(LADDERS).forEach(function (k) { m[k] = { rung: 0, streak: 0, miss: 0 }; }); return m; }
 function ladderStep(m, done) {
   m = m || { rung: 0, streak: 0, miss: 0 };
@@ -495,7 +534,7 @@ function pickQuest(stats, lastId, dream, mastery, dayIndex, names) {
   const t = questTable(dream);
   if (mastery) {
     if (dream >= 0 && t[0].id === 'dream' && (stats[t[0].need] || 0) < t[0].n && lastId !== 'dream') return t[0];
-    const order = ['counting', 'geometry', 'number'];
+    const order = ['counting', 'geometry', 'number', 'space'];
     for (let k = 0; k < order.length; k++) {
       const ladder = order[((dayIndex || 0) + k) % order.length];
       const m = mastery[ladder] || { rung: 0 };
@@ -554,6 +593,7 @@ function chapter(o) {
     if (total > 0) page1.push(cap + ' loaded the car and delivered crates: ' + parts.join(' and ') + '. ' + (o.job.length > 1 ? o.job.map(function (j) { return j.n - j.left; }).join(' and ') + ' makes ' + total + '.' : total + ' altogether.'));
   }
   if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
+  if (o.word) page1.push('The word of the island today was ' + o.word.w + '. It means ' + o.word.d + '. ' + cap + (o.wordHeard ? ' heard it from an islander.' : ' can go and find out who says it.'));
   if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
   const page2 = [];
   if (o.bedtime && o.bedtime.ask) {
@@ -624,7 +664,8 @@ function bookAdd(journal, entry) {
 function bedtimeQuestion(o) {
   const keys = o.keys || [], n = o.n || 1, st = o.stats || {};
   let q;
-  if (keys.indexOf('ramp') !== -1) q = { ask: 'How high do you build a jumping ramp?', right: 'One block high', wrong: 'Three blocks high' };
+  if (o.word && keys.indexOf('word') !== -1 && n % 3 === 0) q = wordQuestion(n, o.word);
+  else if (keys.indexOf('ramp') !== -1) q = { ask: 'How high do you build a jumping ramp?', right: 'One block high', wrong: 'Three blocks high' };
   else if (o.job && o.job.length > 1 && o.job.every(function (j) { return j.left === 0; })) {
     const total = o.job.reduce(function (a, j) { return a + j.n; }, 0);
     q = { ask: 'You took ' + o.job.map(function (j) { return j.n + ' to ' + j.name; }).join(' and ') + '. How many altogether?', right: String(total), wrong: String(total + (n % 2 ? 1 : -1)) };
@@ -662,7 +703,7 @@ function parentSummary(journal, today, name) {
   if (laps) lines.push(cap + ' beat a personal lap record ' + laps + ' time' + (laps === 1 ? '' : 's') + '.');
   if (asked) lines.push('Bedtime questions: ' + right + ' right out of ' + asked + '.');
   if (journal.mastery) masteryLines(journal.mastery, nm).forEach(function (l) { lines.push(l); });
-  const names = { counting: 'Counting', geometry: 'Shapes and building', number: 'Number sense', time: 'Time', sharing: 'Sharing' };
+  const names = { counting: 'Counting', geometry: 'Shapes and building', number: 'Number sense', time: 'Time', sharing: 'Sharing', words: 'Words', space: 'Space and direction' };
   Object.keys(cats).forEach(function (c) { lines.push((names[c] || c) + ': ' + cats[c].join(' ')); });
   if (!ledger.length && !book.length) lines.push('Nothing on this device yet. Chapters appear after the first bedtime story.');
   return lines;
@@ -686,7 +727,8 @@ function nextThing(st) {
     { key: 'share', line: 'Send your island to someone. Tap SHARE and it all fits in one link.' },
     { key: 'arcade', line: 'Build an ARCADE and drive past it. Twenty points a go.' },
     { key: 'palm', line: 'Plant some PALM trees so the islanders have shade.' },
-    { key: 'mirror', line: 'Try building a house that is the same on both sides.' },
+    { key: 'mirror', line: 'Try building a house that is the same on both sides. Tap me and I will show the missing half.', ghost: 'mirror' },
+    { key: 'compass', line: 'Look at the corners of the island. N is north. Try building something north of your flag.' },
   ];
   return spare[(st.tick || 0) % spare.length];
 }
@@ -733,7 +775,7 @@ function houses(w) {
   return found;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines };
+  module.exports = { ISLE, makeWorld, place, erase, undo, encode, decode, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion };
 }
 </script>
 <script>
@@ -878,6 +920,14 @@ if (typeof module !== 'undefined' && module.exports) {
       }
     }
     arcadeCells = arcades(w); factoryCells = factories(w);
+    // the compass: four letters at the four corners of the island, drawn once into the cache
+    octx.save(); octx.font = 'bold 26px system-ui'; octx.textAlign = 'center'; octx.textBaseline = 'middle';
+    [['N', 0, 0, 0, -30], ['E', ISLE.N - 1, 0, 34, 0], ['S', ISLE.N - 1, ISLE.N - 1, 0, 34], ['W', 0, ISLE.N - 1, -34, 0]].forEach(function (c) {
+      const cx = isoX(c[1], c[2]) + c[3], cy = isoY(c[1], c[2], -1) + ZH + c[4];
+      octx.fillStyle = 'rgba(42,27,61,0.28)'; octx.beginPath(); octx.arc(cx, cy, 17, 0, 6.29); octx.fill();
+      octx.fillStyle = '#FFF3E2'; octx.fillText(c[0], cx, cy + 1);
+    });
+    octx.restore();
   }
   let t0 = performance.now(), tPrev = 0;
   function frame(now) {
@@ -1022,7 +1072,8 @@ if (typeof module !== 'undefined' && module.exports) {
   function toast(msg) {
     const el = document.getElementById('toast');
     el.textContent = msg; el.classList.add('on');
-    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200);
+    const nx = document.getElementById('next'); if (nx) nx.style.visibility = 'hidden';
+    clearTimeout(toastT); toastT = setTimeout(() => { el.classList.remove('on'); if (nx) nx.style.visibility = ''; }, 2200);
   }
   let AC = null;
   function blip(f) {
@@ -1267,6 +1318,16 @@ if (typeof module !== 'undefined' && module.exports) {
     if (kind === 'house') { for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) if (x === 0 || x === 4 || y === 0 || y === 4) cells.push({ x: c.x + x - 2, y: c.y + y - 2, door: x === 2 && y === 4 }); }
     else if (kind === 'ramp') { for (let x = 0; x < 4; x++) cells.push({ x: c.x + x - 1, y: c.y + 3 }); }
     else if (kind === 'door') { cells.push({ x: c.x, y: c.y, door: true }); }
+    else if (kind === 'mirror') {
+      const hs = houses(world.ref); let h = null, best = 1e9;
+      hs.forEach(function (q) { const d = Math.hypot(q.x - c.x, q.y - c.y); if (d < best) { best = d; h = q; } });
+      if (h) { for (let dy = -3; dy <= 3; dy++) for (let dx = 1; dx <= 3; dx++) {
+        const a = { x: h.x - dx, y: h.y + dy }, b2 = { x: h.x + dx, y: h.y + dy };
+        if (!inBounds(a.x, a.y) || !inBounds(b2.x, b2.y)) continue;
+        const ta = topZ(world.ref, a.x, a.y), tb = topZ(world.ref, b2.x, b2.y);
+        if (ta >= 0 && tb < 0) cells.push(b2); else if (tb >= 0 && ta < 0) cells.push(a);
+      } }
+    }
     ghost = { cells: cells.filter(function (q) { return inBounds(q.x, q.y); }), until: performance.now() + 8000, kind: kind };
   }
   function drawGhost() {
@@ -1289,6 +1350,12 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!OWNER && !journal.metCleo) { journal.metCleo = true; saveJournal(journal); line = 'I am Cleo. I am a show dog, and I keep the book. Tap me any time and I will tell you what to do next.'; }
     else if (journal.lastQuestDone && !journal.quest) line = 'You did it! ' + journal.lastQuestDone + ' That goes in the book tonight.';
     else if (n.ghost) { showGhost(n.ghost); line = line + ' I drew you the shape.'; }
+    if (!journal.wordHeard && Math.random() < 0.35) {
+      const wd = wordOfDay((journal.book || []).length + 1);
+      journal.wordHeard = true; if (!journal.keys) journal.keys = []; if (journal.keys.indexOf('word') === -1) journal.keys.push('word');
+      noteLearned('The word of the island: ' + wd.w + '. It means ' + wd.d + '.', 'word', 'words');
+      line = line + ' Word of the island: ' + wd.w + '. It means ' + wd.d + '.';
+    }
     el.innerHTML = '<b>' + (OWNER ? keeperName() : 'CLEO') + '</b><br>'; el.appendChild(document.createTextNode(line));
     el.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px';
     el.style.top = Math.max(60, hit.py - 92) + 'px';
@@ -1349,6 +1416,14 @@ if (typeof module !== 'undefined' && module.exports) {
     const el = document.getElementById('bubble');
     let ph = phrases();
     if (OWNER && hit.p === islanders[0]) { talkToKeeper(hit); return; }
+    const wd = wordOfDay((journal.book || []).length + 1);
+    let saidWord = false;
+    if (!journal.wordHeard && Math.random() < 0.5) {
+      journal.wordHeard = true; if (!journal.keys) journal.keys = []; if (journal.keys.indexOf('word') === -1) journal.keys.push('word');
+      noteLearned('The word of the island: ' + wd.w + '. It means ' + wd.d + '.', 'word', 'words');
+      ph = ['Word of the island: ' + wd.w + '! It means ' + wd.d + '.']; saidWord = true;
+    } else if (journal.wordHeard && Math.random() < 0.25) { ph = ['Say it with me: ' + wd.w + '. It means ' + wd.d + '.']; saidWord = true; }
+    if (saidWord) {}
     else if (hit.p.play) ph = ['WATCH ME! High score!', 'One more go on the arcade!', 'DING DING! Twenty points!', 'This machine is the BEST.'];
     else if (factoryCells.length && Math.random() < 0.35) ph = ['The chocolate factory smells AMAZING!', 'Chocolate bars for everybody!', 'I work at the chocolate factory now!'];
     el.innerHTML = '<b>' + hit.p.name + '</b><br>' + ph[Math.floor(Math.random() * ph.length)];
@@ -1841,6 +1916,7 @@ if (typeof module !== 'undefined' && module.exports) {
     st.laps = bestLap > 0 ? 1 : 0;
     st.beaten = journal.lapBeatenEver || 0;
     st.gain = journal.lapGainToday || 0;
+    const cs = compassStats(world.ref); st.north = cs.north; st.east = cs.east; st.south = cs.south; st.west = cs.west;
     return st;
   }
   function islanderNames() { return islanders.map(function (p) { return p.name; }); }
@@ -1865,6 +1941,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function writeChapter() {
     const st = worldStats(world.ref);
     if (!journal.mastery) journal.mastery = newMastery();
+    Object.keys(LADDERS).forEach(function (k) { if (!journal.mastery[k]) journal.mastery[k] = { rung: 0, streak: 0, miss: 0 }; });
     // step the ladders on the quest that was set last night
     let rungUp = '';
     if (journal.quest && journal.quest.ladder && journal.questDay && daysBetween(journal.questDay, today()) >= 1) {
@@ -1888,16 +1965,17 @@ if (typeof module !== 'undefined' && module.exports) {
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
       bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
+      word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard,
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
-      q: bedtimeQuestion({ keys: journal.keys || [], n: (journal.book || []).length + 1, stats: st, bestLap: bestLap, job: journal.job ? journal.job.to : null }),
+      q: bedtimeQuestion({ keys: journal.keys || [], n: (journal.book || []).length + 1, stats: st, bestLap: bestLap, job: journal.job ? journal.job.to : null, word: wordOfDay((journal.book || []).length + 1) }),
       delivered: journal.deliveredToday || 0, mastery: JSON.parse(JSON.stringify(journal.mastery)) };
     if (!bookAdd(journal, entry)) return journal.book[journal.book.length - 1];
     if (!journal.quest) journal.questDay = today();
     journal.quest = q;
     journal.arcadePlays = 0; journal.prevStats = st; journal.newIslanders = []; journal.learned = []; journal.keys = [];
-    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.job = null; journal.lastQuestId = q.id;
+    journal.deliveredToday = 0; journal.lapGainToday = 0; journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
     journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
@@ -2019,7 +2097,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
-    owner: OWNER, cleo, questStats, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
+    owner: OWNER, cleo, questStats, compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
