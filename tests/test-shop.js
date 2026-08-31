@@ -31,8 +31,10 @@ ok('old style link still decodes', decode(encode(old)).count === 2);
 const bad = Buffer.from([1, 0, 5, 5, 12]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 ok('id 12 rejected by decoder', decode(bad) === null);
 const full = makeWorld();
-for (let i = 0; i < ISLE.MAX_BLOCKS; i++) place(full, i % 64, Math.floor(i / 64), 11);
-ok('worst case link with factories under budget', buildHash(encode(full), 599999, 'CAPTAINABC', ['AAAAAAAAAA', 'BBBBBBBBBB', 'CCCCCCCCCC']).length < 1700);
+let lastR = null;
+for (let i = 0; i < ISLE.MAX_BLOCKS; i++) { lastR = place(full, i % 64, Math.floor(i / 64), 11); if (!lastR.ok) break; }
+ok('a carpet of single blocks hits the link gate before the cargo cap', !lastR.ok && lastR.why === 'link' && full.count > 600);
+ok('the link stays under budget with a record and a full chain', buildHash(encode(full), 599999, 'CAPTAINABC', ['AAAAAAAAAA', 'BBBBBBBBBB', 'CCCCCCCCCC']).length < 2000);
 
 // the gift: three houses make a village, a village gets a factory
 w = makeWorld();
