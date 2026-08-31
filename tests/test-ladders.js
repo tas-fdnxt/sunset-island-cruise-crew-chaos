@@ -66,9 +66,9 @@ ok('unfinished job: no delivery question', bedtimeQuestion({ keys: [], n: 1, job
 // grown-ups
 const ml = masteryLines({ counting: { rung: 2, streak: 1 }, geometry: { rung: 0, streak: 0 }, number: { rung: 3, streak: 0 } }, 'ollie');
 ok('counting line shows fluent and working on', ml[0].indexOf('rung 3 of 5') !== -1 && ml[0].indexOf('Fluent up to "count to 5"') !== -1 && ml[0].indexOf('Working on "add two small numbers", done 1 day running') !== -1, ml[0]);
-ok('geometry at the bottom', ml[1].indexOf('rung 1 of 4') !== -1 && ml[1].indexOf('Fluent') === -1);
+ok('geometry at the bottom', ml[1].indexOf('rung 1 of 5') !== -1 && ml[1].indexOf('Fluent') === -1);
 ok('number finished', ml[2].indexOf('every rung done') !== -1);
 const ps = parentSummary({ book: [], ledger: [], mastery: newMastery() }, '2026-08-31', 'OLLIE').join(' ');
-ok('parent summary includes the ladders', ps.indexOf('Counting: rung 1 of 5') !== -1 && ps.indexOf('Shapes and building: rung 1 of 4') !== -1);
+ok('parent summary includes the ladders', ps.indexOf('Counting: rung 1 of 5') !== -1 && ps.indexOf('Shapes and building: rung 1 of 5') !== -1);
 console.log('RESULT:', pass, 'passed,', fail, 'failed');
 process.exit(fail ? 1 : 0);
