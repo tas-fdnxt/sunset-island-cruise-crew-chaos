@@ -52,7 +52,7 @@ async def run():
             await page.wait_for_timeout(900)
 
             n = await page.evaluate("document.querySelectorAll('.card').length")
-            ck("eleven cards", n == 11, n)
+            ck("sixteen cards", n == 16, n)
 
             # the sprite is a CSS background on .shot, not an <img>.
             # prove the data URI genuinely decodes, and the panels have real size.
@@ -77,10 +77,10 @@ async def run():
                 })()"""
             )
             ck("sprite webp decodes", sprite.get("ok"), sprite)
-            ck("three screenshot panels", sprite.get("count") == 3, sprite.get("shots"))
+            ck("six screenshot panels", sprite.get("count") == 6, sprite.get("shots"))
             ck(
                 "every panel has real size",
-                len(sprite.get("shots", [])) == 3
+                len(sprite.get("shots", [])) == 6
                 and all(
                     int(s.split("x")[0]) > 0 and int(s.split("x")[1]) > 0
                     for s in sprite.get("shots", [])
@@ -113,6 +113,9 @@ async def run():
                 {"from": 0.0, "to": 0.402},
                 {"from": 0.402, "to": 0.574},
                 {"from": 0.574, "to": 1.0},
+                {"from": 0.0, "to": 0.238},
+                {"from": 0.238, "to": 0.664},
+                {"from": 0.664, "to": 1.0},
             ]
             for n, (got, want) in enumerate(zip(slices, EXPECT), 1):
                 ck(
@@ -150,7 +153,7 @@ async def run():
 
             # swipe through every card by scrolling the rail
             reached = []
-            for i in range(11):
+            for i in range(16):
                 await page.evaluate(
                     "i=>{const r=document.getElementById('rail');"
                     "r.scrollTo({left:i*r.clientWidth,behavior:'auto'});}", i
@@ -161,7 +164,7 @@ async def run():
                     "return Math.round(r.scrollLeft/r.clientWidth);})()"
                 )
                 reached.append(idx)
-            ck("scrolled to all eleven cards", reached == list(range(11)), reached)
+            ck("scrolled to all sixteen cards", reached == list(range(16)), reached)
 
             # buttons
             hrefs = await page.evaluate(
