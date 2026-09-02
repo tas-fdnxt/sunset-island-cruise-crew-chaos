@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A1B3D">
+<meta name="robots" content="noindex">
+<title>Sunset Island: for a grown-up</title>
+<style>
+  :root { --ink:#2A1B3D; --cream:#FFF3E2; --yellow:#FFD447; --coral:#FF6B6B; --sea:#2EC4B6; --sand:#F6D8A8; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; }
+  body { font-family:-apple-system, "Helvetica Neue", Arial, sans-serif; color:var(--ink);
+    background:linear-gradient(180deg,#FF8A5B 0%,#FFC15E 45%,#F6D8A8 100%); min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card { width:min(560px,100%); background:var(--cream); border:4px solid var(--ink); border-radius:28px;
+    box-shadow:0 10px 0 rgba(20,8,30,0.35); padding:28px 26px; }
+  .screen { display:none; } .screen.on { display:block; }
+  .eyebrow { font-size:13px; font-weight:900; letter-spacing:0.14em; opacity:0.7; margin:0 0 6px; }
+  h1 { font-size:30px; line-height:1.1; margin:0 0 14px; letter-spacing:-0.01em; }
+  p { font-size:18px; line-height:1.45; margin:0 0 16px; }
+  label { display:block; font-weight:900; font-size:14px; letter-spacing:0.08em; margin:14px 0 6px; }
+  input { width:100%; font:inherit; font-size:24px; font-weight:800; padding:14px 16px; border:3px solid var(--ink);
+    border-radius:16px; background:#fff; color:var(--ink); }
+  input:focus { outline:4px solid var(--yellow); }
+  .btn { display:block; width:100%; margin-top:14px; font:inherit; font-size:20px; font-weight:900; letter-spacing:0.06em;
+    padding:18px 20px; border:3px solid var(--ink); border-radius:18px; background:var(--yellow); color:var(--ink);
+    box-shadow:0 5px 0 rgba(20,8,30,0.45); cursor:pointer; text-align:center; text-decoration:none; }
+  .btn:active { transform:translateY(3px); box-shadow:0 2px 0 rgba(20,8,30,0.45); }
+  .btn.quiet { background:#fff; } .btn.go { background:var(--sea); }
+  .row { display:flex; gap:10px; } .row .btn { margin-top:14px; }
+  .pick { border:3px solid var(--ink); border-radius:18px; background:#fff; padding:16px; font-weight:900; font-size:20px;
+    flex:1; cursor:pointer; text-align:center; }
+  .pick.sel { background:var(--yellow); }
+  .kid { display:flex; align-items:center; gap:14px; width:100%; margin-top:10px; font:inherit; font-weight:900;
+    font-size:22px; padding:14px 16px; border:3px solid var(--ink); border-radius:18px; background:#fff; color:var(--ink);
+    cursor:pointer; text-align:left; }
+  .kid .dot { width:34px; height:34px; border-radius:50%; border:3px solid var(--ink); flex:0 0 auto; }
+  .kid small { margin-left:auto; font-size:13px; letter-spacing:0.1em; opacity:0.7; }
+  .err { color:#B3261E; font-weight:800; min-height:22px; margin-top:8px; font-size:15px; }
+  .yes { text-align:center; padding:8px 0 4px; }
+  .yes .big { font-size:64px; line-height:1; margin:0 0 10px; }
+  .fine { font-size:13px; opacity:0.7; margin-top:18px; line-height:1.4; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <section class="screen on" id="s-year">
+    <p class="eyebrow">SUNSET ISLAND</p>
+    <h1>This part is for a grown-up.</h1>
+    <p>Your child's island will be remembered on our server in Sydney, so a cleared browser can never lose it again. First, a quick check.</p>
+    <label for="year">WHAT YEAR WERE YOU BORN?</label>
+    <input id="year" type="number" inputmode="numeric" placeholder="1985" min="1900" max="2030">
+    <div class="err" id="e-year"></div>
+    <button class="btn" id="b-year">NEXT</button>
+    <p class="fine">We use your birth year only to check you are an adult, then we throw it away. It is never stored.</p>
+  </section>
+
+  <section class="screen" id="s-notyet">
+    <p class="eyebrow">NOT YET</p>
+    <h1>Ask a grown-up to do this bit.</h1>
+    <p>You have to be 18 to set up the family. Hand this to your grown-up, or send them this page.</p>
+    <button class="btn" id="b-copy">COPY THIS PAGE'S LINK</button>
+    <button class="btn quiet" id="b-back-year">BACK</button>
+  </section>
+
+  <section class="screen" id="s-email">
+    <p class="eyebrow">THE FAMILY ACCOUNT</p>
+    <h1>Your email is the account.</h1>
+    <p>Children never get an email or a password. You sign in once on this device and they just pick their name.</p>
+    <label for="email">YOUR EMAIL</label>
+    <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+    <label for="pass">A PASSWORD (8 OR MORE)</label>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="••••••••">
+    <div class="err" id="e-email"></div>
+    <button class="btn" id="b-email">SIGN IN OR CREATE</button>
+  </section>
+
+  <section class="screen" id="s-check">
+    <p class="eyebrow">ONE MORE STEP</p>
+    <h1>Check your email.</h1>
+    <p>We sent a link to <b id="sent-to"></b>. Tap it, then come back here and press the button.</p>
+    <button class="btn" id="b-retry">I TAPPED IT</button>
+    <div class="err" id="e-check"></div>
+  </section>
+
+  <section class="screen" id="s-kids">
+    <p class="eyebrow">THE CREW</p>
+    <h1>Who is playing?</h1>
+    <div id="kids"></div>
+    <label for="nick">ADD A CHILD: FIRST NAME OR NICKNAME</label>
+    <input id="nick" type="text" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="OLLIE">
+    <label>HOW OLD?</label>
+    <div class="row">
+      <div class="pick sel" data-band="5-8">5 to 8</div>
+      <div class="pick" data-band="9-12">9 to 12</div>
+      <div class="pick" data-band="13+">13 and up</div>
+    </div>
+    <div class="err" id="e-kids"></div>
+    <button class="btn" id="b-add">ADD TO THE CREW</button>
+    <button class="btn quiet" id="b-out">SIGN OUT ON THIS DEVICE</button>
+    <p class="fine">Letters only, ten at most. That is the only thing anyone ever types. No surname, no birthday, no photo.</p>
+  </section>
+
+  <section class="screen" id="s-yes">
+    <div class="yes">
+      <p class="big">🌅</p>
+      <p class="eyebrow">A NOTE FOR THE CAPTAIN</p>
+      <h1 id="yes-title">Your grown-up said yes.</h1>
+      <p id="yes-body">Your island will be remembered forever now, even if this iPad forgets.</p>
+      <a class="btn go" id="b-play" href="#">PLAY</a>
+      <button class="btn quiet" id="b-crew">BACK TO THE CREW</button>
+    </div>
+  </section>
+
+</div>
+<script>
+(function () {
+  const SB = { url: 'https://whhzezkpejplaghiuuyk.supabase.co', key: 'sb_publishable_YV7G7ROGkFRwc4noDH4gNA_xXIeA3gd' };
+  const SESSKEY = 'sunset-session-v1';
+  const $ = function (id) { return document.getElementById(id); };
+  let session = null, familyId = null, band = '5-8';
+  const state = { screen: 'year', kids: [] };
+  window.__J = state;
+
+  function show(id) { document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('on', s.id === 's-' + id); }); state.screen = id; }
+  function err(id, msg) { $(id).textContent = msg || ''; }
+  function loadSession() { try { const s = JSON.parse(localStorage.getItem(SESSKEY) || 'null'); if (s && s.access_token && s.refresh_token && s.user_id) session = s; } catch (e) {} return session; }
+  function keep(j) {
+    session = { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at, user_id: j.user && j.user.id };
+    localStorage.setItem(SESSKEY, JSON.stringify(session));
+  }
+  function authHdr() { return { 'apikey': SB.key, 'Content-Type': 'application/json' }; }
+  function hdr(extra) { return Object.assign({ 'apikey': SB.key, 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' }, extra || {}); }
+  async function rest(path, opt) {
+    const r = await fetch(SB.url + '/rest/v1/' + path, Object.assign({}, opt || {}, { headers: hdr(opt && opt.headers) }));
+    if (r.status === 401) { session = null; localStorage.removeItem(SESSKEY); show('email'); throw new Error('signed out'); }
+    if (!r.ok) throw new Error('rest ' + r.status);
+    const t = await r.text(); return t ? JSON.parse(t) : null;
+  }
+
+  /* 1. THE AGE GATE. The year is checked and thrown away. Nothing about it is stored. */
+  $('b-year').addEventListener('click', function () {
+    const y = parseInt($('year').value, 10);
+    const now = new Date().getFullYear();
+    if (!(y >= 1900 && y <= now)) { err('e-year', 'Type the year you were born, like 1985.'); return; }
+    $('year').value = '';
+    if (now - y < 18) { show('notyet'); return; }
+    err('e-year'); show('email');
+  });
+  $('b-back-year').addEventListener('click', function () { show('year'); });
+  $('b-copy').addEventListener('click', function () {
+    const u = location.origin + location.pathname;
+    try { navigator.clipboard.writeText(u); } catch (e) {}
+    this.textContent = 'COPIED';
+  });
+
+  /* 2. THE ACCOUNT. Try to sign in; if the account does not exist, create it. */
+  async function signIn(email, pass) {
+    const r = await fetch(SB.url + '/auth/v1/token?grant_type=password', { method: 'POST', headers: authHdr(), body: JSON.stringify({ email: email, password: pass }) });
+    if (!r.ok) return null;
+    return r.json();
+  }
+  async function signUp(email, pass) {
+    const r = await fetch(SB.url + '/auth/v1/signup', { method: 'POST', headers: authHdr(), body: JSON.stringify({ email: email, password: pass }) });
+    if (!r.ok) throw new Error('signup ' + r.status);
+    return r.json();
+  }
+  async function ensureFamily() {
+    const f = await rest('families?select=id&limit=1');
+    if (f && f[0]) { familyId = f[0].id; return; }
+    const made = await rest('families?select=id', { method: 'POST', headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ owner: session.user_id, adult_attested: true }) });
+    familyId = made[0].id;
+  }
+  async function afterSignIn() { await ensureFamily(); await loadKids(); show('kids'); }
+  $('b-email').addEventListener('click', async function () {
+    const email = $('email').value.trim().toLowerCase(), pass = $('pass').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err('e-email', 'That email does not look right.'); return; }
+    if (pass.length < 8) { err('e-email', 'The password needs 8 or more characters.'); return; }
+    err('e-email', 'One moment.');
+    try {
+      let j = await signIn(email, pass);
+      if (!j) {
+        j = await signUp(email, pass);
+        if (!j.access_token) { $('sent-to').textContent = email; show('check'); return; }
+      }
+      keep(j); err('e-email'); await afterSignIn();
+    } catch (e) { err('e-email', 'That did not work. Check the email and password and try again.'); }
+  });
+  $('b-retry').addEventListener('click', async function () {
+    err('e-check', 'Checking.');
+    try {
+      const j = await signIn($('email').value.trim().toLowerCase(), $('pass').value);
+      if (!j) { err('e-check', 'Not yet. Tap the link in the email first.'); return; }
+      keep(j); err('e-check'); await afterSignIn();
+    } catch (e) { err('e-check', 'Not yet. Tap the link in the email first.'); }
+  });
+
+  /* 3. THE CREW. Nickname is the only typed thing: letters only, ten at most. The database enforces the same rule. */
+  async function loadKids() {
+    const rows = await rest('children?select=id,nickname,age_band,colour&order=created_at.asc');
+    state.kids = rows || [];
+    const box = $('kids'); box.innerHTML = '';
+    state.kids.forEach(function (k) {
+      const b = document.createElement('button'); b.className = 'kid'; b.dataset.nick = k.nickname;
+      const d = document.createElement('span'); d.className = 'dot'; d.style.background = k.colour || '#FFD447';
+      b.appendChild(d); b.appendChild(document.createTextNode(k.nickname));
+      const s = document.createElement('small'); s.textContent = k.age_band; b.appendChild(s);
+      b.addEventListener('click', function () { sayYes(k); });
+      box.appendChild(b);
+    });
+  }
+  document.querySelectorAll('.pick').forEach(function (p) {
+    p.addEventListener('click', function () { document.querySelectorAll('.pick').forEach(function (q) { q.classList.remove('sel'); }); p.classList.add('sel'); band = p.dataset.band; });
+  });
+  $('nick').addEventListener('input', function () { this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 10); });
+  $('b-add').addEventListener('click', async function () {
+    const nick = $('nick').value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 10);
+    if (!nick) { err('e-kids', 'A first name or nickname, letters only.'); return; }
+    if (state.kids.some(function (k) { return k.nickname === nick; })) { err('e-kids', nick + ' is already in the crew.'); return; }
+    err('e-kids', 'One moment.');
+    try {
+      const made = await rest('children?select=id,nickname,age_band,colour', { method: 'POST', headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ family_id: familyId, nickname: nick, age_band: band, colour: '#FFD447' }) });
+      await rest('consents', { method: 'POST', headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ family_id: familyId, child_id: made[0].id, what: 'profile made by a grown-up on this device' }) });
+      $('nick').value = ''; err('e-kids');
+      await loadKids(); sayYes(made[0]);
+    } catch (e) { err('e-kids', 'That did not save. Try again.'); }
+  });
+  $('b-out').addEventListener('click', function () { localStorage.removeItem(SESSKEY); session = null; show('year'); });
+
+  /* 4. THE CARD. The child is told, in a friendly card, that a grown-up set this up. Then PLAY boots SIGNED. */
+  function sayYes(k) {
+    $('yes-title').textContent = k.nickname + ', your grown-up said yes.';
+    $('b-play').href = 'island.html?crew=' + encodeURIComponent(k.nickname) + '&s=1';
+    state.play = $('b-play').getAttribute('href');
+    show('yes');
+  }
+  $('b-crew').addEventListener('click', function () { show('kids'); });
+
+  /* Already signed in on this device: straight to the crew. */
+  if (loadSession()) { afterSignIn().catch(function () { show('email'); }); }
+})();
+</script>
+</body>
+</html>
