@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2A1B3D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MY ISLAND">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Captain's Island</title>
 <meta name="description" content="Build your own island. Houses with people in them, cars and ramps, an arcade machine, a chocolate factory. Then send the whole island inside one link. No app, no account, no ads.">
 <meta property="og:type" content="website">
@@ -28,7 +33,7 @@
   canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
   canvas#gl { position:fixed; inset:0; width:100vw; height:100dvh; display:none; touch-action:none; z-index:4; }
   body.walking canvas#gl { display:block; }
-  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer { display:none !important; }
+  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail { display:none !important; }
   #walkui { display:none; }
   body.walking #walkui { display:block; }
   body.walking #topbar, body.walking #lineage { z-index:6; }
@@ -234,6 +239,15 @@
   #bubble::after { content:''; position:absolute; left:50%; bottom:-12px; margin-left:-8px;
     border:8px solid transparent; border-top-color:var(--ink); }
 
+  #rail { display:none; position:fixed; left:0; right:0; z-index:5; padding:0 10px;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 116px); flex-wrap:wrap; gap:8px; justify-content:center; pointer-events:none; }
+  #rail button { pointer-events:auto; width:76px; height:88px; border-radius:16px; border:3px solid var(--ink);
+    background:rgba(255,243,226,0.94); color:var(--ink); font-weight:900; font-size:10px; letter-spacing:0.04em;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:0; cursor:pointer;
+    box-shadow:0 4px 0 rgba(20,8,30,0.45); touch-action:manipulation; }
+  #rail button canvas { width:44px; height:47px; }
+  #rail button.sel { background:var(--yellow); border-color:var(--ink); transform:translateY(-4px); box-shadow:0 8px 0 rgba(20,8,30,0.45); }
+  #rail button:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.45); }
   /* THE TABLET. Ollie plays on an iPad and every size in this file was drawn for a 390 point phone.
      This block is the same test as bigScreen(w,h) in the core: a short side of 700, or a long side of 1000. */
   @media (min-width:700px) and (min-height:700px), (min-width:1000px) {
@@ -244,6 +258,7 @@
     #cur canvas { width:68px; height:72px; }
     .pin { width:70px; height:82px; font-size:11px; }
     #bottombar { gap:12px; padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
+    #rail { display:flex; }
     #drawer { left:6vw; right:6vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px 20px 14px; }
     #drawer .grp { font-size:14px; letter-spacing:0.2em; margin:12px 6px 8px; }
     #drawer .tiles { grid-template-columns:repeat(auto-fill, minmax(116px, 1fr)); gap:16px; margin-bottom:10px; }
@@ -252,9 +267,9 @@
     .coin { width:15px; height:15px; margin-right:6px; }
     .folk { width:14px; height:18px; margin-right:7px; }
     #bubble { width:300px; font-size:19px; padding:16px 18px; border-radius:20px; border-width:4px; line-height:1.4; }
-    #tip { font-size:20px; padding:13px 24px; border-radius:20px; bottom:calc(env(safe-area-inset-bottom,0px) + 136px); }
-    #toast { font-size:20px; padding:14px 26px; bottom:calc(env(safe-area-inset-bottom,0px) + 208px); }
-    #quest, #next { font-size:17px; padding:10px 20px 10px 16px; bottom:calc(env(safe-area-inset-bottom,0px) + 134px); }
+    #tip { font-size:20px; padding:13px 24px; border-radius:20px; bottom:calc(env(safe-area-inset-bottom,0px) + 330px); }
+    #toast { font-size:20px; padding:14px 26px; bottom:calc(env(safe-area-inset-bottom,0px) + 404px); }
+    #quest, #next { font-size:17px; padding:10px 20px 10px 16px; bottom:calc(env(safe-area-inset-bottom,0px) + 246px); }
     #mini { width:200px; height:200px; border-radius:20px; border-width:4px; }
     #btn-board { width:64px; height:64px; font-size:28px; left:12px; top:calc(env(safe-area-inset-top,0px) + 268px); }
     #btn-book, #btn-story, #keeper { width:64px; height:64px; border-width:4px; }
@@ -331,6 +346,7 @@
     <button id="bclose">PLAY!</button>
   </div>
 </div>
+<div id="rail"></div>
 <div id="bottombar"></div>
 <div id="drawer"></div>
 <div id="tip"></div>
@@ -1953,7 +1969,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function setTool(id, quiet) {
     tool = id;
     if (id !== -1) { recent = [id].concat(recent.filter(function (r) { return r !== id; })).slice(0, 3); }
-    renderDock(); renderDrawer();
+    renderDock(); renderDrawer(); renderRail();
     drawer.classList.remove('on');
     if (!quiet) { blip(600); showTip('<b>' + nameOf(id) + ':</b> ' + TIPS[String(id)]); }
     try { localStorage.setItem('captains-island-recent-v1', JSON.stringify(recent)); } catch (e) {}
@@ -1996,6 +2012,24 @@ if (typeof module !== 'undefined' && module.exports) {
         b.addEventListener('click', function () { setTool(id); }); tiles.appendChild(b);
       });
       drawer.appendChild(tiles);
+    });
+  }
+  /* Every block, always on screen, never in a menu. Only where there is room for it. */
+  const railEl = document.getElementById('rail');
+  function renderRail() {
+    if (!BIG) return;
+    railEl.innerHTML = '';
+    GROUPS.forEach(function (grp) {
+      grp[1].forEach(function (id) {
+        const b = document.createElement('button');
+        if (id === tool) b.className = 'sel';
+        b.dataset.val = id;
+        b.setAttribute('aria-label', ISLE.TYPES[id].name);
+        b.appendChild(iconFor(id));
+        b.appendChild(document.createTextNode(ISLE.TYPES[id].name));
+        b.addEventListener('click', function () { setTool(id); });
+        railEl.appendChild(b);
+      });
     });
   }
   try { recent = (JSON.parse(localStorage.getItem('captains-island-recent-v1') || '[]') || []).filter(function (r) { return ISLE.TYPES[r]; }).slice(0, 3); } catch (e) { recent = []; }
@@ -3524,6 +3558,7 @@ if (typeof module !== 'undefined' && module.exports) {
     driving = on;
     document.getElementById('drivebar').classList.toggle('on', on);
     document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
+    railEl.style.display = on ? 'none' : (BIG ? 'flex' : 'none');
     drawer.classList.remove('on'); tipEl.classList.remove('on');
     document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
     document.getElementById('next').style.display = on ? 'none' : '';
