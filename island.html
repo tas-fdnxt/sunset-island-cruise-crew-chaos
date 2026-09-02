@@ -2270,6 +2270,18 @@ if (typeof module !== 'undefined' && module.exports) {
   });
   // ISLANDERS: derived from houses, never stored. Curated names and phrases only.
   const I_NAMES = ['COCO', 'BARNACLE BOB', 'PEARL', 'MANGO', 'SALTY SAM', 'CAPTAIN CRUMB', 'SHELLY', 'BISCUIT'];
+  /* Everybody has a name AND a job, and says both the first time you tap them. */
+  const I_JOBS = {
+    'COCO': 'I keep the book, and I write down everything you do.',
+    'BARNACLE BOB': 'I mend the boats when they bump the rocks.',
+    'PEARL': 'I dive off the beach and find shells down deep.',
+    'MANGO': 'I grow all the fruit on this island.',
+    'SALTY SAM': 'I know every wave in this sea by name.',
+    'CAPTAIN CRUMB': 'I do the baking. That smell is me.',
+    'SHELLY': 'I paint the doors so everyone knows which house is theirs.',
+    'BISCUIT': 'I feed the seagulls, which is why there are so many.'
+  };
+  function jobOf(n) { return I_JOBS[n] || 'I live here on your island.'; }
   const I_COLORS = ['#FF6E6C', '#FFD447', '#8FD8E8', '#3FA96B', '#FFB067', '#C75B82', '#FFF3E2', '#5C3A6E'];
   function phrases() { return [
     'Ahoy, ' + TITLE + ' ' + CREW + '!',
@@ -2554,6 +2566,19 @@ if (typeof module !== 'undefined' && module.exports) {
     const el = document.getElementById('bubble');
     let ph = phrases();
     if (OWNER && hit.p === islanders[0]) { talkToKeeper(hit); return; }
+    if (!journal.met) journal.met = {};
+    if (!hit.p.visitor && !journal.met[hit.p.name]) {
+      journal.met[hit.p.name] = 1; saveJournal(journal);
+      const el0 = document.getElementById('bubble');
+      el0.innerHTML = '<b>' + hit.p.name + '</b><br>';
+      el0.appendChild(document.createTextNode('I am ' + hit.p.name + '. ' + jobOf(hit.p.name) + ' You built my house, so thank you!'));
+      el0.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px';
+      el0.style.top = Math.max(60, hit.py - 92) + 'px';
+      el0.classList.add('on');
+      blip(700); setTimeout(function () { blip(880); }, 90); setTimeout(function () { blip(1100); }, 180);
+      clearTimeout(bubbleT); bubbleT = setTimeout(function () { el0.classList.remove('on'); }, 5200);
+      return;
+    }
     const wd = wordOfDay((journal.book || []).length + 1);
     let saidWord = false;
     if (!journal.wordHeard && Math.random() < 0.5) {
@@ -3790,7 +3815,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (journal.learned.indexOf(line) === -1) journal.learned.push(line);
     saveJournal(journal);
   }
-  function keeperName() { return OWNER ? (islanders.length ? islanders[0].name : 'THE BOOK') : 'CLEO'; }
+  function keeperName() { return OWNER ? (islanders.length ? islanders[0].name : 'COCO') : 'CLEO'; }
   function questStats() {
     const st = worldStats(world.ref);
     st.delivered = journal.deliveredToday || 0;
