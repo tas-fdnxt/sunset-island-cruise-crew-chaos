@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Island Rescue</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067; --yellow:#FFD447; --green:#3FA96B; --dusk:#5C3A6E; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:linear-gradient(180deg,#3A2352,#1C1030); color:var(--cream); min-height:100dvh;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif; padding:20px 16px 60px; line-height:1.5; }
+  .wrap { max-width:760px; margin:0 auto; }
+  h1 { font-size:clamp(22px,5vw,34px); letter-spacing:0.04em; margin-bottom:6px; }
+  h1 span { color:var(--yellow); }
+  .sub { color:#C9B6DC; font-size:clamp(13px,3vw,16px); margin-bottom:22px; }
+  .card { background:rgba(255,243,226,0.07); border:3px solid rgba(255,243,226,0.28); border-radius:20px;
+    padding:16px 18px; margin-bottom:14px; }
+  .card h2 { font-size:clamp(15px,3.4vw,19px); color:var(--yellow); letter-spacing:0.05em; margin-bottom:8px; }
+  .found { border-color:var(--green); background:rgba(63,169,107,0.13); }
+  .empty { border-color:var(--coral); background:rgba(255,110,108,0.12); }
+  .row { display:flex; justify-content:space-between; gap:12px; font-size:clamp(13px,3vw,15px); padding:3px 0; }
+  .row b { color:var(--cream); font-weight:800; }
+  .row span { color:#C9B6DC; font-variant-numeric:tabular-nums; text-align:right; }
+  button { font:900 15px/1 system-ui; letter-spacing:0.04em; border:3px solid var(--ink); border-radius:14px;
+    padding:14px 18px; cursor:pointer; margin:8px 8px 0 0; min-height:48px; }
+  .go { background:var(--yellow); color:var(--ink); }
+  .alt { background:var(--peach); color:var(--ink); }
+  .play { background:var(--green); color:var(--cream); display:inline-block; text-decoration:none;
+    border:3px solid var(--ink); border-radius:14px; padding:14px 18px; font:900 15px/1 system-ui; margin-top:10px; }
+  textarea { width:100%; min-height:110px; margin-top:10px; border-radius:14px; border:3px solid var(--ink);
+    padding:12px; font:600 13px/1.4 ui-monospace,Menlo,monospace; background:var(--cream); color:var(--ink); resize:vertical; }
+  .note { font-size:clamp(12px,2.8vw,14px); color:#C9B6DC; margin-top:10px; }
+  .safe { display:inline-block; background:var(--green); color:var(--cream); font:900 11px system-ui;
+    letter-spacing:0.1em; padding:6px 12px; border-radius:999px; margin-bottom:16px; }
+  code { background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:6px; font-size:0.92em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="safe">NOTHING ON THIS PAGE DELETES ANYTHING</span>
+  <h1>ISLAND <span>RESCUE</span></h1>
+  <div class="sub">This reads what is saved on this device and shows it to you. It never erases, and it only ever writes when you press RESTORE yourself.</div>
+  <div id="out"></div>
+
+  <div class="card">
+    <h2>PUT A BACKUP BACK</h2>
+    <div class="note">Paste a backup you copied earlier and press RESTORE. It writes it back exactly as it was.</div>
+    <textarea id="paste" placeholder="Paste a backup here"></textarea>
+    <button class="alt" id="restore">RESTORE THIS BACKUP</button>
+    <div class="note" id="rmsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>WHY AN ISLAND CAN VANISH</h2>
+    <div class="note">
+      An island is kept on this device only, in the browser, so nothing about a child ever leaves the iPad.
+      The cost of that is real: Safari clears a website's stored data by itself if the site has not been opened
+      for a while, and a Private tab never keeps anything at all.
+      <br><br>
+      <b>The fix is to add it to the Home Screen.</b> Open the island in Safari, tap the share button, choose
+      <code>Add to Home Screen</code>. Opened from the home screen icon it counts as an installed app and Safari
+      stops clearing it. Do that once and this stops happening.
+      <br><br>
+      Copy a backup from above every so often and keep it in a note. That is a real second copy.
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var out = document.getElementById('out');
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
+  function when(t) {
+    if (!t) return 'unknown';
+    var d = new Date(t), day = 86400000, ago = Date.now() - t;
+    var s = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (ago < day) return s + ' (today)';
+    return s + ' (' + Math.floor(ago / day) + ' days ago)';
+  }
+  var keys = [];
+  try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('captains-island') === 0) keys.push(k); } }
+  catch (e) { out.innerHTML = '<div class="card empty"><h2>THE BROWSER WILL NOT LET ME LOOK</h2><div class="note">This is usually a Private tab. Open the same link in a normal tab and try again.</div></div>'; return; }
+  keys.sort();
+
+  var saves = keys.filter(function (k) { return k.indexOf('captains-island-save-v1') === 0; });
+  var html = '';
+
+  if (!saves.length) {
+    html += '<div class="card empty"><h2>NO ISLAND IS SAVED ON THIS DEVICE</h2>' +
+      '<div class="note">There is nothing here to recover. The island was not deleted by an update: the game has no code that deletes a save. ' +
+      'Either the browser cleared it, or this is a different device, a different browser, or a Private tab.</div></div>';
+  }
+
+  saves.forEach(function (k) {
+    var raw = '';
+    try { raw = localStorage.getItem(k) || ''; } catch (e) {}
+    var crew = k.replace('captains-island-save-v1-', '') || 'OLLIE', at = 0, isl = '', blocks = '?';
+    try { var j = JSON.parse(raw); crew = j.crew || crew; at = j.at || 0; isl = j.i || ''; } catch (e) {}
+    html += '<div class="card found"><h2>' + esc(crew) + "'S ISLAND IS HERE</h2>" +
+      '<div class="row"><b>Last saved</b><span>' + esc(when(at)) + '</span></div>' +
+      '<div class="row"><b>Island data</b><span>' + isl.length + ' characters</span></div>' +
+      '<div class="row"><b>Stored under</b><span>' + esc(k) + '</span></div>' +
+      '<button class="go" data-copy="' + esc(k) + '">COPY A BACKUP</button>' +
+      '<a class="play" href="island.html?crew=' + encodeURIComponent(crew) + '">OPEN THIS ISLAND</a>' +
+      '<div class="note" id="m-' + esc(k) + '"></div></div>';
+  });
+
+  var others = keys.filter(function (k) { return saves.indexOf(k) === -1; });
+  if (others.length) {
+    html += '<div class="card"><h2>EVERYTHING ELSE ON THIS DEVICE</h2>';
+    others.forEach(function (k) {
+      var n = 0; try { n = (localStorage.getItem(k) || '').length; } catch (e) {}
+      html += '<div class="row"><b>' + esc(k) + '</b><span>' + n + ' characters</span></div>';
+    });
+    html += '</div>';
+  }
+  out.innerHTML = html;
+
+  out.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-copy]'); if (!b) return;
+    var k = b.getAttribute('data-copy'), raw = '';
+    try { raw = localStorage.getItem(k) || ''; } catch (err) {}
+    var msg = document.getElementById('m-' + k);
+    function done(ok) { if (msg) msg.textContent = ok ? 'Copied. Paste it into a note and keep it.' : 'Could not copy. Long press the text box below and paste it there instead.'; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(raw).then(function () { done(true); }, function () { done(false); });
+    else { document.getElementById('paste').value = raw; done(false); }
+  });
+
+  document.getElementById('restore').addEventListener('click', function () {
+    var v = document.getElementById('paste').value.trim(), m = document.getElementById('rmsg');
+    if (!v) { m.textContent = 'Paste a backup in first.'; return; }
+    var j;
+    try { j = JSON.parse(v); } catch (e) { m.textContent = 'That does not look like a backup. Paste the whole thing, starting with a curly bracket.'; return; }
+    if (!j || typeof j.i !== 'string') { m.textContent = 'That backup has no island in it.'; return; }
+    var crew = (j.crew || 'OLLIE').toString().slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    try {
+      localStorage.setItem('captains-island-save-v1-' + crew, v);
+      m.innerHTML = 'Put back for <b>' + esc(crew) + '</b>. <a class="play" href="island.html?crew=' + encodeURIComponent(crew) + '">OPEN IT NOW</a>';
+    } catch (e) { m.textContent = 'The browser refused to save it. It may be full, or this is a Private tab.'; }
+  });
+})();
+</script>
+</body>
+</html>
