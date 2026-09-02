@@ -59,7 +59,7 @@
   #cur { width:70px; height:70px; border-color:var(--yellow); background:var(--dusk); font-size:10px; }
   #cur canvas, .tool canvas, .pin canvas { width:34px; height:36px; image-rendering:auto; }
   #cur canvas { width:40px; height:42px; }
-  .pin { width:40px; height:50px; font-size:8px; }
+  .pin { width:46px; height:56px; font-size:8px; }
   #btn-share { background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); }
   #btn-drive { background:linear-gradient(180deg,var(--coral),#C74744); }
   /* THE DRAWER. Every block, in three groups, drawn by the engine. One tap picks and it drops away. */
@@ -233,6 +233,51 @@
     background:var(--yellow); color:var(--ink); font-weight:900; font-size:16px; letter-spacing:0.06em; cursor:pointer; }
   #bubble::after { content:''; position:absolute; left:50%; bottom:-12px; margin-left:-8px;
     border:8px solid transparent; border-top-color:var(--ink); }
+
+  /* THE TABLET. Ollie plays on an iPad and every size in this file was drawn for a 390 point phone.
+     This block is the same test as bigScreen(w,h) in the core: a short side of 700, or a long side of 1000. */
+  @media (min-width:700px) and (min-height:700px), (min-width:1000px) {
+    .dock { width:80px; height:92px; border-radius:20px; font-size:12px; border-width:4px; }
+    .dock .ic { font-size:34px; }
+    #cur canvas, .tool canvas, .pin canvas { width:54px; height:58px; }
+    #cur { width:116px; height:116px; font-size:14px; }
+    #cur canvas { width:68px; height:72px; }
+    .pin { width:70px; height:82px; font-size:11px; }
+    #bottombar { gap:12px; padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
+    #drawer { left:6vw; right:6vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px 20px 14px; }
+    #drawer .grp { font-size:14px; letter-spacing:0.2em; margin:12px 6px 8px; }
+    #drawer .tiles { grid-template-columns:repeat(auto-fill, minmax(116px, 1fr)); gap:16px; margin-bottom:10px; }
+    .tool { height:120px; border-radius:20px; font-size:13px; border-width:4px; }
+    .badge { font-size:17px; padding:10px 14px; border-radius:16px; border-width:3px; }
+    .coin { width:15px; height:15px; margin-right:6px; }
+    .folk { width:14px; height:18px; margin-right:7px; }
+    #bubble { width:300px; font-size:19px; padding:16px 18px; border-radius:20px; border-width:4px; line-height:1.4; }
+    #tip { font-size:20px; padding:13px 24px; border-radius:20px; bottom:calc(env(safe-area-inset-bottom,0px) + 136px); }
+    #toast { font-size:20px; padding:14px 26px; bottom:calc(env(safe-area-inset-bottom,0px) + 208px); }
+    #quest, #next { font-size:17px; padding:10px 20px 10px 16px; bottom:calc(env(safe-area-inset-bottom,0px) + 134px); }
+    #mini { width:200px; height:200px; border-radius:20px; border-width:4px; }
+    #btn-board { width:64px; height:64px; font-size:28px; left:12px; top:calc(env(safe-area-inset-top,0px) + 268px); }
+    #btn-book, #btn-story, #keeper { width:64px; height:64px; border-width:4px; }
+    #btn-book { font-size:30px; top:calc(env(safe-area-inset-top,0px) + 64px); }
+    #btn-story { font-size:30px; top:calc(env(safe-area-inset-top,0px) + 138px); }
+    #dial { width:64px; top:calc(env(safe-area-inset-top,0px) + 212px); gap:8px; }
+    #dial button { width:64px; height:64px; font-size:30px; border-width:4px; }
+    #dial .track { width:18px; height:128px; border-radius:9px; }
+    #keeper { font-size:13px; top:calc(env(safe-area-inset-top,0px) + 500px); }
+    #lapbar { font-size:20px; padding:8px 20px; border-radius:16px; }
+    #chasebar { font-size:18px; padding:10px 20px; }
+    .dbtn { height:126px; max-width:190px; font-size:30px; border-radius:24px; border-width:4px; }
+    #d-left, #d-right { font-size:54px; max-width:240px; }
+    #d-car, #d-exit { font-size:15px; }
+    #drivebar { gap:16px; padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 18px); }
+    #stick { width:170px; height:170px; }
+    #knob { left:48px; top:48px; width:64px; height:64px; }
+    #w-jump { width:128px; height:128px; font-size:20px; }
+    #w-exit { height:82px; font-size:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
+    #w-hint { font-size:17px; padding:11px 20px; }
+    .wincard { max-width:560px; }
+    #boardcard { max-width:600px; }
+  }
 </style>
 </head>
 <body>
@@ -1265,8 +1310,57 @@ function boardRows(rows) {
     return (b.trophies || 0) - (a.trophies || 0);
   });
 }
+/* ============================================================================
+   THE HANDS. A six year old on an iPad taps a cell 40 points wide and 20 points tall, which is
+   under half what a finger can reliably hit, and every repeat tap on the same column builds upward.
+   These are the rules that fix it: a dragged finger paints a line of blocks and NEVER stacks, so
+   going up stays a deliberate single tap and a wall is one stroke instead of sixteen taps.
+   ============================================================================ */
+function paintable(w, x, y) {
+  if (!inBounds(x, y)) return false;
+  if (!isLand(x, y)) return false;
+  if (topZ(w, x, y) >= 0) return false;
+  if (w.count >= ISLE.MAX_BLOCKS) return false;
+  return true;
+}
+/* A finger moves faster than the frames, so the cells between two samples are filled in. */
+function cellLine(a, b) {
+  const out = [];
+  const n = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+  if (n === 0) return [{ x: b.x, y: b.y }];
+  for (let i = 1; i <= n; i++) out.push({ x: Math.round(a.x + (b.x - a.x) * i / n), y: Math.round(a.y + (b.y - a.y) * i / n) });
+  return out;
+}
+/* THE SCREEN. One test decides the tablet layout. The CSS media query says the same thing in its own
+   language, and if one is ever changed without the other the layout suite fails. */
+function bigScreen(w, h) { return (w >= 700 && h >= 700) || w >= 1000; }
+function zoomsFor(w, h) { return bigScreen(w, h) ? { whole: 0.40, build: 1.60, close: 2.60 } : { whole: 0.28, build: 0.90, close: 1.80 }; }
+function zoomCapFor(w, h) { return bigScreen(w, h) ? 3.4 : 2.6; }
+/* A cell must be big enough for a child's finger. Apple asks for 44 points. */
+function cellSizeAt(zoom) { return { w: 44 * zoom, h: 22 * zoom }; }
+/* ============================================================================
+   THE WHEEL. Steering used to snap to full lock and the speed never changed, so the car
+   spun on the spot and every corner felt the same. Now the wheel eases over, it bites less
+   the faster you go, a hard corner costs speed and a straight line pays it back, and past
+   the limit the back end lets go and leaves marks.
+   ============================================================================ */
+const CAR = { STEER_RATE: 5.4, TURN: 3.1, TOP: 5.4, IDLE: 62, DRIFT: 0.52, LEAD: 3.4 };
+function steerToward(cur, want, dt) {
+  const d = want - cur, step = CAR.STEER_RATE * dt;
+  if (Math.abs(d) <= step) return want;
+  return cur + (d > 0 ? step : -step);
+}
+function turnRate(steer, sp) { return steer * CAR.TURN * (1 - 0.4 * Math.min(1, Math.abs(sp) / CAR.TOP)); }
+function carTopSpeed(steer) { return CAR.TOP * (1 - 0.32 * Math.min(1, Math.abs(steer))); }
+function driftOf(steer, sp) { const d = Math.abs(steer) * Math.min(1, Math.abs(sp) / CAR.TOP) - CAR.DRIFT; return d > 0 ? d : 0; }
+function camLead(sp, hd) { const k = CAR.LEAD * Math.min(1, Math.abs(sp) / CAR.TOP); return { x: Math.cos(hd) * k, y: Math.sin(hd) * k }; }
+function engineHz(sp) { return CAR.IDLE + Math.max(0, sp) * 48; }
+/* A coin thrown into the air, so the arc can be proven without drawing it. */
+function coinArc(p, t) { return { x: p.x + p.vx * t, y: p.y + p.vy * t + 520 * t * t / 2, a: Math.max(0, 1 - t / p.life) }; }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine };
+  module.exports = { COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+    paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
+    CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
 }
 </script>
 <script>
@@ -1554,6 +1648,8 @@ if (typeof module !== 'undefined' && module.exports) {
     drawGulls(t, hour);
     drawGhost();
     drawPreview();
+    drawSkids();
+    drawDust();
     stepIslanders(dt, t);
     drawIslanders(t);
     stepCar(dt);
@@ -1564,6 +1660,7 @@ if (typeof module !== 'undefined' && module.exports) {
     drawCleo(t);
     drawDock();
     drawCrates();
+    drawCoinFx();
     miniT += dt; if (miniT > 0.25) { miniT = 0; drawMini(); }
     requestAnimationFrame(frame);
   }
@@ -1571,8 +1668,9 @@ if (typeof module !== 'undefined' && module.exports) {
   /* THE CAMERA. Three snap levels (whole island, build, close up), zoom about the point under the fingers or the cursor,
      pinch and two-finger pan on touch, trackpad pinch and scroll on a Mac, mouse wheel, double tap, arrow keys, a dial,
      a home button and a minimap. Pans carry a little momentum and the island can never be dragged off the screen. */
-  const ZOOMS = { whole: 0.28, build: 0.9, close: 1.8 };
-  const ZMIN = 0.22, ZMAXV = 2.6;
+  const ZOOMS = zoomsFor(innerWidth, innerHeight);
+  const BIG = bigScreen(innerWidth, innerHeight);
+  const ZMIN = 0.22, ZMAXV = zoomCapFor(innerWidth, innerHeight);
   let vel = { x: 0, y: 0 }, target = null;
   function worldBounds() { return { x0: 0, y0: 0, x1: off.width, y1: off.height }; }
   function clampCam() {
@@ -1649,7 +1747,8 @@ if (typeof module !== 'undefined' && module.exports) {
     }
     if (pts.size === 1) {
       const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
-      if (gesture.kind === 'maybe-tap' && Math.hypot(dx, dy) > 10) gesture.kind = 'pan';
+      if (gesture.kind === 'maybe-tap' && Math.hypot(dx, dy) > 10) gesture.kind = paintStart(gesture.x, gesture.y) ? 'paint' : 'pan';
+      if (gesture.kind === 'paint') { paintTo(e.clientX, e.clientY); return; }
       if (gesture.kind === 'pan') {
         const now = performance.now();
         if (lastMove) { const dtm = Math.max(8, now - lastMove.t) / 1000; vel.x = (e.clientX - lastMove.x) / dtm; vel.y = (e.clientY - lastMove.y) / dtm; }
@@ -1662,8 +1761,9 @@ if (typeof module !== 'undefined' && module.exports) {
     const p = pts.get(e.pointerId); if (!p) return;
     pts.delete(e.pointerId);
     if (gesture && gesture.kind === 'maybe-tap' && pts.size === 0) {
-      tapAt(e.clientX, e.clientY); // a second tap on the same spot stacks a block, so there is no double-tap zoom on purpose
+      tapAt(e.clientX, e.clientY); // a single tap on top of a block is how you go UP, so there is no double-tap zoom on purpose
     }
+    if (gesture && gesture.kind === 'paint' && pts.size === 0) endStroke();
     if (gesture && gesture.kind === 'pan' && pts.size === 0) { const age = lastMove ? performance.now() - lastMove.t : 999; if (age > 80) { vel.x = 0; vel.y = 0; } }
     if (pts.size === 1) { const a = [...pts.values()][0]; gesture = { kind: 'pan', cx: cam.x, cy: cam.y, x: a.x, y: a.y, t: performance.now() }; }
     else if (pts.size === 0) { gesture = null; lastMove = null; }
@@ -1682,6 +1782,7 @@ if (typeof module !== 'undefined' && module.exports) {
   addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     const step = 60;
+    if (driving && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { steerWant = e.key === 'ArrowLeft' ? -1 : 1; e.preventDefault(); return; }
     if (e.key === 'ArrowLeft') { cam.x += step; clampCam(); } else if (e.key === 'ArrowRight') { cam.x -= step; clampCam(); }
     else if (e.key === 'ArrowUp') { cam.y += step; clampCam(); } else if (e.key === 'ArrowDown') { cam.y -= step; clampCam(); }
     else if (e.key === '+' || e.key === '=') zoomAbout(W / 2, H / 2, cam.zoom * 1.2);
@@ -1730,6 +1831,72 @@ if (typeof module !== 'undefined' && module.exports) {
     return inBounds(x, y) ? { x, y } : null;
   }
   let tool = 3; // wood first: house building starts with walls
+  /* THE STROKE. A dragged finger lays a line of blocks. It only ever fills bare ground, so a stroke
+     can never build a tower by accident, which is the thing that defeated Ollie on the iPad.
+     Every stroke is one press of UNDO, not thirty. */
+  let stroke = null, strokes = [];
+  function paintStart(sx, sy) {
+    if (driving || walking) return false;
+    const c = cellAt(sx, sy); if (!c) return false;
+    if (islanderAt(sx, sy) || cleoAt(sx, sy)) return false;
+    if (tool === -1) { if (topZ(world.ref, c.x, c.y) < 0) return false; }
+    else if (!paintable(world.ref, c.x, c.y)) return false;
+    stroke = { last: c, n: 0 };
+    const bands = [];
+    strokeCell(c.x, c.y, bands);
+    redrawBands(bands);
+    return true;
+  }
+  /* One stroke can cross thirty cells, so the chunk cache is redrawn once per band per batch
+     rather than once per block, and the sound is throttled by the clock rather than the count. */
+  let thunkAt = 0;
+  function redrawBands(svals) {
+    if (!svals.length) return;
+    meshDirty = true;
+    for (let i = 0; i < chunks.length; i++) {
+      const c = chunks[i];
+      for (let k = 0; k < svals.length; k++) { if (svals[k] >= c.s0 && svals[k] <= c.s1) { drawChunk(i); break; } }
+    }
+    arcadeCells = arcades(world.ref); factoryCells = factories(world.ref);
+  }
+  function strokeCell(x, y, bands) {
+    let r;
+    if (tool === -1) { if (topZ(world.ref, x, y) < 0) return; r = erase(world.ref, x, y); }
+    else { if (!paintable(world.ref, x, y)) return; r = place(world.ref, x, y, tool); }
+    if (!r || !r.ok) { if (r && r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
+      else if (r && r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.'); return; }
+    stroke.n++;
+    lastPlaced = { x: x, y: y };
+    if (bands.indexOf(x + y) === -1) bands.push(x + y);
+    if (tool === -1 && r.id === 6) toast('THAT WAS A DOOR! Your islander may move out.');
+    if (tool === -1 && r.id === 9) toast('THAT WAS YOUR FLAG! The race line is gone.');
+    if (tool === -1 && isPlant(r.id)) delete garden[x + ',' + y];
+    if (tool === 12) { garden[x + ',' + y] = today(); journal.planted = (journal.planted || 0) + 1; }
+    const now = performance.now();
+    if (now - thunkAt > 55) { thunkAt = now; if (tool === -1) blip(300); else thunk(r.z); }
+    try { if (navigator.vibrate) navigator.vibrate(6); } catch (e) {}
+  }
+  function paintTo(sx, sy) {
+    if (!stroke) return;
+    const c = cellAt(sx, sy); if (!c) return;
+    if (c.x === stroke.last.x && c.y === stroke.last.y) return;
+    const line = cellLine(stroke.last, c), bands = [];
+    for (let i = 0; i < line.length; i++) strokeCell(line[i].x, line[i].y, bands);
+    stroke.last = c;
+    redrawBands(bands);
+    syncCargo();
+  }
+  function endStroke() {
+    if (!stroke) return;
+    const n = stroke.n; stroke = null;
+    if (!n) return;
+    strokes.push(n);
+    if (strokes.length > 60) strokes.shift();
+    syncCargo(); popCheck(); saveSoon();
+    if (tool !== -1) { if (n >= 4 && !journal.painted) { journal.painted = true; noteLearned('Dragging your finger lays a whole line of blocks at once, and a line that comes back to where it started is a ring.', 'paint', 'geometry'); }
+      if (n >= 3) toast(n + ' BLOCKS IN ONE GO!'); }
+    if (tool === 12) saveJournal(journal);
+  }
   function tapAt(sx, sy) {
     if (driving || walking) return;
     const ch = cleoAt(sx, sy);
@@ -1743,7 +1910,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (tool === -1) r = erase(world.ref, c.x, c.y);
     else r = place(world.ref, c.x, c.y, tool);
     if (r.ok) {
-      blip(tool === -1 ? 300 : 520 + r.z * 90);
+      if (tool === -1) blip(300); else thunk(r.z);
       try { if (navigator.vibrate) navigator.vibrate(tool === -1 ? 8 : 12); } catch (e) {}
       heightPop = { x: c.x, y: c.y, z: tool === -1 ? Math.max(0, r.z) : r.z, n: tool === -1 ? topZ(world.ref, c.x, c.y) + 1 : r.z + 1, until: performance.now() + 1100 };
       if (tool === -1 && r.id === 6) toast('THAT WAS A DOOR! Your islander may move out.');
@@ -1753,6 +1920,7 @@ if (typeof module !== 'undefined' && module.exports) {
       if (tool === 12) { garden[c.x + ',' + c.y] = today(); journal.planted = (journal.planted || 0) + 1; saveJournal(journal); toast('SEED PLANTED! Come back tomorrow and see.'); noteLearned('A seed goes on bare ground, and then you have to wait. Tomorrow it will be different.', 'plant', 'time'); }
       if (tool === -1 && isPlant(r.id)) delete garden[c.x + ',' + c.y];
       redrawWorld({ x: c.x, y: c.y }); syncCargo(); popCheck(); saveSoon();
+      strokes.push(1); if (strokes.length > 60) strokes.shift();
       lastPlaced = { x: c.x, y: c.y };
       if (r.z === ISLE.ZMAX - 1) noteLearned('Eight blocks is as tall as the island lets you build. Any higher and it would topple.', 'tall', 'geometry');
     }
@@ -1797,7 +1965,12 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function renderDock() {
     bar.innerHTML = '';
-    bar.appendChild(dockBtn('btn-undo', 'UNDO', '\u21B6', function () { if (undo(world.ref).ok) { blip(260); redrawWorld(); syncCargo(); popCheck(); saveSoon(); heightPop = null; } }));
+    bar.appendChild(dockBtn('btn-undo', 'UNDO', '\u21B6', function () {
+      const n = strokes.length ? strokes.pop() : 1;
+      let any = false;
+      for (let i = 0; i < n; i++) { if (undo(world.ref).ok) any = true; else break; }
+      if (any) { blip(260); redrawWorld(); syncCargo(); popCheck(); saveSoon(); heightPop = null; }
+    }));
     recent.filter(function (r) { return r !== tool; }).slice(0, 2).forEach(function (id) {
       const b = document.createElement('button'); b.className = 'dock pin'; b.dataset.val = id; b.appendChild(iconFor(id)); b.appendChild(document.createTextNode(nameOf(id)));
       b.addEventListener('click', function () { setTool(id); }); bar.appendChild(b);
@@ -1845,6 +2018,7 @@ if (typeof module !== 'undefined' && module.exports) {
     else return;
     e.preventDefault();
   });
+  addEventListener('keyup', function (e) { if (driving && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) steerWant = 0; });
   // preview before commit: a ghost of the block where it will land, under a held finger or a hovering mouse
   let hoverCell = null, heightPop = null;
   cv.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse' && !pts.size && !driving) hoverCell = cellAt(e.clientX, e.clientY); });
@@ -1911,17 +2085,92 @@ if (typeof module !== 'undefined' && module.exports) {
     const nx = document.getElementById('next'); if (nx) nx.style.visibility = 'hidden';
     clearTimeout(toastT); toastT = setTimeout(() => { el.classList.remove('on'); if (nx) nx.style.visibility = ''; }, 2200);
   }
-  let AC = null;
-  function blip(f) {
+  let AC = null, MASTER = null, NOISE = null;
+  /* THE SOUND. Everything here is generated from oscillators and one noise buffer, so there is not a
+     single audio file and not a single external request. The context is built on the first touch,
+     which is what iOS needs before it will make a sound at all. */
+  function ac() {
+    if (!AC) {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      MASTER = AC.createGain(); MASTER.gain.value = 0.85; MASTER.connect(AC.destination);
+    }
+    if (AC.state === 'suspended') AC.resume();
+    return AC;
+  }
+  function noiseBuf() {
+    if (NOISE) return NOISE;
+    const a = ac(), n = Math.floor(a.sampleRate * 0.5);
+    NOISE = a.createBuffer(1, n, a.sampleRate);
+    const d = NOISE.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return NOISE;
+  }
+  function tone(f, dur, type, vol, slideTo, delay) {
     try {
-      if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
-      if (AC.state === 'suspended') AC.resume();
-      const o = AC.createOscillator(), g = AC.createGain();
-      o.type = 'square'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.05, AC.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 0.08);
-      o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime + 0.1);
+      const a = ac(), t = a.currentTime + (delay || 0);
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type || 'square'; o.frequency.setValueAtTime(f, t);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.012, dur * 0.2));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(MASTER); o.start(t); o.stop(t + dur + 0.02);
     } catch (e) {}
+  }
+  function hiss(dur, vol, hz, delay) {
+    try {
+      const a = ac(), t = a.currentTime + (delay || 0);
+      const s = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter();
+      s.buffer = noiseBuf(); s.loop = true;
+      f.type = 'bandpass'; f.frequency.value = hz; f.Q.value = 1.1;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f).connect(g).connect(MASTER); s.start(t); s.stop(t + dur + 0.02);
+    } catch (e) {}
+  }
+  function blip(f) { tone(f, 0.11, 'square', 0.14); tone(f * 2, 0.06, 'sine', 0.05); }
+  /* A block landing. Pitched by how high it went, so a tower sounds like a tower. */
+  function thunk(z) { const f = 168 + z * 30; tone(f, 0.13, 'triangle', 0.22, f * 0.55); hiss(0.05, 0.05, 1400); }
+  function ding() { tone(880, 0.09, 'sine', 0.18); tone(1320, 0.17, 'sine', 0.18, null, 0.075); }
+  function chime(n) { for (let i = 0; i < Math.min(5, n); i++) tone(660 * Math.pow(1.26, i), 0.13, 'sine', 0.14, null, i * 0.055); }
+  /* THE ENGINE. A saw for the note, a square an octave down for the guts, through a filter that
+     opens as the car speeds up. It only ever exists while he is driving. */
+  let eng = null, squealAt = 0;
+  function engineOn() {
+    if (eng) return;
+    try {
+      const a = ac();
+      const o = a.createOscillator(), sub = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter();
+      o.type = 'sawtooth'; sub.type = 'square'; lp.type = 'lowpass'; lp.frequency.value = 760; lp.Q.value = 3;
+      o.frequency.value = CAR.IDLE; sub.frequency.value = CAR.IDLE / 2;
+      g.gain.setValueAtTime(0.0001, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.05, a.currentTime + 0.25);
+      o.connect(lp); sub.connect(lp); lp.connect(g); g.connect(MASTER);
+      o.start(); sub.start();
+      eng = { o: o, sub: sub, g: g, lp: lp };
+    } catch (e) { eng = null; }
+  }
+  function engineOff() {
+    if (!eng) return;
+    const e = eng; eng = null;
+    try { const a = ac(); e.g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 0.18); } catch (x) {}
+    setTimeout(function () { try { e.o.stop(); e.sub.stop(); } catch (x) {} }, 320);
+  }
+  function engineAt(sp, air) {
+    if (!eng) return;
+    try {
+      const a = ac(), f = engineHz(sp), t = a.currentTime;
+      eng.o.frequency.setTargetAtTime(f, t, 0.05);
+      eng.sub.frequency.setTargetAtTime(f / 2, t, 0.05);
+      eng.lp.frequency.setTargetAtTime(air ? 2400 : 620 + sp * 300, t, 0.07);
+      eng.g.gain.setTargetAtTime(air ? 0.028 : 0.05, t, 0.08);
+    } catch (e) {}
+  }
+  function squeal() {
+    const now = performance.now();
+    if (now - squealAt < 150) return;
+    squealAt = now; hiss(0.2, 0.045, 2100);
   }
   function shareUrl() {
     const p = new URLSearchParams(location.search).get('crew');
@@ -2677,8 +2926,42 @@ if (typeof module !== 'undefined' && module.exports) {
   const purse = loadPurse();
   function savePurse() { if (!canSave()) return; try { localStorage.setItem(PKEY, JSON.stringify(purse)); } catch (e) {} }
   function syncCoins() { document.getElementById('coinn').textContent = String(purse.coins); }
+  /* COINS THAT FLY. Ollie's own words were "you get coins", and on the island they only ever
+     appeared as a number going up. Now they are thrown into the air from wherever it happened. */
+  let coinFx = [];
+  function focusPoint() {
+    if (driving) return { x: isoX(car.x, car.y) * cam.zoom + cam.x, y: (isoY(car.x, car.y, 0) + ZH) * cam.zoom + cam.y - 18 };
+    if (lastPlaced) return { x: isoX(lastPlaced.x, lastPlaced.y) * cam.zoom + cam.x, y: (isoY(lastPlaced.x, lastPlaced.y, 0) + ZH) * cam.zoom + cam.y - 18 };
+    return { x: W / 2, y: H * 0.45 };
+  }
+  function coinBurst(sx, sy, n) {
+    const k = Math.max(4, Math.min(16, n));
+    for (let i = 0; i < k; i++) {
+      coinFx.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 270, vy: -250 - Math.random() * 200,
+        t0: performance.now(), life: 0.85 + Math.random() * 0.45, sp: Math.random() * 6.28 });
+    }
+    if (coinFx.length > 90) coinFx = coinFx.slice(-90);
+  }
+  function drawCoinFx() {
+    if (!coinFx.length) return;
+    const now = performance.now(), keep = [], s = BIG ? 1.7 : 1;
+    for (let i = 0; i < coinFx.length; i++) {
+      const p = coinFx[i], t = (now - p.t0) / 1000;
+      if (t > p.life) continue;
+      keep.push(p);
+      const q = coinArc(p, t);
+      const wob = Math.abs(Math.cos(p.sp + t * 9));
+      ctx.globalAlpha = q.a;
+      ctx.fillStyle = '#FFD447';
+      ctx.beginPath(); ctx.ellipse(q.x, q.y, 7 * s * (0.25 + 0.75 * wob), 7 * s, 0, 0, 6.29); ctx.fill();
+      ctx.strokeStyle = '#C9932E'; ctx.lineWidth = 2 * s; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    coinFx = keep;
+  }
   function awardCoins(n, why) {
     if (!(n > 0)) return 0;
+    const fp = focusPoint(); coinBurst(fp.x, fp.y, n * 3); chime(n);
     purse.coins += n; journal.coinsToday = (journal.coinsToday || 0) + n; saveJournal(journal); savePurse(); syncCoins();
     const b = document.getElementById('coins'); b.classList.add('pop'); setTimeout(function () { b.classList.remove('pop'); }, 220);
     if (why) toast(why + ' +' + n + ' COIN' + (n === 1 ? '' : 'S'));
@@ -3004,6 +3287,37 @@ if (typeof module !== 'undefined' && module.exports) {
   function agInput(i) { if (ag && !ag.over) GAMES[ag.game].input(ag, i, ag.k); }
   syncCoins();
   const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
+  let steerWant = 0, skids = [], dust = [];
+  function drawSkids() {
+    if (!skids.length) return;
+    const now = performance.now(), keep = [];
+    for (let i = 0; i < skids.length; i++) {
+      const s = skids[i], age = (now - s.t0) / 1000;
+      if (age > 7) continue;
+      keep.push(s);
+      const sx = isoX(s.x, s.y) * cam.zoom + cam.x, sy = (isoY(s.x, s.y, 0) + ZH) * cam.zoom + cam.y;
+      ctx.globalAlpha = 0.3 * (1 - age / 7);
+      ctx.fillStyle = '#2A1B3D';
+      ctx.beginPath(); ctx.ellipse(sx, sy + 2, 7 * cam.zoom, 3 * cam.zoom, 0, 0, 6.29); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    skids = keep;
+  }
+  function drawDust() {
+    if (!dust.length) return;
+    const now = performance.now(), keep = [];
+    for (let i = 0; i < dust.length; i++) {
+      const d = dust[i], age = (now - d.t0) / 1000;
+      if (age > 0.7) continue;
+      keep.push(d);
+      const sx = isoX(d.x, d.y) * cam.zoom + cam.x, sy = (isoY(d.x, d.y, 0) + ZH) * cam.zoom + cam.y;
+      ctx.globalAlpha = 0.42 * (1 - age / 0.7);
+      ctx.fillStyle = '#F3DFC0';
+      ctx.beginPath(); ctx.arc(sx, sy - age * 26, (d.r + age * 12) * cam.zoom, 0, 6.29); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    dust = keep;
+  }
   let lapStart = 0, lapNow = 0, lapArmed = false, bestLap = 0, ghostLap = 0;
   let arcadeScore = 0; const dingAt = {};
   function arcadeCheck() {
@@ -3112,11 +3426,23 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function stepCar(dt) {
     if (!driving) return;
-    car.h += car.steer * 2.6 * dt;
-    car.sp += (3.4 - car.sp) * 1.6 * dt;
+    car.steer = steerToward(car.steer, steerWant, dt);
+    car.h += turnRate(car.steer, car.sp) * dt;
+    car.sp += (carTopSpeed(car.steer) - car.sp) * 2.1 * dt;
+    const slip = driftOf(car.steer, car.sp);
+    if (slip > 0 && car.z <= 0.02) {
+      const px = car.h - Math.PI / 2 * (car.steer > 0 ? 1 : -1);
+      car.x += Math.cos(px) * slip * car.sp * 0.42 * dt;
+      car.y += Math.sin(px) * slip * car.sp * 0.42 * dt;
+      squeal();
+      if (skids.length < 200) skids.push({ x: car.x, y: car.y, h: car.h, t0: performance.now() });
+    }
+    if (car.z <= 0.02 && car.sp > 2.4 && Math.random() < dt * 22) dust.push({ x: car.x, y: car.y, t0: performance.now(), r: 3 + Math.random() * 4 });
+    engineAt(car.sp, car.z > 0.05);
     if (car.z > 0 || car.vz > 0) {
       car.vz -= 9.5 * dt; car.z += car.vz * dt;
-      if (car.z <= 0) { car.z = 0; car.vz = 0; blip(320); }
+      if (car.z <= 0) { car.z = 0; car.vz = 0; tone(120, 0.2, 'triangle', 0.3, 52); hiss(0.14, 0.09, 700);
+        for (let i = 0; i < 8; i++) dust.push({ x: car.x, y: car.y, t0: performance.now(), r: 4 + Math.random() * 6 }); }
     }
     const nx = car.x + Math.cos(car.h) * car.sp * dt;
     const ny = car.y + Math.sin(car.h) * car.sp * dt;
@@ -3129,13 +3455,15 @@ if (typeof module !== 'undefined' && module.exports) {
     deliveryCheck();
     if (chase) { chaseStep(chase, dt); if (chaseCatch(chase, car)) chaseWin(); else if (chase.gone) { endChase(); toast('The gull got away with it. Next drive, try again.'); } }
     if (wasRamp && !onRamp(car.x, car.y) && car.z <= 0) {
-      car.vz = 3.6; blip(880); award('air', 'BIG AIR!');
+      car.vz = 3.6; tone(520, 0.34, 'sawtooth', 0.16, 1180); hiss(0.3, 0.05, 1700); award('air', 'BIG AIR!');
       noteLearned('A ramp only works if it is one block high. Any taller and it is a wall.', 'ramp', 'geometry'); trophyCheck();
     }
-    const tcx = W / 2 - isoX(car.x, car.y) * cam.zoom;
-    const tcy = H * 0.52 - (isoY(car.x, car.y, 0) + ZH) * cam.zoom;
-    cam.x += (tcx - cam.x) * Math.min(1, 4.5 * dt);
-    cam.y += (tcy - cam.y) * Math.min(1, 4.5 * dt);
+    // the camera looks where the car is going, not where it has been
+    const ld = camLead(car.sp, car.h);
+    const tcx = W / 2 - isoX(car.x + ld.x, car.y + ld.y) * cam.zoom;
+    const tcy = H * 0.54 - (isoY(car.x + ld.x, car.y + ld.y, 0) + ZH) * cam.zoom;
+    cam.x += (tcx - cam.x) * Math.min(1, 3.6 * dt);
+    cam.y += (tcy - cam.y) * Math.min(1, 3.6 * dt);
     const f = flags(world.ref);
     if (f.length) {
       const d = Math.min.apply(null, f.map(p => Math.hypot(p.x + 0.5 - car.x, p.y + 0.5 - car.y)));
@@ -3168,7 +3496,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y, s = Math.max(cam.zoom, 0.95);
     ctx.fillStyle = 'rgba(42,27,61,0.3)';
     ctx.beginPath(); ctx.ellipse(sx, isoY(car.x, car.y, 0) * cam.zoom + cam.y + ZH * cam.zoom + 2 * s, 12 * s, 5 * s, 0, 0, 6.29); ctx.fill();
-    ctx.save(); ctx.translate(sx, sy - 10 * s); ctx.scale(s, s);
+    ctx.save(); ctx.translate(sx, sy - 10 * s); ctx.rotate(car.steer * -0.13); ctx.scale(s, s);
     const C = CARS[carIdx];
     ctx.fillStyle = '#2A1B3D';
     ctx.beginPath(); ctx.ellipse(-7, 6, 4, 3, 0, 0, 6.29); ctx.ellipse(7, 6, 4, 3, 0, 0, 6.29); ctx.fill();
@@ -3198,13 +3526,16 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
     drawer.classList.remove('on'); tipEl.classList.remove('on');
     document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
+    document.getElementById('next').style.display = on ? 'none' : '';
+    document.getElementById('quest').style.display = on ? 'none' : '';
     if (!on) {
       const hs1 = houses(world.ref), st1 = hs1.length ? { x: hs1[0].x, y: hs1[0].y } : { x: ISLE.N / 2, y: ISLE.N / 2 };
       cam.x = W / 2 - isoX(st1.x, st1.y) * cam.zoom; cam.y = H * 0.5 - (isoY(st1.x, st1.y, 0) + ZH) * cam.zoom; clampCam(); syncDial();
     }
-    if (!on) endChase();
+    if (!on) { endChase(); engineOff(); steerWant = 0; skids = []; dust = []; }
     if (on) {
-      spawnCar();
+      spawnCar(); engineOn(); steerWant = 0; skids = []; dust = [];
+      if (cam.zoom < ZOOMS.build) { cam.zoom = ZOOMS.build; syncDial(); }
       if (houses(world.ref).length >= 1 && (journal.chaseWinsToday || 0) < 3) chaseT = setTimeout(startChase, 4000);
       toast(flags(world.ref).length ? 'DRIVE THROUGH YOUR FLAG TO START THE LAP!' : 'DRIVE! Build a FLAG to race a lap.');
     if (PRO && !driveSaid) { driveSaid = true; setTimeout(function () { toast('YOUR ' + CARS[carIdx].name + ', IN ' + PROFILE.COLOURS[PRO.colour].name + '.'); }, 2400); }
@@ -3212,8 +3543,8 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function holdBtn(id, val) {
     const b = document.getElementById(id);
-    const on = (e) => { e.preventDefault(); car.steer = val; };
-    const off2 = () => { if (car.steer === val) car.steer = 0; };
+    const on = (e) => { e.preventDefault(); steerWant = val; };
+    const off2 = () => { if (steerWant === val) steerWant = 0; };
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off2);
     b.addEventListener('pointerleave', off2); b.addEventListener('pointercancel', off2);
   }
