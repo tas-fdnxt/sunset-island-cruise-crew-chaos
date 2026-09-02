@@ -1459,9 +1459,12 @@ if (typeof module !== 'undefined' && module.exports) {
       const t = times();
       ['save', 'journal', 'purse', 'answers'].forEach(function (d) {
         const k = key(d), local = localStorage.getItem(k), r = have[d];
-        if (r && (!local || !t[d] || r.updated_at > t[d])) {
-          /* the server has it and this device is behind, or has never synced: the server wins */
+        if (r && (!local || (t[d] && r.updated_at > t[d]))) {
+          /* this device is empty, or has synced before and is behind: the server wins */
           localStorage.setItem(k, JSON.stringify(r.value)); stamp(d, r.updated_at); stat.adopted.push(d);
+        } else if (r && local && !t[d]) {
+          /* a real drawer that has never synced: local wins and pushes, never adopts */
+          push(d, true);
         } else if (!r && local) {
           /* first device to sign in with a real drawer: it seeds the server */
           push(d, true);
