@@ -1397,6 +1397,94 @@ if (typeof module !== 'undefined' && module.exports) {
   if (PRO) { CREW = PRO.name; TITLE = PROFILE.TITLES[PRO.title]; FLAGCOL = PRO.hex; }
   /* Two editions, one engine. Ollie and Sibella's edition has no Cleo: Ollie is the captain and an islander keeps the book. */
   const OWNER = !PRO && (CREW === 'OLLIE' || CREW === 'SIBELLA');
+  /* S2B. The boot boundary. ANON is the whole game with zero network. SIGNED needs two things at once:
+     a grown-up's session saved on this device by join.html, and ?s=1 in the query. A shared link never
+     carries ?s=1, so a shared link always boots ANON. The server never gates play; it only remembers. */
+  const SB = { url: 'https://whhzezkpejplaghiuuyk.supabase.co', key: 'sb_publishable_YV7G7ROGkFRwc4noDH4gNA_xXIeA3gd' };
+  const SESSKEY = 'sunset-session-v1';
+  let SESSION = null;
+  try { const s = JSON.parse(localStorage.getItem(SESSKEY) || 'null'); if (s && s.access_token && s.refresh_token && s.user_id) SESSION = s; } catch (e) {}
+  const MODE = (SESSION && new URLSearchParams(location.search).get('s') === '1') ? 'SIGNED' : 'ANON';
+  window.__MODE = MODE;
+  /* The four drawers, mirrored to the family's own rows. Newest wins by timestamp. The device stays the
+     cache, the server becomes the truth, so a cleared browser can never lose the island again.
+     Every call is a no-op in ANON. Every failure is silent: the server never blocks play. */
+  const SYNC = (function () {
+    const NICK = (CREW || '').replace(/[^A-Za-z]/g, '').slice(0, 10) || 'CAPTAIN';
+    const TKEY = 'captains-island-synct-v1-' + CREW;
+    let childId = null, dead = MODE !== 'SIGNED';
+    const timers = {}, stat = { pushes: 0, pulls: 0, adopted: [], errors: 0 };
+    function key(d) { return { save: SAVEKEY, journal: JKEY, purse: PKEY, answers: QKEY }[d]; }
+    function times() { try { return JSON.parse(localStorage.getItem(TKEY) || '{}'); } catch (e) { return {}; } }
+    function stamp(d, iso) { try { const t = times(); t[d] = iso; localStorage.setItem(TKEY, JSON.stringify(t)); } catch (e) {} }
+    function hdr(extra) { return Object.assign({ 'apikey': SB.key, 'Authorization': 'Bearer ' + SESSION.access_token, 'Content-Type': 'application/json' }, extra || {}); }
+    async function refresh() {
+      const r = await fetch(SB.url + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { 'apikey': SB.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: SESSION.refresh_token }) });
+      if (!r.ok) throw new Error('refresh');
+      const j = await r.json();
+      SESSION = { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at, user_id: (j.user && j.user.id) || SESSION.user_id };
+      try { localStorage.setItem(SESSKEY, JSON.stringify(SESSION)); } catch (e) {}
+    }
+    async function rest(path, opt, retried) {
+      const r = await fetch(SB.url + '/rest/v1/' + path, Object.assign({ headers: hdr(opt && opt.headers) }, opt || {}, { headers: hdr(opt && opt.headers) }));
+      if (r.status === 401 && !retried) { await refresh(); return rest(path, opt, true); }
+      if (!r.ok) throw new Error('rest ' + r.status);
+      const txt = await r.text(); return txt ? JSON.parse(txt) : null;
+    }
+    async function child() {
+      if (childId) return childId;
+      const rows = await rest('children?select=id&nickname=eq.' + encodeURIComponent(NICK) + '&limit=1');
+      if (rows && rows[0]) { childId = rows[0].id; return childId; }
+      const fam = await rest('families?select=id&limit=1');
+      if (!fam || !fam[0]) throw new Error('no family');
+      const made = await rest('children?select=id', { method: 'POST', headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ family_id: fam[0].id, nickname: NICK, age_band: '5-8', title: TITLE, colour: FLAGCOL }) });
+      childId = made[0].id; return childId;
+    }
+    async function pull() {
+      const id = await child();
+      const rows = await rest('child_state?select=drawer,value,updated_at&child_id=eq.' + id);
+      const have = {}; (rows || []).forEach(function (r) { have[r.drawer] = r; });
+      const t = times();
+      ['save', 'journal', 'purse', 'answers'].forEach(function (d) {
+        const k = key(d), local = localStorage.getItem(k), r = have[d];
+        if (r && (!local || !t[d] || r.updated_at > t[d])) {
+          /* the server has it and this device is behind, or has never synced: the server wins */
+          localStorage.setItem(k, JSON.stringify(r.value)); stamp(d, r.updated_at); stat.adopted.push(d);
+        } else if (!r && local) {
+          /* first device to sign in with a real drawer: it seeds the server */
+          push(d, true);
+        }
+      });
+      stat.pulls++;
+      return stat.adopted.length > 0;
+    }
+    async function upsert(d) {
+      const raw = localStorage.getItem(key(d)); if (raw == null) return;
+      let val; try { val = JSON.parse(raw); } catch (e) { return; }
+      const id = await child();
+      const out = await rest('child_state?on_conflict=child_id,drawer&select=updated_at', { method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({ child_id: id, drawer: d, value: val }) });
+      if (out && out[0] && out[0].updated_at) stamp(d, out[0].updated_at);
+      stat.pushes++;
+    }
+    function push(d, now) {
+      if (dead || !key(d)) return;
+      clearTimeout(timers[d]);
+      timers[d] = setTimeout(function () { upsert(d).catch(function () { stat.errors++; }); }, now ? 0 : 1500);
+    }
+    async function boot() {
+      if (dead) return;
+      try {
+        const changed = await pull();
+        /* adopted something from the server: reload once so the game reads it, guarded against loops */
+        if (changed && !sessionStorage.getItem('sunset-adopted')) { sessionStorage.setItem('sunset-adopted', '1'); location.reload(); }
+      } catch (e) { stat.errors++; }
+    }
+    return { push: push, boot: boot, stat: stat, nick: NICK };
+  })();
+  window.__SYNC = SYNC;
   function updateLineage() {
     const own = !builder || builder === CREW;
     document.getElementById('title-badge').textContent =
@@ -2931,6 +3019,7 @@ if (typeof module !== 'undefined' && module.exports) {
       localStorage.setItem(SAVEKEY, JSON.stringify({
         v: 1, crew: CREW, i: encode(world.ref), t: Math.round(bestLap) || 0, c: chain, car: carIdx, g: garden, at: Date.now()
       }));
+      SYNC.push('save');
       return true;
     } catch (e) { return false; }
   }
@@ -2983,7 +3072,7 @@ if (typeof module !== 'undefined' && module.exports) {
   const PKEY = 'captains-island-purse-v1-' + CREW;
   function loadPurse() { try { const p = JSON.parse(localStorage.getItem(PKEY) || 'null'); if (p && p.v === 1) return { v: 1, coins: p.coins | 0, trophies: Array.isArray(p.trophies) ? p.trophies.filter(function (i) { return !!trophyById(i); }) : [], chaseWins: p.chaseWins | 0, arcadeGoes: p.arcadeGoes | 0, deliveries: p.deliveries | 0 }; } catch (e) {} return { v: 1, coins: 0, trophies: [], chaseWins: 0, arcadeGoes: 0, deliveries: 0 }; }
   const purse = loadPurse();
-  function savePurse() { if (!canSave()) return; try { localStorage.setItem(PKEY, JSON.stringify(purse)); } catch (e) {} }
+  function savePurse() { if (!canSave()) return; try { localStorage.setItem(PKEY, JSON.stringify(purse)); SYNC.push('purse'); } catch (e) {} }
   function syncCoins() { document.getElementById('coinn').textContent = String(purse.coins); }
   /* COINS THAT FLY. Ollie's own words were "you get coins", and on the island they only ever
      appeared as a number going up. Now they are thrown into the air from wherever it happened. */
@@ -3626,6 +3715,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const a = loadAnswers();
       a[id] = { picked: picked, right: right, at: Date.now() };
       localStorage.setItem(QKEY, JSON.stringify(a));
+      SYNC.push('answers');
     } catch (e) {}
   }
   function mPrism(g, cx, cy, t, s) {
@@ -3801,7 +3891,7 @@ if (typeof module !== 'undefined' && module.exports) {
   let DAY_OVERRIDE = null, HOUR_OVERRIDE = null;
   function today() { return DAY_OVERRIDE || dayKey(); }
   function hourNow() { if (HOUR_OVERRIDE != null) return HOUR_OVERRIDE; const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
-  function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); } catch (e) {} }
+  function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); SYNC.push('journal'); } catch (e) {} }
   let journal = loadJournal();
   function noteIslander(nm) {
     if (journal.newIslanders.indexOf(nm) === -1) { journal.newIslanders.push(nm); saveJournal(journal); }
@@ -4026,6 +4116,7 @@ if (typeof module !== 'undefined' && module.exports) {
     agState: () => ag ? { name: ag.name, game: ag.game, score: ag.score, over: ag.over, coins: ag.coins, phase: ag.phase, seq: ag.seq ? ag.seq.slice() : null, pi: ag.pi, round: ag.round, pops: ag.pops ? ag.pops.map(p => ({ cell: p.cell, kind: p.kind })) : null, stack: ag.stack ? ag.stack.length : 0, left: ag.left, swing: (ag.game === 2 && ag.swing && !ag.drop) ? GAMES[2].swingX(ag) : null, topX: ag.stack ? ag.stack[ag.stack.length - 1].x : null } : null,
     garden: () => garden, applyGrowth, boatArrive, setVisitor, visitor: () => visitor, boatAt: () => boatAt(hourNow()), boatGift: () => boatGift(today()), boatSpot, dockCell, chocoDay };
   boot();
+  SYNC.boot();
 })();
 </script>
 </body>
