@@ -133,6 +133,92 @@ with sync_playwright() as pw:
     pg.screenshot(path='shot-sync-signed.png')
     ctx.close()
 
+    # ---------- 2B. THE GUARD: A REAL ISLAND THAT HAS NEVER SYNCED IS NEVER OVERWRITTEN ----------
+    local_save = dict(server_save); local_save['at'] = local_save['at'] - 5000
+    calls_b = []
+    def api_b(r):
+        req = r.request; path = req.url[len(SB):]
+        calls_b.append({'m': req.method, 'p': path, 'body': req.post_data})
+        def j(data, status=200): r.fulfill(status=status, content_type='application/json', body=json.dumps(data))
+        if path.startswith('/rest/v1/children?select=id&nickname=eq.OLLIE'): return j([{'id': 'kid1'}])
+        if path.startswith('/rest/v1/child_state?select=') and req.method == 'GET':
+            return j([{'drawer': 'save', 'value': {'at': 9999999999999, 'i': 'SERVER-DECOY'}, 'updated_at': '2030-01-01T00:00:00+00:00'}])
+        if path.startswith('/rest/v1/child_state?on_conflict') and req.method == 'POST':
+            return j([{'updated_at': '2031-05-05T00:00:00+00:00'}], 201)
+        j({'unexpected': path}, 500)
+    ctx = br.new_context(viewport={'width': 1180, 'height': 820}, device_scale_factor=1, has_touch=True)
+    ctx.add_init_script("localStorage.setItem('sunset-session-v1', %s)" % json.dumps(json.dumps(SESSION)))
+    ctx.add_init_script("localStorage.setItem(%s, %s)" % (json.dumps(SAVEKEY), json.dumps(json.dumps(local_save))))
+    errs, outside = [], []
+    def route_b(r):
+        if r.request.url.startswith(U): return r.continue_()
+        if r.request.url.startswith(SB): return api_b(r)
+        outside.append(r.request.url); r.abort()
+    ctx.route('**/*', route_b)
+    pg = ctx.new_page()
+    pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
+    pg.goto(U + 'island.html?crew=OLLIE&s=1', wait_until='load')
+    def ups_b():
+        return [c for c in calls_b if c['p'].startswith('/rest/v1/child_state?on_conflict') and json.loads(c['body']).get('drawer') == 'save']
+    for _ in range(100):
+        if ups_b(): break
+        pg.wait_for_timeout(100)
+    settle(pg)
+    ok(pg.evaluate('()=>window.__MODE') == 'SIGNED', 'guard: boots SIGNED')
+    local_after = pg.evaluate("k=>JSON.parse(localStorage.getItem(k))", SAVEKEY)
+    ok(local_after and local_after.get('at') == local_save['at'] and local_after.get('i') == local_save['i'], 'guard: the unsynced local island is never overwritten by the server row')
+    ok(pg.evaluate("()=>sessionStorage.getItem('sunset-adopted')") is None, 'guard: nothing adopted, no reload')
+    u = ups_b()
+    ok(len(u) >= 1, 'guard: the local island is pushed up instead', pg.evaluate('()=>window.__SYNC.stat'))
+    body_b = json.loads(u[-1]['body']) if u else {}
+    ok(isinstance(body_b.get('value'), dict) and body_b['value'].get('at') == local_save['at'], 'guard: the push carries the local island, not the decoy')
+    stamp_b = pg.evaluate("()=>JSON.parse(localStorage.getItem('captains-island-synct-v1-OLLIE')||'{}')")
+    ok(stamp_b.get('save') == '2031-05-05T00:00:00+00:00', 'guard: after the push the device remembers the server timestamp', stamp_b)
+    ok(len(outside) == 0 and len(errs) == 0, 'guard: nothing leaks, zero console errors', (outside[:1], errs[:1]))
+    pg.screenshot(path='shot-sync-guard.png')
+    ctx.close()
+
+    # ---------- 2C. SYNCED BEFORE AND BEHIND: THE SERVER STILL WINS ----------
+    old_local = dict(server_save); old_local['at'] = old_local['at'] - 99000
+    def api_c(r):
+        req = r.request; path = req.url[len(SB):]
+        def j(data, status=200): r.fulfill(status=status, content_type='application/json', body=json.dumps(data))
+        if path.startswith('/rest/v1/children?select=id&nickname=eq.OLLIE'): return j([{'id': 'kid1'}])
+        if path.startswith('/rest/v1/child_state?select=') and req.method == 'GET':
+            return j([{'drawer': 'save', 'value': server_save, 'updated_at': '2030-01-01T00:00:00+00:00'}])
+        if path.startswith('/rest/v1/child_state?on_conflict') and req.method == 'POST':
+            return j([{'updated_at': '2030-01-02T00:00:00+00:00'}], 201)
+        j({'unexpected': path}, 500)
+    ctx = br.new_context(viewport={'width': 1180, 'height': 820}, device_scale_factor=1, has_touch=True)
+    ctx.add_init_script("localStorage.setItem('sunset-session-v1', %s)" % json.dumps(json.dumps(SESSION)))
+    ctx.add_init_script("localStorage.setItem(%s, %s)" % (json.dumps(SAVEKEY), json.dumps(json.dumps(old_local))))
+    ctx.add_init_script("localStorage.setItem('captains-island-synct-v1-OLLIE', %s)" % json.dumps(json.dumps({'save': '2020-01-01T00:00:00+00:00'})))
+    errs = []
+    def route_c(r):
+        if r.request.url.startswith(U): return r.continue_()
+        if r.request.url.startswith(SB): return api_c(r)
+        r.abort()
+    ctx.route('**/*', route_c)
+    pg = ctx.new_page()
+    pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
+    pg.goto(U + 'island.html?crew=OLLIE&s=1', wait_until='load')
+    for _ in range(80):
+        try:
+            if pg.evaluate("()=>sessionStorage.getItem('sunset-adopted')") == '1' and pg.evaluate('()=>document.readyState') == 'complete': break
+        except Exception:
+            pass  # the page is mid-reload, which is the thing we are waiting for
+        pg.wait_for_timeout(100)
+    pg.wait_for_load_state('load'); settle(pg)
+    local_c = pg.evaluate("k=>JSON.parse(localStorage.getItem(k))", SAVEKEY)
+    ok(local_c and local_c.get('at') == server_save['at'], 'behind: a device that has synced before and is behind still adopts the server island')
+    ok(pg.evaluate("()=>sessionStorage.getItem('sunset-adopted')") == '1', 'behind: reloaded exactly once')
+    stamp_c = pg.evaluate("()=>JSON.parse(localStorage.getItem('captains-island-synct-v1-OLLIE')||'{}')")
+    ok(stamp_c.get('save') == '2030-01-01T00:00:00+00:00', 'behind: the stamp moved to the adopted timestamp', stamp_c)
+    ok(len(errs) == 0, 'behind: zero console errors', errs[:2])
+    ctx.close()
+
     # ---------- 3. THE GROWN-UP PAGE ----------
     auth, made, consents = {'signin': 0, 'signup': 0}, [], []
     fam_rows = []
