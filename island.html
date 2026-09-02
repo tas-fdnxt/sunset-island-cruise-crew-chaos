@@ -248,6 +248,10 @@
   #rail button canvas { width:44px; height:47px; }
   #rail button.sel { background:var(--yellow); border-color:var(--ink); transform:translateY(-4px); box-shadow:0 8px 0 rgba(20,8,30,0.45); }
   #rail button:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.45); }
+  #orders { position:fixed; display:none; gap:6px; z-index:9; }
+  #orders.on { display:flex; }
+  #orders button { font:inherit; font-weight:900; font-size:12px; letter-spacing:0.04em; padding:10px 12px; border:3px solid var(--ink);
+    border-radius:14px; background:var(--yellow); color:var(--ink); box-shadow:0 4px 0 rgba(20,8,30,0.45); cursor:pointer; touch-action:manipulation; }
   /* THE TABLET. Ollie plays on an iPad and every size in this file was drawn for a 390 point phone.
      This block is the same test as bigScreen(w,h) in the core: a short side of 700, or a long side of 1000. */
   @media (min-width:700px) and (min-height:700px), (min-width:1000px) {
@@ -352,6 +356,7 @@
 <div id="tip"></div>
 <button id="keeper" aria-label="Ask the keeper"></button>
 <div id="toast"></div>
+<div id="orders"></div>
 <div id="bubble"></div>
 <div id="drivebar">
   <button class="dbtn" id="d-left">&#9664;</button>
@@ -1397,6 +1402,12 @@ if (typeof module !== 'undefined' && module.exports) {
   if (PRO) { CREW = PRO.name; TITLE = PROFILE.TITLES[PRO.title]; FLAGCOL = PRO.hex; }
   /* Two editions, one engine. Ollie and Sibella's edition has no Cleo: Ollie is the captain and an islander keeps the book. */
   const OWNER = !PRO && (CREW === 'OLLIE' || CREW === 'SIBELLA');
+  /* F1. Cleo is retired. DOG is false for every child, so KEEP is true for every child: the first islander keeps the
+     book in everyone's edition the way Coco always has in Ollie's. Her code stays behind the switch, never drawn. */
+  const DOG = false;
+  const KEEP = OWNER || !DOG;
+  /* Sibella comes and goes on the morning boat in Ollie's edition, and Ollie visits hers. Every second visitor day. */
+  function familyVisitor(name) { if (!OWNER) return name; return (new Date().getDate() % 2 === 0) ? (CREW === 'OLLIE' ? 'SIBELLA' : 'OLLIE') : name; }
   /* S2B. The boot boundary. ANON is the whole game with zero network. SIGNED needs two things at once:
      a grown-up's session saved on this device by join.html, and ?s=1 in the query. A shared link never
      carries ?s=1, so a shared link always boots ANON. The server never gates play; it only remembers. */
@@ -2123,9 +2134,9 @@ if (typeof module !== 'undefined' && module.exports) {
   try { recent = (JSON.parse(localStorage.getItem('captains-island-recent-v1') || '[]') || []).filter(function (r) { return ISLE.TYPES[r]; }).slice(0, 3); } catch (e) { recent = []; }
   if (!recent.length) recent = [3, 6, 2];
   setTool(3, true);
-  document.getElementById('keeper').textContent = OWNER ? 'LOG' : 'CLEO';
+  document.getElementById('keeper').textContent = 'LOG';
   document.getElementById('keeper').addEventListener('click', function () {
-    if (!OWNER) { centreOn(cleo.x, cleo.y); const px = W / 2, py = H / 2; setTimeout(function () { talkToKeeper({ px: px, py: py }); }, 350); }
+    if (!KEEP) { centreOn(cleo.x, cleo.y); const px = W / 2, py = H / 2; setTimeout(function () { talkToKeeper({ px: px, py: py }); }, 350); }
     else { const k = islanders[0]; if (k) { centreOn(k.x, k.y); setTimeout(function () { talkToKeeper({ px: W / 2, py: H / 2 }); }, 350); } else talkToKeeper({ px: W / 2, py: H * 0.4 }); }
   });
   addEventListener('keydown', function (e) {
@@ -2177,7 +2188,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const before = islanders.length, after = rebuildIslanders();
     if (after > before) {
       const nw = islanders[after - 1];
-      toast(nw.name + ' MOVED IN! Tap them to say hi.');
+      toast(nw.name + ' MOVED IN! You built a house with a door, so somebody came. Tap them to say hi.');
       noteIslander(nw.name);
       sayPersonal('house');
       noteLearned('A house needs walls all the way round and a door to get in, and then somebody comes to live in it.', 'house', 'geometry');
@@ -2421,6 +2432,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function stepIslanders(dt, t) {
     for (const p of allFolk()) {
+      if (p.rider) { p.x = car.x - Math.cos(car.h) * 0.5; p.y = car.y - Math.sin(car.h) * 0.5; p.wait -= dt; if (p.wait <= 0) p.rider = false; continue; }
       p.wait -= dt;
       if (p.wait <= 0) { wanderTarget(p); p.wait = 2.5 + Math.random() * 3.5; }
       const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
@@ -2439,7 +2451,7 @@ if (typeof module !== 'undefined' && module.exports) {
     return c ? { x: c.x + 0.5, y: c.y + 0.5 } : { x: cleo.x, y: cleo.y };
   }
   function stepCleo(dt, t) {
-    if (OWNER || cleo.mood === 'sleep') return;
+    if (KEEP || cleo.mood === 'sleep') return;
     if (cleo.spin > 0) { cleo.spin = Math.max(0, cleo.spin - dt); return; }
     const tg = cleoTarget();
     const d = Math.hypot(tg.x - cleo.x, tg.y - cleo.y);
@@ -2457,7 +2469,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (cleo.bark > 0) cleo.bark -= dt;
   }
   function drawCleo(t) {
-    if (OWNER) return;
+    if (KEEP) return;
     const wx = isoX(cleo.x, cleo.y), wy = isoY(cleo.x, cleo.y, 0) + ZH;
     const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y;
     const s = Math.max(cam.zoom, 0.8), coat = coatLevel(journal.book ? journal.book.length : 0);
@@ -2517,7 +2529,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (cleo.spin > 0) { ctx.fillStyle = '#FFD447'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(sx + Math.cos(t * 6 + k * 1.57) * 16 * s, sy - 24 * s + Math.sin(t * 6 + k * 1.57) * 6 * s, 2 * s, 0, 6.29); ctx.fill(); } }
   }
   function cleoAt(sx, sy) {
-    if (OWNER || cleo.moving) return null;
+    if (KEEP || cleo.moving) return null;
     const wx = isoX(cleo.x, cleo.y), wy = isoY(cleo.x, cleo.y, 0) + ZH;
     const px = wx * cam.zoom + cam.x, py = wy * cam.zoom + cam.y - 12 * cam.zoom;
     return Math.hypot(sx - px, sy - py) < 26 * cam.zoom ? { px, py } : null;
@@ -2537,7 +2549,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const n = nextThing(adviceState(adviceTick));
     cleo.hint = n;
     if (!hintOn || document.getElementById('book').classList.contains('on')) { el.classList.remove('on'); return; }
-    el.innerHTML = '<b>' + (OWNER ? 'CAPTAIN\u2019S LOG:' : 'CLEO:') + '</b> ' + n.line.replace(/[<>&]/g, '');
+    el.innerHTML = '<b>' + (OWNER ? 'CAPTAIN\u2019S LOG:' : TITLE + '\u2019S LOG:') + '</b> ' + n.line.replace(/[<>&]/g, '');
     el.classList.add('on');
   }
   setInterval(function () { adviceTick++; refreshNext(); }, 8000);
@@ -2576,7 +2588,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const el = document.getElementById('bubble');
     const n = cleo.hint || nextThing(adviceState(adviceTick));
     let line = n.line;
-    if (!OWNER && !journal.metCleo) { journal.metCleo = true; saveJournal(journal); line = 'I am Cleo. I am a show dog, and I keep the book. Tap me any time and I will tell you what to do next.'; }
+    if (!KEEP && !journal.metCleo) { journal.metCleo = true; saveJournal(journal); line = 'I am Cleo. I am a show dog, and I keep the book. Tap me any time and I will tell you what to do next.'; }
     else if (journal.lastQuestDone && !journal.quest) line = 'You did it! ' + journal.lastQuestDone + ' That goes in the book tonight.';
     else if (n.ghost) { showGhost(n.ghost); line = line + ' I drew you the shape.'; }
     if (!journal.wordHeard && Math.random() < 0.35) {
@@ -2585,7 +2597,7 @@ if (typeof module !== 'undefined' && module.exports) {
       noteLearned('The word of the island: ' + wd.w + '. It means ' + wd.d + '.', 'word', 'words');
       line = line + ' Word of the island: ' + wd.w + '. It means ' + wd.d + '.';
     }
-    el.innerHTML = '<b>' + (OWNER ? keeperName() : 'CLEO') + '</b><br>'; el.appendChild(document.createTextNode(line));
+    el.innerHTML = '<b>' + keeperName() + '</b><br>'; el.appendChild(document.createTextNode(line));
     el.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px';
     el.style.top = Math.max(60, hit.py - 92) + 'px';
     el.classList.add('on');
@@ -2626,7 +2638,7 @@ if (typeof module !== 'undefined' && module.exports) {
         ctx.beginPath(); ctx.arc(sx - 9 * s, sy - 15 * s + bob - w2, 2.6 * s, 0, 6.29); ctx.arc(sx + 9 * s, sy - 15 * s + bob + w2, 2.6 * s, 0, 6.29); ctx.fill();
         ctx.fillStyle = '#FFD447';
         ctx.beginPath(); ctx.arc(sx + 13 * s, sy - 30 * s + Math.sin(t * 7) * 3 * s, 1.8 * s, 0, 6.29); ctx.fill();
-      } else if (OWNER && p === islanders[0]) { // Ollie's edition: the first islander keeps the book
+      } else if (KEEP && p === islanders[0]) { // Ollie's edition: the first islander keeps the book
         ctx.fillStyle = '#5C3A6E'; ctx.fillRect(sx + 6 * s, sy - 13 * s + bob, 6 * s, 8 * s);
         ctx.fillStyle = '#FFF3E2'; ctx.fillRect(sx + 7 * s, sy - 12 * s + bob, 4 * s, 6 * s);
         ctx.fillStyle = '#5C3A6E'; ctx.fillRect(sx + 8.5 * s, sy - 12 * s + bob, 1 * s, 6 * s);
@@ -2653,7 +2665,14 @@ if (typeof module !== 'undefined' && module.exports) {
   function chat(hit) {
     const el = document.getElementById('bubble');
     let ph = phrases();
-    if (OWNER && hit.p === islanders[0]) { talkToKeeper(hit); return; }
+    showOrders(hit);
+    if (hit.p.visitor && (hit.p.name === 'SIBELLA' || hit.p.name === 'OLLIE')) {
+      el.innerHTML = '<b>' + hit.p.name + '</b><br>';
+      el.appendChild(document.createTextNode(hit.p.name === 'SIBELLA' ? 'It\u2019s me, Sibella! First Mate reporting for duty. Show me what you built, Captain.' : 'It\u2019s me, Ollie! The Captain, visiting. Show me your island, First Mate.'));
+      el.style.left = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)) + 'px'; el.style.top = Math.max(60, hit.py - 92) + 'px'; el.classList.add('on');
+      blip(700); clearTimeout(bubbleT); bubbleT = setTimeout(function () { el.classList.remove('on'); }, 5200); return;
+    }
+    if (KEEP && hit.p === islanders[0]) { talkToKeeper(hit); return; }
     if (!journal.met) journal.met = {};
     if (!hit.p.visitor && !journal.met[hit.p.name]) {
       journal.met[hit.p.name] = 1; saveJournal(journal);
@@ -2740,13 +2759,13 @@ if (typeof module !== 'undefined' && module.exports) {
     texCache[key] = tx; return tx;
   }
   function folkTex(p) {
-    return spriteTex('folk:' + p.col + (p.visitor ? ':v' : '') + (OWNER && p === islanders[0] ? ':k' : ''), function (g) {
+    return spriteTex('folk:' + p.col + (p.visitor ? ':v' : '') + (KEEP && p === islanders[0] ? ':k' : ''), function (g) {
       g.fillStyle = p.col; g.beginPath(); g.ellipse(32, 62, 16, 24, 0, 0, 6.29); g.fill();
       g.fillStyle = '#FFF3E2'; g.beginPath(); g.arc(32, 30, 15, 0, 6.29); g.fill();
       g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(26, 28, 2.6, 0, 6.29); g.arc(38, 28, 2.6, 0, 6.29); g.fill();
       g.strokeStyle = '#2A1B3D'; g.lineWidth = 2.6; g.beginPath(); g.arc(32, 33, 6, 0.35, 2.8); g.stroke();
       if (p.visitor) { g.fillStyle = '#FFD447'; g.beginPath(); g.ellipse(32, 18, 24, 6, 0, 0, 6.29); g.fill(); g.fillRect(20, 4, 24, 15); g.fillStyle = '#FF6E6C'; g.fillRect(20, 13, 24, 4); }
-      if (OWNER && p === islanders[0]) { g.fillStyle = '#5C3A6E'; g.fillRect(44, 52, 14, 18); g.fillStyle = '#FFF3E2'; g.fillRect(46, 54, 10, 14); }
+      if (KEEP && p === islanders[0]) { g.fillStyle = '#5C3A6E'; g.fillRect(44, 52, 14, 18); g.fillStyle = '#FFF3E2'; g.fillRect(46, 54, 10, 14); }
     });
   }
   function cleoTex(pose) {
@@ -2808,7 +2827,7 @@ if (typeof module !== 'undefined' && module.exports) {
       if (!journal.walkSaid) { journal.walkSaid = true; noteLearned('The island looks different from the ground. A door is taller than you are, and eight blocks is a long way up.', 'walk', 'geometry'); }
       blip(520); setTimeout(function () { blip(780); }, 100);
       cleo.mood = 'sit'; cleo.stuck = 0;
-      if (!OWNER) { const tg = cleoTarget(), fz = floorAt(world.ref, tg.x, tg.y); if (fz !== null && fz <= walker.z + 1.05) { cleo.x = tg.x; cleo.y = tg.y; } else { cleo.x = walker.x; cleo.y = walker.y; } }
+      if (!KEEP) { const tg = cleoTarget(), fz = floorAt(world.ref, tg.x, tg.y); if (fz !== null && fz <= walker.z + 1.05) { cleo.x = tg.x; cleo.y = tg.y; } else { cleo.x = walker.x; cleo.y = walker.y; } }
     } else {
       walking = false; document.body.classList.remove('walking');
       journal.walkedToday = (journal.walkedToday || 0) + Math.round(walker ? walker.steps : 0); journal.jumpedToday = (journal.jumpedToday || 0) + (walker ? walker.jumps : 0);
@@ -2895,7 +2914,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const shTex = shadowTex();
     const wf = footprintFloor(world.ref, walker.x, walker.y); if (wf !== null) { const lift = Math.max(0, walker.z - wf); drawFlat(shTex, walker.x, walker.y, wf + 0.012, 0.34 * Math.max(0.35, 1 - lift * 0.25)); }
     allFolk().forEach(function (p) { const fz = floorAt(world.ref, p.x, p.y); if (fz !== null) drawFlat(shTex, p.x, p.y, fz + 0.012, 0.3); });
-    if (!OWNER) { const fz = floorAt(world.ref, cleo.x, cleo.y); if (fz !== null) drawFlat(shTex, cleo.x, cleo.y, fz + 0.012, 0.28); }
+    if (!KEEP) { const fz = floorAt(world.ref, cleo.x, cleo.y); if (fz !== null) drawFlat(shTex, cleo.x, cleo.y, fz + 0.012, 0.28); }
     gl.depthMask(true); gl.uniform1f(uCut, 0.5);
     lastProj = [];
     const proj = function (x, y, z) { const m = VP.m; const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15]; if (cw <= 0.05) return null; return { sx: (cx / cw * 0.5 + 0.5) * innerWidth, sy: (0.5 - cy / cw * 0.5) * innerHeight }; };
@@ -2911,7 +2930,7 @@ if (typeof module !== 'undefined' && module.exports) {
       drawBillboard(VP, eye, trophyTex(), tp.x, tp.y, fz, 0.6, 0.9);
       const s = proj(tp.x, tp.y, fz + 0.45); if (s) lastProj.push({ trophy: tp.id, sx: s.sx, sy: s.sy });
     });
-    if (!OWNER) {
+    if (!KEEP) {
       const fz = floorAt(world.ref, cleo.x, cleo.y);
       if (fz !== null) {
         cleoPose = cleo.moving ? (Math.sin(t * 14 + cleo.seed) > 0 ? 'trot0' : 'trot1') : 'sit';
@@ -2947,13 +2966,59 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   let visitor = null;
   function allFolk() { return visitor ? islanders.concat([visitor]) : islanders; }
+  /* Bossing the islanders. "Get out of my house. What are they doing in my house?" Tap one, give an order, they obey. */
+  const ordersEl = document.getElementById('orders');
+  let ordersT = 0, ordered = null;
+  function showOrders(hit) {
+    if (hit.p.visitor) return;
+    ordered = hit.p; ordersEl.innerHTML = '';
+    [['out', 'GO OUTSIDE'], ['here', 'COME HERE'], ['car', 'GET IN THE CAR']].forEach(function (o) {
+      const b = document.createElement('button'); b.textContent = o[1]; b.dataset.order = o[0];
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); giveOrder(ordered, o[0]); });
+      ordersEl.appendChild(b);
+    });
+    /* above the speech bubble, aligned with it; below it when the islander is near the top of the screen */
+    const bl = Math.max(8, Math.min(innerWidth - 168, hit.px - 80)), bt = Math.max(60, hit.py - 92);
+    ordersEl.style.left = Math.max(8, Math.min(innerWidth - 320, bl)) + 'px';
+    ordersEl.style.top = (bt > 130 ? bt - 58 : bt + 215) + 'px';
+    ordersEl.classList.add('on');
+    clearTimeout(ordersT); ordersT = setTimeout(function () { ordersEl.classList.remove('on'); }, 5200);
+  }
+  function openGround(cx, cy, rmin, rmax) {
+    for (let k = 0; k < 60; k++) {
+      const a = Math.random() * Math.PI * 2, r = rmin + Math.random() * (rmax - rmin);
+      const x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r);
+      if (isLand(x, y) && topZ(world.ref, x, y) < 0) return { x: x + 0.5, y: y + 0.5 };
+    }
+    return null;
+  }
+  function giveOrder(p, kind) {
+    if (!p) return;
+    ordersEl.classList.remove('on');
+    p.rider = false; p.play = null; p.asleep = false;
+    if (kind === 'out') {
+      const g = openGround(p.home.x, p.home.y, 4, 8); if (g) { p.tx = g.x; p.ty = g.y; }
+      p.wait = 30;
+      toast(p.name + ': "Sorry, ' + TITLE + '!" They went outside.' + (OWNER && CREW === 'OLLIE' ? ' Remember you said "Get out of my house"? They listened.' : ''));
+    } else if (kind === 'here') {
+      let c = null;
+      if (driving) c = { x: car.x, y: car.y }; else { const cc = cellAt(innerWidth / 2, innerHeight / 2); if (cc) c = { x: cc.x + 0.5, y: cc.y + 0.5 }; }
+      if (c) { p.tx = c.x + 0.8; p.ty = c.y + 0.8; }
+      p.wait = 30; toast(p.name + ' is coming over.');
+    } else if (kind === 'car') {
+      p.rider = true; p.wait = 60; p.tx = car.x; p.ty = car.y;
+      toast(p.name + ' hopped in! Press DRIVE and hold on tight.');
+    }
+    journal.orders = (journal.orders || 0) + 1; saveJournal(journal);
+    blip(600);
+  }
   function chocoDay() { return boatGift(today()).kind === 'chocolate'; }
   function setVisitor() {
     const g = boatGift(today());
     if (g.kind !== 'visitor') { visitor = null; return; }
     if (visitor && visitor.name === g.name) return;
     const d = dockCell(), home = { x: Math.floor(d.x), y: Math.floor(d.y) };
-    visitor = { home: home, name: g.name, col: '#FFF3E2', visitor: true, x: home.x + 0.5, y: home.y + 0.5, tx: home.x + 0.5, ty: home.y + 0.5, wait: 1, seed: 4.2 };
+    visitor = { home: home, name: familyVisitor(g.name), col: '#FFF3E2', visitor: true, x: home.x + 0.5, y: home.y + 0.5, tx: home.x + 0.5, ty: home.y + 0.5, wait: 1, seed: 4.2 };
   }
   function horn() { blip(150); setTimeout(function () { blip(120); }, 260); setTimeout(function () { blip(150); }, 560); }
   function boatArrive(delay) {
@@ -3839,7 +3904,7 @@ if (typeof module !== 'undefined' && module.exports) {
       qw.appendChild(fb);
     }
   }
-  if (!OWNER) CARDS.push({ title: 'MEET CLEO', text: 'Cleo is a show dog, and she keeps the book. Tap her any time and she tells you the next thing to do. If you are stuck she draws you the shape.',
+  if (!KEEP) CARDS.push({ title: 'MEET CLEO', text: 'Cleo is a show dog, and she keeps the book. Tap her any time and she tells you the next thing to do. If you are stuck she draws you the shape.',
     q: 'What is Cleo?', a: ['A show dog', 'A seagull'], right: 0,
     draw: function (g, t) {
       const s = 3, cx = 300, cy = 250, trot = Math.sin(t * 6), INK = '#2A1B3D', TAN = '#C9834E', bow = PRO ? PRO.hex : '#FF6E6C';
@@ -3905,7 +3970,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (journal.learned.indexOf(line) === -1) journal.learned.push(line);
     saveJournal(journal);
   }
-  function keeperName() { return OWNER ? (islanders.length ? islanders[0].name : 'COCO') : 'CLEO'; }
+  function keeperName() { return islanders.length ? islanders[0].name : 'COCO'; }
   function questStats() {
     const st = worldStats(world.ref);
     st.delivered = journal.deliveredToday || 0;
@@ -3926,7 +3991,7 @@ if (typeof module !== 'undefined' && module.exports) {
       journal.doneId = journal.quest.id; journal.doneSkill = journal.quest.skill || '';
       journal.quest = null; journal.questDay = '';
       saveJournal(journal); award('quest'); trophyCheck();
-      if (OWNER) { if (islanders.length) islanders[0].cheer = 3; } else { cleo.spin = 1.6; cleo.mood = 'sit'; }
+      if (KEEP) { if (islanders.length) islanders[0].cheer = 3; } else { cleo.spin = 1.6; cleo.mood = 'sit'; }
       blip(700); setTimeout(function () { blip(950); }, 110);
       setTimeout(function () { toast('QUEST DONE! Read it tonight at story time.'); }, 1500);
     }
@@ -3962,7 +4027,7 @@ if (typeof module !== 'undefined' && module.exports) {
       newIslanders: journal.newIslanders, learned: journal.learned, job: journal.job ? journal.job.to : null, rungUp: rungUp,
       bestLap: bestLap, remixedFrom: chain.length ? chain[0] : '',
       quest: q, lastQuestDone: journal.lastQuestDone, arcadePlays: journal.arcadePlays || 0,
-      bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !OWNER),
+      bedtime: journal.bedtimeLast || null, keeper: keeperName(), questDays: questDays, fact: cleoFact((journal.book || []).length + 1, !KEEP),
       word: wordOfDay((journal.book || []).length + 1), wordHeard: !!journal.wordHeard, weather: weatherAt(today(), 12),
       chaseWins: journal.chaseWinsToday || 0, coinsToday: journal.coinsToday || 0, trophyNew: journal.trophyNew || '', cabinet: journal.cabinetToday || {},
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
@@ -4008,7 +4073,7 @@ if (typeof module !== 'undefined' && module.exports) {
     storyMode = 'morning'; storyEntry = last;
     const lines = ['Good morning, ' + TITLE.charAt(0) + TITLE.slice(1).toLowerCase() + ' ' + CREW + '.'];
     if (last.quest) lines.push('Last night the book said: today you are going to ' + last.quest.tell + '.');
-    lines.push(OWNER ? (islanders.length ? keeperName() + ' is carrying the book. Tap them if you forget.' : 'Build a house and somebody will move in to carry the book.') : 'Cleo the show dog is carrying the book. Tap her any time and she will tell you what to do next.');
+    lines.push(KEEP ? (islanders.length ? keeperName() + ' is carrying the book. Tap them if you forget.' : 'Build a house and somebody will move in to carry the book.') : 'Cleo the show dog is carrying the book. Tap her any time and she will tell you what to do next.');
     if ((journal.sprouted || 0) + (journal.treed || 0) > 0) lines.push('Go and look at the garden. Something grew while you slept.');
     lines.push('Tonight, tap the moon and the next chapter will be about what you did.');
     storyPages = [{ title: 'GOOD MORNING', lines: lines }];
@@ -4064,7 +4129,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const lines = parentSummary(journal, today(), CREW);
       body.innerHTML = lines.map(function (l) { const d = document.createElement('p'); d.textContent = l; return d.outerHTML; }).join('');
       const hb = document.createElement('button'); hb.id = 'shints';
-      const hl = function () { return (OWNER ? 'THE CAPTAIN\u2019S LOG IS ' : 'CLEO\u2019S HINTS ARE ') + (hintOn ? 'ON (tap to turn off)' : 'OFF (tap to turn on)'); };
+      const hl = function () { return (OWNER ? 'THE CAPTAIN\u2019S LOG IS ' : 'THE ' + TITLE + '\u2019S LOG IS ') + (hintOn ? 'ON (tap to turn off)' : 'OFF (tap to turn on)'); };
       hb.textContent = hl();
       hb.addEventListener('click', function () { hintOn = !hintOn; try { localStorage.setItem('captains-island-hints', hintOn ? 'on' : 'off'); } catch (e) {} hb.textContent = hl(); refreshNext(); });
       body.appendChild(hb);
@@ -4091,7 +4156,7 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('snext').addEventListener('click', function () { if (storyIdx < storyPages.length - 1) { storyIdx++; renderStory(); blip(640); } });
   document.getElementById('sprev').addEventListener('click', function () { if (storyIdx > 0) { storyIdx--; renderStory(); blip(560); } });
 
-  window.__ISLAND = { world, islandersRef: () => islanders, houses: () => houses(world.ref), popCheck,
+  window.__ISLAND = { world, islandersRef: () => islanders, familyVisitor, giveOrder, keep: KEEP, dog: DOG, keeperName, houses: () => houses(world.ref), popCheck,
     car, flags: () => flags(world.ref), fmtLap, setDrive: (b) => setDrive(b),
     isDriving: () => driving, steer: (v) => { car.steer = v; },
     lapInfo: () => ({ best: bestLap, ghost: ghostLap, started: !!lapStart, armed: lapArmed }),
