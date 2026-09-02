@@ -22,5 +22,7 @@ t(!j || /throw it away|thrown away|never stored/i.test(j), 'join: the page says 
 t(!j || !/localStorage\.setItem\([^)]*year/i.test(j), 'join: the birth year is never written to storage');
 t(!j || /replace\(\/\[\^A-Za-z\]\/g, ''\)\.toUpperCase\(\)\.slice\(0, 10\)/.test(j), 'join: nickname is letters only, ten at most, on the client too');
 t(!j || /'island\.html\?crew=' \+ encodeURIComponent\(k\.nickname\) \+ '&s=1'/.test(j), 'join: PLAY boots the island SIGNED');
+t(/if \(r && \(!local \|\| \(t\[d\] && r\.updated_at > t\[d\]\)\)\)/.test(h), 'the server wins only over an empty device or one that has synced before and is behind');
+t(/} else if \(r && local && !t\[d\]\) {\n          \/\* a real drawer that has never synced: local wins and pushes, never adopts \*\/\n          push\(d, true\);/.test(h), 'an unsynced local drawer wins and pushes, never adopts');
 console.log('RESULT: ' + (P + F) + ' checks, ' + P + ' passed, ' + F + ' failed');
 process.exit(F ? 1 : 0);
