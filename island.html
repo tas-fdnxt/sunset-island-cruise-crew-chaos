@@ -33,7 +33,7 @@
   canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
   canvas#gl { position:fixed; inset:0; width:100vw; height:100dvh; display:none; touch-action:none; z-index:4; }
   body.walking canvas#gl { display:block; }
-  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail { display:none !important; }
+  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #bpbar, body.walking #bpmenu, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail { display:none !important; }
   #walkui { display:none; }
   body.walking #walkui { display:block; }
   body.walking #topbar, body.walking #lineage { z-index:6; }
@@ -250,6 +250,14 @@
   #rail button:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.45); }
   #orders { position:fixed; display:none; gap:6px; z-index:9; }
   #orders.on { display:flex; }
+  #bpbar { position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 58px);
+    z-index:6; display:none; background:rgba(42,27,61,0.92); color:#FFD447; border:2px solid rgba(255,212,71,0.7);
+    border-radius:999px; padding:7px 15px; font-weight:900; font-size:12px; max-width:90vw; text-align:center; cursor:pointer; touch-action:manipulation; }
+  #bpbar.on { display:block; }
+  #bpmenu { position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 96px); z-index:9; display:none; gap:6px; }
+  #bpmenu.on { display:flex; }
+  #bpmenu button { font:inherit; font-weight:900; font-size:12px; letter-spacing:0.04em; padding:10px 12px; border:3px solid var(--ink);
+    border-radius:14px; background:var(--yellow); color:var(--ink); box-shadow:0 4px 0 rgba(20,8,30,0.45); cursor:pointer; touch-action:manipulation; }
   #orders button { font:inherit; font-weight:900; font-size:12px; letter-spacing:0.04em; padding:10px 12px; border:3px solid var(--ink);
     border-radius:14px; background:var(--yellow); color:var(--ink); box-shadow:0 4px 0 rgba(20,8,30,0.45); cursor:pointer; touch-action:manipulation; }
   /* THE TABLET. Ollie plays on an iPad and every size in this file was drawn for a 390 point phone.
@@ -320,6 +328,8 @@
 <div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="knob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
 <canvas id="mini" width="192" height="192" aria-label="Map of the island"></canvas>
 <div id="quest"></div>
+<div id="bpbar"></div>
+<div id="bpmenu"></div>
 <div id="next"></div>
 <div id="story">
   <div id="storycard">
@@ -715,6 +725,8 @@ function questTableBase() {
       done: 'A tower rose four blocks high.' },
     { id: 'choco', need: 'factories', n: 1, tell: 'open a chocolate factory so nobody on the island ever runs out',
       done: 'The chocolate factory opened its doors.' },
+    { id: 'bp1', need: 'bpFinishedToday', n: 1, tell: 'finish the blueprint the morning boat brought',
+      done: 'The blueprint became a real building.' },
     { id: 'houses6', need: 'houses', n: 6, tell: 'grow the village to six houses so everyone has a neighbour',
       done: 'Six houses stood in a row.' },
   ];
@@ -888,6 +900,8 @@ function chapter(o) {
   const cab = Object.keys(o.cabinet || {});
   if (cab.length) page1.push('The arcade was switched on: ' + cab.map(function (k) { return k + ' best ' + o.cabinet[k]; }).join(', ') + '. Ten points is a coin, every time.');
   if (o.word) page1.push('The word of the island today was ' + o.word.w + '. It means ' + o.word.d + '. ' + cap + (o.wordHeard ? ' heard it from an islander.' : ' can go and find out who says it.'));
+  if (o.bpToday && o.bpToday.finished) page1.push('The ' + o.bpToday.finished + ' blueprint became a real building' + (o.bpToday.hired ? ', with the crew hired for ' + o.bpToday.hired + ' coins' : ", laid by " + cap + "'s own hands") + '.');
+  else if (o.bpToday && o.bpToday.started) page1.push('The morning boat brought a rolled-up blueprint: the ' + o.bpToday.started + '. Its outline is glowing on the sand.');
   if (o.remixedFrom) page1.push('The island had started as ' + o.remixedFrom + "'s, and " + cap + ' made it their own.');
   const page2 = [];
   if (o.bedtime && o.bedtime.ask) {
@@ -1016,6 +1030,7 @@ function nextThing(st) {
   }
   if (st.quest && !st.questMet && st.quest.job) return { key: 'delivery', line: st.crates > 0 ? 'Drive the crates to ' + st.quest.job.filter(function (j) { return j.left > 0; }).map(function (j) { return j.name; }).join(' and ') + '.' : 'Press DRIVE and go to the DOCK to load crates. Then ' + st.quest.tell.replace('deliver', 'take') + '.' };
   if (st.quest && !st.questMet) return { key: 'quest', line: 'The book says: today you ' + st.quest.tell + '.' };
+  if (st.bp && st.bpToGo > 0) return { key: 'bp', line: 'The ' + st.bp + ' outline is glowing on the sand, ' + st.bpToGo + ' block' + (st.bpToGo === 1 ? '' : 's') + ' to go. Build into it, or coins hire the crew.' };
   if (st.rain) return { key: 'rain', line: 'It is raining! The islanders are indoors. A rainbow comes when it stops.' };
   if (h >= 18 || h < 5) return { key: 'moon', line: 'It is nearly bedtime. Tap the moon and I will read tonight\u2019s chapter.' };
   if (!st.flags) return { key: 'flag', line: 'Plant a FLAG, then press DRIVE. Zoom!' };
@@ -1378,8 +1393,86 @@ function camLead(sp, hd) { const k = CAR.LEAD * Math.min(1, Math.abs(sp) / CAR.T
 function engineHz(sp) { return CAR.IDLE + Math.max(0, sp) * 48; }
 /* A coin thrown into the air, so the arc can be proven without drawing it. */
 function coinArc(p, t) { return { x: p.x + p.vx * t, y: p.y + p.vy * t + 520 * t * t / 2, a: Math.max(0, 1 - t / p.life) }; }
+/* BLUEPRINTS AND THE CREW. Pure parts. The boat brings a rolled-up scroll, and tapping it lays a glowing
+   outline on the sand. Hands are free, always. Coins hire the crew, who build it block by block in front of
+   the child. Coins buy labour, never access. Every column is a stack of block ids from the ground up. */
+const BLUEPRINTS = [
+  { id: 'house', name: 'LITTLE HOUSE', cols: [
+    { dx: 0, dy: 0, ids: [3, 3, 7] }, { dx: 1, dy: 0, ids: [3, 3, 7] }, { dx: 2, dy: 0, ids: [3, 3, 7] },
+    { dx: 0, dy: 1, ids: [3, 3, 7] }, { dx: 2, dy: 1, ids: [3, 3, 7] },
+    { dx: 0, dy: 2, ids: [3, 3, 7] }, { dx: 1, dy: 2, ids: [6, 3, 7] }, { dx: 2, dy: 2, ids: [3, 3, 7] } ] },
+  { id: 'light', name: 'LIGHTHOUSE', cols: [
+    { dx: 1, dy: 1, ids: [4, 4, 4, 4, 5, 7] },
+    { dx: 0, dy: 1, ids: [2] }, { dx: 2, dy: 1, ids: [2] }, { dx: 1, dy: 0, ids: [2] }, { dx: 1, dy: 2, ids: [2] } ] },
+  { id: 'castle', name: 'CASTLE', cols: [
+    { dx: 0, dy: 0, ids: [4, 4, 4] }, { dx: 4, dy: 0, ids: [4, 4, 4] }, { dx: 0, dy: 4, ids: [4, 4, 4] }, { dx: 4, dy: 4, ids: [4, 4, 4] },
+    { dx: 1, dy: 0, ids: [4, 4] }, { dx: 2, dy: 0, ids: [4, 4] }, { dx: 3, dy: 0, ids: [4, 4] },
+    { dx: 0, dy: 1, ids: [4, 4] }, { dx: 4, dy: 1, ids: [4, 4] }, { dx: 0, dy: 2, ids: [4, 4] }, { dx: 4, dy: 2, ids: [4, 4] },
+    { dx: 0, dy: 3, ids: [4, 4] }, { dx: 4, dy: 3, ids: [4, 4] },
+    { dx: 1, dy: 4, ids: [4, 4] }, { dx: 2, dy: 4, ids: [6, 4] }, { dx: 3, dy: 4, ids: [4, 4] } ] },
+  { id: 'race', name: 'RACE RUN', cols: [
+    { dx: 0, dy: 0, ids: [9] },
+    { dx: 3, dy: 0, ids: [2] }, { dx: 4, dy: 0, ids: [2] }, { dx: 5, dy: 0, ids: [2] }, { dx: 6, dy: 0, ids: [2] } ] },
+  { id: 'square', name: 'VILLAGE SQUARE', cols: [
+    { dx: 0, dy: 0, ids: [6, 3] }, { dx: 1, dy: 0, ids: [3, 3] }, { dx: 0, dy: 1, ids: [3, 3] }, { dx: 1, dy: 1, ids: [3, 3] }, { dx: 0, dy: 2, ids: [3, 3] }, { dx: 1, dy: 2, ids: [3, 3] },
+    { dx: 7, dy: 0, ids: [6, 3] }, { dx: 8, dy: 0, ids: [3, 3] }, { dx: 7, dy: 1, ids: [3, 3] }, { dx: 8, dy: 1, ids: [3, 3] }, { dx: 7, dy: 2, ids: [3, 3] }, { dx: 8, dy: 2, ids: [3, 3] },
+    { dx: 14, dy: 0, ids: [6, 3] }, { dx: 15, dy: 0, ids: [3, 3] }, { dx: 14, dy: 1, ids: [3, 3] }, { dx: 15, dy: 1, ids: [3, 3] }, { dx: 14, dy: 2, ids: [3, 3] }, { dx: 15, dy: 2, ids: [3, 3] } ] },
+];
+function blueprintById(id) { for (let i = 0; i < BLUEPRINTS.length; i++) if (BLUEPRINTS[i].id === id) return BLUEPRINTS[i]; return null; }
+function scrollFor(day) { return BLUEPRINTS[dayHash(String(day) + ':scroll') % BLUEPRINTS.length]; }
+function bpBlocks(bp) { return bp.cols.reduce(function (a, c) { return a + c.ids.length; }, 0); }
+function bpPrice(n) { return Math.max(3, Math.ceil(n / 4)); }
+function bpSize(bp) { let w = 0, h2 = 0; bp.cols.forEach(function (c) { if (c.dx > w) w = c.dx; if (c.dy > h2) h2 = c.dy; }); return { w: w + 1, h: h2 + 1 }; }
+function bpLaid(w, bp, ox, oy) {
+  let n = 0;
+  bp.cols.forEach(function (c) {
+    const x = ox + c.dx, y = oy + c.dy;
+    if (!inBounds(x, y)) return;
+    for (let z = 0; z < c.ids.length; z++) { if (w.cols[idx(x, y, z)] === c.ids[z]) n++; else return; }
+  });
+  return n;
+}
+function bpRemaining(w, bp, ox, oy) {
+  /* per column, from the ground up: everything still to lay. A wrong block in a slot blocks that column until it is erased. */
+  const out = [];
+  bp.cols.forEach(function (c) {
+    const x = ox + c.dx, y = oy + c.dy;
+    if (!inBounds(x, y)) return;
+    for (let z = 0; z < c.ids.length; z++) {
+      const have = w.cols[idx(x, y, z)];
+      if (!have) out.push({ x: x, y: y, z: z, id: c.ids[z] });
+      else if (have !== c.ids[z]) return;
+    }
+  });
+  return out;
+}
+function bpNext(w, bp, ox, oy) {
+  /* only the cells a block can land in right now: the top of each unfinished column */
+  return bpRemaining(w, bp, ox, oy).filter(function (c) { return topZ(w, c.x, c.y) + 1 === c.z; });
+}
+function bpDone(w, bp, ox, oy) {
+  return bp.cols.every(function (c) {
+    const x = ox + c.dx, y = oy + c.dy;
+    if (!inBounds(x, y)) return false;
+    for (let z = 0; z < c.ids.length; z++) if (w.cols[idx(x, y, z)] !== c.ids[z]) return false;
+    return true;
+  });
+}
+function bpSpot(w, bp, near) {
+  for (let r = 3; r <= 34; r++) for (let a = 0; a < 24; a++) {
+    const ang = a / 24 * Math.PI * 2, cx = Math.round(near.x + Math.cos(ang) * r), cy = Math.round(near.y + Math.sin(ang) * r);
+    let ok = true;
+    for (let i = 0; i < bp.cols.length && ok; i++) {
+      const c = bp.cols[i], x = cx + c.dx, y = cy + c.dy;
+      if (!inBounds(x, y) || !isLand(x, y) || topZ(w, x, y) >= 0) ok = false;
+    }
+    if (ok) return { x: cx, y: cy };
+  }
+  return null;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+    BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
 }
@@ -1761,14 +1854,17 @@ if (typeof module !== 'undefined' && module.exports) {
     drawCompass();
     drawTide(hour);
     drawBoat(t, hour);
+    drawScroll(t);
     if (SKY.night > 0.05) { ctx.fillStyle = 'rgba(20,26,60,' + (0.45 * SKY.night) + ')'; ctx.fillRect(0, 0, W, H); drawLamps(SKY.night); }
     if (WX.kind === 'rain') drawRain(t);
     drawGulls(t, hour);
     drawGhost();
+    drawBpGhost();
     drawPreview();
     drawSkids();
     drawDust();
     stepIslanders(dt, t);
+    crewStep(dt);
     drawIslanders(t);
     stepCar(dt);
     drawCar();
@@ -2010,7 +2106,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!n) return;
     strokes.push(n);
     if (strokes.length > 60) strokes.shift();
-    syncCargo(); popCheck(); saveSoon();
+    syncCargo(); popCheck(); saveSoon(); bpCheck();
     if (tool !== -1) { if (n >= 4 && !journal.painted) { journal.painted = true; noteLearned('Dragging your finger lays a whole line of blocks at once, and a line that comes back to where it started is a ring.', 'paint', 'geometry'); }
       if (n >= 3) toast(n + ' BLOCKS IN ONE GO!'); }
     if (tool === 12) saveJournal(journal);
@@ -2021,6 +2117,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (ch) { talkToKeeper(ch); return; }
     const hit = islanderAt(sx, sy);
     if (hit) { chat(hit); return; }
+    if (scrollAt(sx, sy)) { openBlueprint(); return; }
     const c = cellAt(sx, sy);
     if (!c) return;
     if (tool !== -1 && arcadeCells.some(function (a) { return a.x === c.x && a.y === c.y; })) { openCabinet(c.x, c.y); return; }
@@ -2040,6 +2137,7 @@ if (typeof module !== 'undefined' && module.exports) {
       redrawWorld({ x: c.x, y: c.y }); syncCargo(); popCheck(); saveSoon();
       strokes.push(1); if (strokes.length > 60) strokes.shift();
       lastPlaced = { x: c.x, y: c.y };
+      bpCheck();
       if (r.z === ISLE.ZMAX - 1) noteLearned('Eight blocks is as tall as the island lets you build. Any higher and it would topple.', 'tall', 'geometry');
     }
     else if (r.why === 'water') toast('That is the sea! Build on the sand.');
@@ -2544,7 +2642,7 @@ if (typeof module !== 'undefined' && module.exports) {
     return { blocks: st.blocks, houses: st.houses, flags: st.flags, walls: walls, doors: doors,
       quest: journal.job && journal.quest ? Object.assign({}, journal.quest, { job: journal.job.to }) : journal.quest, questMet: journal.quest ? questMet(journal.quest, questStats()) : false, crates: car.crates || 0,
       ramp: (journal.ledger || []).some(function (e) { return e.line.indexOf('ramp') !== -1; }),
-      hour: hourNow(), rain: weatherAt(today(), hourNow()).kind === 'rain', tick: tick || 0 };
+      hour: hourNow(), rain: weatherAt(today(), hourNow()).kind === 'rain', tick: tick || 0, bp: bpInfo().name, bpToGo: bpInfo().toGo };
   }
   let adviceTick = 0;
   function refreshNext() {
@@ -3023,6 +3121,149 @@ if (typeof module !== 'undefined' && module.exports) {
     const d = dockCell(), home = { x: Math.floor(d.x), y: Math.floor(d.y) };
     visitor = { home: home, name: familyVisitor(g.name), col: '#FFF3E2', visitor: true, x: home.x + 0.5, y: home.y + 0.5, tx: home.x + 0.5, ty: home.y + 0.5, wait: 1, seed: 4.2 };
   }
+  /* BLUEPRINTS ON THE ISLAND. The scroll waits on the dock whenever no outline is active. Tap it and the
+     outline glows. Hands are free, always. The banner offers the crew; the crew builds one block at a time. */
+  let crewOn = false, crewT = 0;
+  function bpInfo() {
+    if (!journal.bp) return { name: '', toGo: 0, bp: null };
+    const bp = blueprintById(journal.bp.id);
+    if (!bp) return { name: '', toGo: 0, bp: null };
+    return { name: bp.name, toGo: bpBlocks(bp) - bpLaid(world.ref, bp, journal.bp.x, journal.bp.y), bp: bp };
+  }
+  function scrollSpot() {
+    const d = dockCell(), c = ISLE.N / 2;
+    let vx = c - d.x, vy = c - d.y; const L = Math.hypot(vx, vy) || 1; vx /= L; vy /= L;
+    return { x: d.x + vx * 3, y: d.y + vy * 3 };
+  }
+  function scrollWaiting() { return canSave() && !journal.bp; }
+  function scrollScreen() {
+    const sp = scrollSpot();
+    return { sx: isoX(sp.x, sp.y) * cam.zoom + cam.x, sy: (isoY(sp.x, sp.y, -1) + ZH) * cam.zoom + cam.y };
+  }
+  function drawScroll(t) {
+    if (!scrollWaiting()) return;
+    const p = scrollScreen(), s = Math.max(cam.zoom, 0.7), sx = p.sx, sy = p.sy - 6 * s - Math.sin(t * 2.2) * 2;
+    if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(20,8,30,0.25)'; ctx.beginPath(); ctx.ellipse(sx, p.sy + 3 * s, 12 * s, 4 * s, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#FFF3E2'; ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 1.5 * s;
+    ctx.fillRect(sx - 11 * s, sy - 7 * s, 22 * s, 12 * s); ctx.strokeRect(sx - 11 * s, sy - 7 * s, 22 * s, 12 * s);
+    ctx.fillStyle = '#C74744'; ctx.fillRect(sx - 2 * s, sy - 9 * s, 4 * s, 16 * s);
+    ctx.fillStyle = '#FFF3E2'; ctx.font = 'bold ' + Math.round(9 * s) + 'px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('BLUEPRINT!', sx, sy + 18 * s); ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  function scrollAt(sx, sy) {
+    if (!scrollWaiting()) return false;
+    const p = scrollScreen();
+    return Math.abs(sx - p.sx) < 34 && Math.abs(sy - p.sy) < 34;
+  }
+  function openBlueprint() {
+    const bp = scrollFor(today());
+    const sp = bpSpot(world.ref, bp, dockCell()) || bpSpot(world.ref, bp, { x: ISLE.N / 2, y: ISLE.N / 2 });
+    if (!sp) { toast('No room for the ' + bp.name + ' near the dock. Clear a patch of sand!'); return; }
+    journal.bp = { id: bp.id, x: sp.x, y: sp.y };
+    journal.bpToday = journal.bpToday || {}; journal.bpToday.started = bp.name;
+    saveJournal(journal);
+    blip(700); setTimeout(function () { blip(950); }, 110);
+    toast(bp.name + ' BLUEPRINT! Build into the glowing shape. Hands are free, or coins hire the crew.');
+    updateBpBar(); refreshNext();
+  }
+  function updateBpBar() {
+    const el = document.getElementById('bpbar'), i = bpInfo();
+    if (!i.name || !canSave()) { el.classList.remove('on'); document.getElementById('bpmenu').classList.remove('on'); return; }
+    el.textContent = i.name + ' \u00b7 ' + i.toGo + ' TO GO \u00b7 ' + bpPrice(i.toGo) + 'c HIRES THE CREW';
+    el.classList.add('on');
+  }
+  let bpMenuT = 0;
+  function bpMenu() {
+    const m = document.getElementById('bpmenu'), i = bpInfo();
+    if (!i.name) return;
+    m.innerHTML = '';
+    const hire = document.createElement('button'); hire.id = 'bp-hire'; hire.textContent = 'HIRE THE CREW \u00b7 ' + bpPrice(i.toGo) + ' COINS';
+    hire.addEventListener('click', function (ev) { ev.stopPropagation(); m.classList.remove('on'); hireCrew(); });
+    const away = document.createElement('button'); away.id = 'bp-away'; away.textContent = 'PUT IT AWAY';
+    away.addEventListener('click', function (ev) { ev.stopPropagation(); m.classList.remove('on'); putAwayBlueprint(); });
+    m.appendChild(hire); m.appendChild(away); m.classList.add('on');
+    clearTimeout(bpMenuT); bpMenuT = setTimeout(function () { m.classList.remove('on'); }, 5200);
+  }
+  function putAwayBlueprint() {
+    if (!journal.bp) return;
+    journal.bp = null; journal.bpHire = null; crewOn = false;
+    saveJournal(journal); updateBpBar(); refreshNext();
+    toast('Rolled up and back on the dock. Tap it any time.');
+  }
+  function hireCrew() {
+    const i = bpInfo(); if (!i.name || i.toGo <= 0) return;
+    const price = bpPrice(i.toGo);
+    if (purse.coins < price) { toast('The crew costs ' + price + ' coins and the purse holds ' + purse.coins + '. Hands are free, or catch the gull for 10!'); return; }
+    const rem = bpRemaining(world.ref, i.bp, journal.bp.x, journal.bp.y).length;
+    if (world.ref.count + rem > ISLE.MAX_BLOCKS) { toast('Not enough cargo room for the crew to finish. Erase something first.'); return; }
+    if (!spendCoins(price)) return;
+    journal.bpHire = { paid: price, laid: 0 };
+    journal.bpToday = journal.bpToday || {}; journal.bpToday.hired = (journal.bpToday.hired || 0) + price;
+    saveJournal(journal);
+    crewOn = true; crewT = 0;
+    toast('THE CREW IS HIRED for ' + price + ' coins! Watch them build.');
+  }
+  function crewStep(dt) {
+    if (!crewOn || !journal.bp) return;
+    crewT += dt; if (crewT < 1.6) return; crewT = 0;
+    const bp = blueprintById(journal.bp.id); if (!bp) { crewOn = false; return; }
+    const next = bpNext(world.ref, bp, journal.bp.x, journal.bp.y);
+    if (!next.length) { crewOn = false; bpCheck(); return; }
+    const c = next[0], r = place(world.ref, c.x, c.y, c.id);
+    if (!r.ok) {
+      crewOn = false;
+      const hb = journal.bpHire;
+      if (hb) {
+        const back = Math.max(0, hb.paid - Math.max(1, Math.ceil(hb.laid / 4)));
+        if (back > 0) { purse.coins += back; savePurse(); syncCoins(); }
+        journal.bpHire = null; saveJournal(journal);
+        toast('The crew ran out of room and gave back ' + back + ' coin' + (back === 1 ? '' : 's') + '.');
+      }
+      return;
+    }
+    world.ref.undo.pop();
+    if (journal.bpHire) { journal.bpHire.laid++; saveJournal(journal); }
+    thunk(r.z); redrawWorld({ x: c.x, y: c.y }); syncCargo(); popCheck(); saveSoon();
+    if (islanders.length) {
+      const p = islanders[(journal.bpHire ? journal.bpHire.laid : 0) % islanders.length];
+      if (!p.rider) { p.tx = c.x + 1.4; p.ty = c.y + 1.4; p.wait = 2; }
+    }
+    bpCheck();
+  }
+  function drawBpGhost() {
+    if (!journal.bp || !canSave()) return;
+    const bp = blueprintById(journal.bp.id); if (!bp) return;
+    const next = bpNext(world.ref, bp, journal.bp.x, journal.bp.y);
+    ctx.save(); ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom);
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeStyle = '#FFD447';
+    next.forEach(function (q) {
+      const cx = isoX(q.x, q.y), cy = isoY(q.x, q.y, q.z - 1) + ZH;
+      ctx.beginPath(); ctx.moveTo(cx, cy - TH / 2); ctx.lineTo(cx + TW / 2, cy); ctx.lineTo(cx, cy + TH / 2); ctx.lineTo(cx - TW / 2, cy); ctx.closePath(); ctx.stroke();
+    });
+    ctx.restore();
+  }
+  function bpCheck() {
+    if (!journal.bp) { updateBpBar(); return; }
+    const bp = blueprintById(journal.bp.id);
+    if (!bp) { journal.bp = null; saveJournal(journal); updateBpBar(); return; }
+    if (!bpDone(world.ref, bp, journal.bp.x, journal.bp.y)) { updateBpBar(); return; }
+    const hired = journal.bpHire ? journal.bpHire.paid : 0;
+    journal.bpToday = journal.bpToday || {}; journal.bpToday.finished = bp.name; if (hired) journal.bpToday.hired = hired;
+    journal.bpFinishedToday = (journal.bpFinishedToday || 0) + 1; journal.bpDoneEver = (journal.bpDoneEver || 0) + 1;
+    journal.bp = null; journal.bpHire = null; crewOn = false;
+    noteLearned('A blueprint is the plan drawn before the building. Follow the shape and the building comes out right.', 'bp', 'geometry');
+    saveJournal(journal);
+    if (KEEP) { if (islanders.length) islanders[0].cheer = 3; } else { cleo.spin = 1.6; cleo.mood = 'sit'; }
+    blip(700); setTimeout(function () { blip(950); }, 110); setTimeout(function () { blip(1200); }, 240);
+    toast(bp.name + ' FINISHED! It goes in the book tonight.');
+    try { refreshQuest(); trophyCheck(); } catch (e) {}
+    updateBpBar(); refreshNext();
+  }
+  document.getElementById('bpbar').addEventListener('click', function (ev) { ev.stopPropagation(); bpMenu(); });
+  setTimeout(updateBpBar, 400);
   function horn() { blip(150); setTimeout(function () { blip(120); }, 260); setTimeout(function () { blip(150); }, 560); }
   function boatArrive(delay) {
     const d = today();
@@ -3035,7 +3276,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
     saveJournal(journal); setVisitor();
     const msg = g.kind === 'visitor' ? g.name + ' came for the day. Say hello!' : g.kind === 'seed' ? (journal.boat.landed ? 'It left a SEED on the sand by the dock.' : 'It brought a seed for the island.') : 'A parcel of chocolate bars, one for every islander!';
-    setTimeout(function () { horn(); toast((hourNow() < 12.5 ? 'THE MORNING BOAT IS IN! ' : 'THE MORNING BOAT CAME EARLIER. ') + msg); }, delay || 0);
+    setTimeout(function () { horn(); toast((hourNow() < 12.5 ? 'THE MORNING BOAT IS IN! ' : 'THE MORNING BOAT CAME EARLIER. ') + msg + (scrollWaiting() ? ' And a rolled-up BLUEPRINT waits on the dock!' : '')); }, delay || 0);
     return true;
   }
   let boatLast = 'away', dayLast = null;
@@ -3185,6 +3426,7 @@ if (typeof module !== 'undefined' && module.exports) {
     return n;
   }
   function award(reason, why) { return awardCoins(coinsFor(reason), why); }
+  function spendCoins(n) { if (n <= 0 || purse.coins < n) return false; purse.coins -= n; savePurse(); syncCoins(); return true; }
   function trophyStats() { const s = questStats(); s.chaseWins = purse.chaseWins; s.arcadeGoes = purse.arcadeGoes; s.coins = purse.coins; return s; }
   function trophyCheck(quiet) {
     const fresh = trophiesEarned(trophyStats()).filter(function (id) { return purse.trophies.indexOf(id) === -1; });
@@ -3981,6 +4223,7 @@ if (typeof module !== 'undefined' && module.exports) {
     st.symmetry = symmetry(world.ref);
     st.laps = bestLap > 0 ? 1 : 0;
     st.beaten = journal.lapBeatenEver || 0;
+    st.bpFinishedToday = journal.bpFinishedToday || 0;
     st.gain = journal.lapGainToday || 0;
     const cs = compassStats(world.ref); st.north = cs.north; st.east = cs.east; st.south = cs.south; st.west = cs.west;
     return st;
@@ -4035,6 +4278,7 @@ if (typeof module !== 'undefined' && module.exports) {
       chaseWins: journal.chaseWinsToday || 0, coinsToday: journal.coinsToday || 0, trophyNew: journal.trophyNew || '', cabinet: journal.cabinetToday || {},
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
+      bpToday: journal.bpToday || null,
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
@@ -4047,7 +4291,7 @@ if (typeof module !== 'undefined' && module.exports) {
     journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; journal.cabinetToday = {}; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
-    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true;
+    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0;
     journal.chapters = journal.book.length;
     saveJournal(journal);
     return entry;
@@ -4167,13 +4411,13 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
-    owner: OWNER, cleo, questStats, setTool, tool: () => tool, recent: () => recent.slice(), heightPop: () => heightPop, hover: (c) => { hoverCell = c; }, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
+    owner: OWNER, cleo, questStats, setTool, tool: () => tool, recent: () => recent.slice(), heightPop: () => heightPop, hover: (c) => { hoverCell = c; }, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, bp: () => journal.bp, bpInfo, scrollScreen, scrollWaiting, openBlueprint, hireCrew, crewStep, crewOn: () => crewOn, bpNextCells: () => { const b = journal.bp && blueprintById(journal.bp.id); return b ? bpNext(world.ref, b, journal.bp.x, journal.bp.y) : []; }, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
     worldStats: () => worldStats(world.ref), noteLearned,
     arcades: () => arcades(world.ref), factories: () => factories(world.ref), arcadeScore: () => arcadeScore,
     arcadeCheck, setCarAt: (x, y) => { car.x = x; car.y = y; },
-    profile: () => PRO, title: () => TITLE, flagCol: () => FLAGCOL, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
+    profile: () => PRO, title: () => TITLE, flagCol: () => FLAGCOL, place: (x,y,id) => { const r = place(world.ref, x, y, id); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); bpCheck(); saveSoon(); } return r; },
     erase: (x,y) => { const r = erase(world.ref, x, y); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE,
