@@ -52,7 +52,7 @@ async def run():
             await page.wait_for_timeout(900)
 
             n = await page.evaluate("document.querySelectorAll('.card').length")
-            ck("sixteen cards", n == 16, n)
+            ck("seventeen cards", n == 17, n)
 
             # the sprite is a CSS background on .shot, not an <img>.
             # prove the data URI genuinely decodes, and the panels have real size.
@@ -153,7 +153,7 @@ async def run():
 
             # swipe through every card by scrolling the rail
             reached = []
-            for i in range(16):
+            for i in range(17):
                 await page.evaluate(
                     "i=>{const r=document.getElementById('rail');"
                     "r.scrollTo({left:i*r.clientWidth,behavior:'auto'});}", i
@@ -164,7 +164,7 @@ async def run():
                     "return Math.round(r.scrollLeft/r.clientWidth);})()"
                 )
                 reached.append(idx)
-            ck("scrolled to all sixteen cards", reached == list(range(16)), reached)
+            ck("scrolled to all seventeen cards", reached == list(range(17)), reached)
 
             # buttons
             hrefs = await page.evaluate(
