@@ -306,6 +306,12 @@
     #boardcard { max-width:600px; }
   }
 </style>
+<style>
+ #tripbar { position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 58px); z-index:6; display:none;
+   background:rgba(42,27,61,0.92); color:#FFD447; border:2px solid rgba(255,212,71,0.7); border-radius:999px; padding:7px 15px;
+   font:900 12px system-ui; letter-spacing:0.05em; max-width:92vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+ #tripbar.on { display:block; }
+</style>
 </head>
 <body>
 <canvas id="world"></canvas>
@@ -374,6 +380,7 @@
   <button class="dbtn" id="d-exit">STOP<br>DRIVING</button>
   <button class="dbtn" id="d-right">&#9654;</button>
 </div>
+<div id="tripbar"></div>
 <div id="lapbar"><span id="laptime">0:00.0</span><span id="lapbest"></span></div>
 <script>
 /* CAPTAIN'S ISLAND core: world model + link codec. Pure logic, headless-testable. */
@@ -729,6 +736,8 @@ function questTableBase() {
       done: 'The blueprint became a real building.' },
     { id: 'houses6', need: 'houses', n: 6, tell: 'grow the village to six houses so everyone has a neighbour',
       done: 'Six houses stood in a row.' },
+    { id: 'trip1', need: 'tripsToday', n: 2, tell: 'drive two islanders where they ask to go',
+      done: 'Two islanders rode the car and paid their fares.' },
   ];
 }
 function worldStats(w) {
@@ -786,6 +795,23 @@ function compassStats(w) {
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) { if (w.cols[idx(x, y, 0)] === 8) things.push({ x: x, y: y, palm: true }); }
   things.forEach(function (t) { const d = compassOf(f[0], t); if (d) st[d]++; });
   return st;
+}
+/* PASSENGERS. An islander flags the stopped car and asks for a real place: a friend's
+   house, the racing flag, the arcade. The ask names the compass direction, the fare is
+   one coin on arrival. Driving becomes the island's taxi, and every trip is a small
+   lesson in direction that never says so. */
+function tripDest(w, from, seed) {
+  const cand = [];
+  houses(w).forEach(function (hh) { if (Math.abs(hh.x - from.x) > 1 || Math.abs(hh.y - from.y) > 1) cand.push({ x: hh.x, y: hh.y, kind: 'house' }); });
+  flags(w).forEach(function (f) { cand.push({ x: f.x, y: f.y, kind: 'flag' }); });
+  arcades(w).forEach(function (a) { cand.push({ x: a.x, y: a.y, kind: 'arcade' }); });
+  if (!cand.length) return null;
+  return cand[((seed % cand.length) + cand.length) % cand.length];
+}
+function tripLine(name, from, dest, title) {
+  const dir = compassOf(from, dest);
+  const place = dest.kind === 'house' ? 'my friend\u2019s house' : dest.kind === 'flag' ? 'the racing flag' : 'the arcade';
+  return name + ': "To ' + place + ', ' + title + '! ' + (dir ? 'Head ' + dir + '!' : 'It is right here!') + '"';
 }
 /* THE WORD OF THE ISLAND. One a day, said by an islander, used in the chapter, asked at bedtime. Small words for small people. */
 const WORDS = [
@@ -896,6 +922,9 @@ function chapter(o) {
   if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
   if (o.chaseWins > 0) page1.push('A gull swooped on the dock and flew off with a crate. ' + cap + ' jumped in the car and chased it round the island, and caught it' + (o.chaseWins > 1 ? ' ' + o.chaseWins + ' times' : '') + '. Crate back on the dock.');
   if (o.coinsToday > 0) page1.push('The purse grew by ' + o.coinsToday + ' coin' + (o.coinsToday === 1 ? '' : 's') + ' today. Ten points is a coin, and coins hire the crew.');
+  if (o.tripsToday > 0) page1.push(o.tripsToday === 1
+    ? 'One passenger rode the car today, paid a shiny coin, and got exactly where they asked to go.'
+    : o.tripsToday + ' passengers rode the car today. Every fare was a coin, and every drop-off was exactly where they asked.');
   if (o.trophyNew) page1.push('A new trophy stands by the front door now: ' + o.trophyNew + '.');
   const cab = Object.keys(o.cabinet || {});
   if (cab.length) page1.push('The arcade was switched on: ' + cab.map(function (k) { return k + ' best ' + o.cabinet[k]; }).join(', ') + '. Ten points is a coin, every time.');
@@ -1471,7 +1500,7 @@ function bpSpot(w, bp, near) {
   return null;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+  module.exports = { tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
@@ -1863,6 +1892,7 @@ if (typeof module !== 'undefined' && module.exports) {
     drawPreview();
     drawSkids();
     drawDust();
+    tripTick(dt);
     stepIslanders(dt, t);
     crewStep(dt);
     drawIslanders(t);
@@ -3882,6 +3912,48 @@ if (typeof module !== 'undefined' && module.exports) {
     ctx.fillStyle = '#FFD447'; ctx.font = 'bold ' + Math.round(11 * s) + 'px system-ui'; ctx.textAlign = 'center';
     ctx.fillText(String(car.crates), sx + 3 * s, sy - 26 * s - car.crates * 6 * s); ctx.textAlign = 'left';
   }
+  var trip = null;
+  function tripHud() {
+    const el = document.getElementById('tripbar');
+    if (!trip) { el.classList.remove('on'); return; }
+    const dir = compassOf({ x: car.x, y: car.y }, trip.dest);
+    el.textContent = trip.p.name + ' \u2192 ' + trip.label + (dir ? ' \u00b7 ' + dir.toUpperCase() : ' \u00b7 HERE!');
+    el.classList.add('on');
+  }
+  function tryBoard() {
+    if (trip || car.sp > 1.2) return;
+    for (let i = 0; i < islanders.length; i++) {
+      const p = islanders[i];
+      if (p.rider || p.asleep) continue;
+      if (Math.hypot(p.x - car.x, p.y - car.y) < 1.7) {
+        const dest = tripDest(world.ref, p.home, (journal.trips || 0) + i);
+        if (!dest) return;
+        p.rider = true; p.wait = 9;
+        trip = { p: p, dest: dest, label: dest.kind === 'house' ? 'A FRIEND\u2019S HOUSE' : dest.kind === 'flag' ? 'THE FLAG' : 'THE ARCADE', x: dest.x, y: dest.y };
+        toast(tripLine(p.name, { x: p.home.x, y: p.home.y }, dest, TITLE));
+        blip(520); tripHud(); return;
+      }
+    }
+  }
+  function tripStep() {
+    if (!trip) return;
+    trip.p.wait = 9; tripHud();
+    if (Math.hypot(car.x - (trip.dest.x + 0.5), car.y - (trip.dest.y + 0.5)) < 2.3) {
+      const p = trip.p;
+      p.rider = false; p.tx = trip.dest.x + 0.5; p.ty = trip.dest.y + 0.5; p.wait = 4;
+      journal.tripsToday = (journal.tripsToday || 0) + 1; journal.trips = (journal.trips || 0) + 1;
+      if (!journal.tripSaid) { journal.tripSaid = true; noteLearned('The island has directions. A passenger says where, the compass says which way: north, south, east, west.', 'trips', 'space'); }
+      saveJournal(journal);
+      awardCoins(1, p.name + ' PAID THE FARE!');
+      toast(p.name + ': "Exactly where I asked! Thank you, ' + TITLE + '!"');
+      trip = null; tripHud(); try { refreshQuest(); } catch (e) {}
+    }
+  }
+  function tripTick(dt) {
+    if (trip && !driving) { trip.p.rider = false; trip.p.wait = 3; trip = null; tripHud(); return; }
+    if (!driving) return;
+    tryBoard(); tripStep();
+  }
   function stepCar(dt) {
     if (!driving) return;
     car.steer = steerToward(car.steer, steerWant, dt);
@@ -4224,6 +4296,7 @@ if (typeof module !== 'undefined' && module.exports) {
     st.laps = bestLap > 0 ? 1 : 0;
     st.beaten = journal.lapBeatenEver || 0;
     st.bpFinishedToday = journal.bpFinishedToday || 0;
+    st.tripsToday = journal.tripsToday || 0;
     st.gain = journal.lapGainToday || 0;
     const cs = compassStats(world.ref); st.north = cs.north; st.east = cs.east; st.south = cs.south; st.west = cs.west;
     return st;
@@ -4278,7 +4351,7 @@ if (typeof module !== 'undefined' && module.exports) {
       chaseWins: journal.chaseWinsToday || 0, coinsToday: journal.coinsToday || 0, trophyNew: journal.trophyNew || '', cabinet: journal.cabinetToday || {},
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
-      bpToday: journal.bpToday || null,
+      bpToday: journal.bpToday || null, tripsToday: journal.tripsToday || 0,
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
@@ -4291,7 +4364,7 @@ if (typeof module !== 'undefined' && module.exports) {
     journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; journal.cabinetToday = {}; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
-    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0;
+    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0;
     journal.chapters = journal.book.length;
     saveJournal(journal);
     return entry;
@@ -4411,6 +4484,9 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
+    trip: function () { return trip ? { name: trip.p.name, label: trip.label, x: trip.x, y: trip.y, kind: trip.dest.kind } : null; },
+    warpCar: function (x, y) { car.x = x; car.y = y; car.sp = 0; },
+    tripDest: tripDest, purse: purse,
     owner: OWNER, cleo, questStats, setTool, tool: () => tool, recent: () => recent.slice(), heightPop: () => heightPop, hover: (c) => { hoverCell = c; }, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, bp: () => journal.bp, bpInfo, scrollScreen, scrollWaiting, openBlueprint, hireCrew, crewStep, crewOn: () => crewOn, bpNextCells: () => { const b = journal.bp && blueprintById(journal.bp.id); return b ? bpNext(world.ref, b, journal.bp.x, journal.bp.y) : []; }, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,
