@@ -327,6 +327,12 @@
  .voyrow.got { color:#2E7D4F; }
  .voyrow.got .vt { text-decoration:line-through; }
  #voyfoot { font:700 11px system-ui; opacity:0.7; text-align:center; margin-top:6px; }
+ #voymenu .go.alt { background:#FFF3E2; }
+ #posterwrap { position:fixed; inset:0; z-index:45; display:none; background:rgba(42,27,61,0.72); align-items:center; justify-content:center; flex-direction:column; gap:14px; padding:18px; }
+ #posterwrap.on { display:flex; }
+ #posterimg { max-width:min(86vw,340px); max-height:62vh; border-radius:18px; box-shadow:0 18px 50px rgba(42,27,61,0.5); }
+ #posterwrap button { font:900 15px system-ui; padding:13px 18px; border-radius:16px; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; cursor:pointer; min-width:min(80vw,300px); }
+ #posterwrap button.alt { background:#FFF3E2; }
  #voymenu .go { display:block; width:100%; font:900 16px system-ui; padding:14px; border-radius:16px; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; margin-top:14px; cursor:pointer; }
 </style>
 </head>
@@ -399,11 +405,13 @@
 </div>
 <div id="tripbar"></div>
 <button id="voybtn" title="Today's Voyage">⚑</button>
+<div id="posterwrap"><img id="posterimg" alt="Today's voyage poster"><button id="poster-share">SHARE THIS POSTER</button><button class="alt" id="poster-save">SAVE THE PICTURE</button><button class="alt" id="poster-close">BACK</button></div>
 <div id="voymenu"><div id="voycard">
   <div id="voyno"></div>
   <div id="voylist"></div>
   <div id="voyfoot">Every island gets the same voyage today. Yesterday is never lost.</div>
-  <button class="go" id="voy-close">KEEP SAILING</button>
+  <button class="go" id="voy-poster">MAKE TODAY'S POSTER</button>
+  <button class="go alt" id="voy-close">KEEP SAILING</button>
 </div></div>
 <div id="lapbar"><span id="laptime">0:00.0</span><span id="lapbest"></span></div>
 <script>
@@ -1504,6 +1512,17 @@ function voyageProgress(v, st) {
   const done = marks.filter(Boolean).length;
   return { marks: marks, done: done, all: v.goals.length, complete: done === v.goals.length };
 }
+function posterText(o) {
+  const name = sanitizeName(o.name) || 'A SAILOR';
+  const g = voyageGlyphs(o.voyage, o.prog);
+  const lines = [];
+  lines.push(String(o.title || 'CAPTAIN').toUpperCase() + ' ' + name + ' \u00b7 SUNSET ISLAND');
+  lines.push('Voyage ' + o.voyage.no + '  ' + g + '  ' + o.prog.done + '/' + o.prog.all);
+  if (o.lap > 0) lines.push('Best lap ' + fmtLap(o.lap) + '. Try to beat it!');
+  lines.push('Same three jobs on every island today. Come and sail:');
+  lines.push(o.url);
+  return lines.join('\n');
+}
 function voyageGlyphs(v, pr) {
   return v.goals.map(function (g, i) { return pr.marks[i] ? g.icon : '\u2B1C'; }).join('');
 }
@@ -1558,7 +1577,7 @@ function bpSpot(w, bp, near) {
   return null;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
+  module.exports = { posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
@@ -4378,6 +4397,86 @@ if (typeof module !== 'undefined' && module.exports) {
     menu.addEventListener('click', function (e) { if (e.target === menu) menu.classList.remove('on'); });
     setTimeout(refreshVoyage, 0); setInterval(refreshVoyage, 4000);
   })();
+  var posterBlob = null;
+  function drawPoster() {
+    const v = voyage(), pr = voyStatus(), W2 = 800, H2 = 1000;
+    const c = document.createElement('canvas'); c.width = W2; c.height = H2;
+    const g = c.getContext('2d');
+    const sky = g.createLinearGradient(0, 0, 0, H2);
+    sky.addColorStop(0, '#2A1B3D'); sky.addColorStop(0.52, '#7A3E6B'); sky.addColorStop(1, '#FF9E5E');
+    g.fillStyle = sky; g.fillRect(0, 0, W2, H2);
+    /* the child's real island, centred, drawn by the same engine that draws the game */
+    try {
+      const src = document.getElementById('c');
+      const sw = Math.min(src.width, src.height * 1.5), sh = sw / 1.5;
+      g.save(); g.beginPath(); g.rect(40, 210, W2 - 80, 470); g.clip();
+      g.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 40, 210, W2 - 80, 470);
+      g.restore();
+    } catch (e) {}
+    g.strokeStyle = 'rgba(255,212,71,0.85)'; g.lineWidth = 5; g.strokeRect(40, 210, W2 - 80, 470);
+    g.textAlign = 'center'; g.fillStyle = '#FFF3E2';
+    g.font = '900 46px system-ui, sans-serif';
+    g.fillText(TITLE + ' ' + (sanitizeName(builder || CREW) || 'A SAILOR'), W2 / 2, 96);
+    g.font = '900 34px system-ui, sans-serif'; g.fillStyle = '#FFD447';
+    g.fillText('VOYAGE ' + v.no, W2 / 2, 150);
+    g.font = '900 30px system-ui, sans-serif'; g.fillStyle = '#FFF3E2';
+    g.fillText(pr.done + ' OF ' + pr.all + ' JOBS DONE TODAY', W2 / 2, 190);
+    /* the three results as big ticks and rings, never the jobs themselves */
+    const cx = W2 / 2, y = 762;
+    pr.marks.forEach(function (m, i) {
+      const x = cx + (i - 1) * 150;
+      g.beginPath(); g.arc(x, y, 52, 0, 6.29);
+      g.fillStyle = m ? '#7BD389' : 'rgba(255,243,226,0.18)'; g.fill();
+      g.lineWidth = 5; g.strokeStyle = '#FFF3E2'; g.stroke();
+      if (m) { g.lineWidth = 9; g.lineCap = 'round'; g.strokeStyle = '#2A1B3D';
+        g.beginPath(); g.moveTo(x - 22, y + 2); g.lineTo(x - 6, y + 20); g.lineTo(x + 24, y - 20); g.stroke(); }
+    });
+    if (bestLap > 0) { g.fillStyle = '#FFF3E2'; g.font = '900 28px system-ui, sans-serif';
+      g.fillText('BEST LAP ' + fmtLap(bestLap) + '  \u00b7  BEAT IT!', W2 / 2, 866); }
+    g.fillStyle = '#FFD447'; g.font = '900 26px system-ui, sans-serif';
+    g.fillText('SUNSET ISLAND', W2 / 2, 926);
+    g.fillStyle = 'rgba(255,243,226,0.86)'; g.font = '700 20px system-ui, sans-serif';
+    g.fillText('Same three jobs on every island today', W2 / 2, 958);
+    return c;
+  }
+  function openPoster() {
+    const c = drawPoster();
+    const img = document.getElementById('posterimg');
+    img.src = c.toDataURL('image/png');
+    document.getElementById('voymenu').classList.remove('on');
+    document.getElementById('posterwrap').classList.add('on');
+    posterBlob = null;
+    if (c.toBlob) c.toBlob(function (b) { posterBlob = b; }, 'image/png');
+    blip(620);
+  }
+  function posterCard() {
+    return posterText({ name: builder || CREW, title: TITLE, voyage: voyage(), prog: voyStatus(), url: shareUrl(), lap: bestLap });
+  }
+  async function sharePoster() {
+    const txt = posterCard();
+    try {
+      if (posterBlob && navigator.canShare) {
+        const file = new File([posterBlob], 'sunset-island-voyage.png', { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: txt }); return; }
+      }
+      if (navigator.share) { await navigator.share({ title: 'Sunset Island', text: txt }); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(txt); toast('CARD COPIED! Paste it to anyone.'); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    savePoster();
+  }
+  function savePoster() {
+    const a = document.createElement('a');
+    a.href = document.getElementById('posterimg').src;
+    a.download = 'sunset-island-voyage-' + voyage().no + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('POSTER SAVED to your pictures!');
+  }
+  (function () {
+    document.getElementById('voy-poster').addEventListener('click', openPoster);
+    document.getElementById('poster-share').addEventListener('click', sharePoster);
+    document.getElementById('poster-save').addEventListener('click', savePoster);
+    document.getElementById('poster-close').addEventListener('click', function () { document.getElementById('posterwrap').classList.remove('on'); });
+  })();
   function questStats() {
     const st = worldStats(world.ref);
     st.delivered = journal.deliveredToday || 0;
@@ -4575,6 +4674,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
+    posterCard: posterCard, openPoster: openPoster, drawPoster: function () { return drawPoster().toDataURL('image/png'); },
     voyage: function () { const v = voyage(), pr = voyStatus(); return { no: v.no, day: v.day, goals: v.goals, done: pr.done, all: pr.all, complete: pr.complete, glyphs: voyageGlyphs(v, pr) }; },
     refreshVoyage: refreshVoyage,
     trip: function () { return trip ? { name: trip.p.name, label: trip.label, x: trip.x, y: trip.y, kind: trip.dest.kind } : null; },
