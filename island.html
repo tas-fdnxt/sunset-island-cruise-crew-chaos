@@ -312,6 +312,23 @@
    font:900 12px system-ui; letter-spacing:0.05em; max-width:92vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
  #tripbar.on { display:block; }
 </style>
+<style>
+ #voybtn { position:fixed; right:calc(env(safe-area-inset-right,0px) + 12px); top:calc(env(safe-area-inset-top,0px) + 108px); z-index:6;
+   width:46px; height:46px; border-radius:50%; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; font:900 20px system-ui; cursor:pointer; }
+ #voybtn.done { background:#7BD389; }
+ body.walking #voybtn, body.driving #voybtn { display:none; }
+ #voymenu { position:fixed; inset:0; z-index:40; display:none; background:rgba(42,27,61,0.55); align-items:center; justify-content:center; }
+ #voymenu.on { display:flex; }
+ #voycard { background:#FFF3E2; color:#2A1B3D; border-radius:24px; padding:22px; width:min(88vw,400px); box-shadow:0 18px 50px rgba(42,27,61,0.45); }
+ #voyno { font:900 19px system-ui; letter-spacing:0.03em; text-align:center; }
+ #voylist { margin:14px 0 6px; }
+ .voyrow { display:flex; align-items:center; gap:10px; font:700 14px system-ui; padding:8px 0; }
+ .voyrow .vi { font-size:22px; width:30px; text-align:center; }
+ .voyrow.got { color:#2E7D4F; }
+ .voyrow.got .vt { text-decoration:line-through; }
+ #voyfoot { font:700 11px system-ui; opacity:0.7; text-align:center; margin-top:6px; }
+ #voymenu .go { display:block; width:100%; font:900 16px system-ui; padding:14px; border-radius:16px; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; margin-top:14px; cursor:pointer; }
+</style>
 </head>
 <body>
 <canvas id="world"></canvas>
@@ -381,6 +398,13 @@
   <button class="dbtn" id="d-right">&#9654;</button>
 </div>
 <div id="tripbar"></div>
+<button id="voybtn" title="Today's Voyage">⚑</button>
+<div id="voymenu"><div id="voycard">
+  <div id="voyno"></div>
+  <div id="voylist"></div>
+  <div id="voyfoot">Every island gets the same voyage today. Yesterday is never lost.</div>
+  <button class="go" id="voy-close">KEEP SAILING</button>
+</div></div>
 <div id="lapbar"><span id="laptime">0:00.0</span><span id="lapbest"></span></div>
 <script>
 /* CAPTAIN'S ISLAND core: world model + link codec. Pure logic, headless-testable. */
@@ -922,6 +946,9 @@ function chapter(o) {
   if (o.bestLap) page1.push('Down at the flag, the little red buggy went round in ' + fmtLap(o.bestLap) + '.');
   if (o.chaseWins > 0) page1.push('A gull swooped on the dock and flew off with a crate. ' + cap + ' jumped in the car and chased it round the island, and caught it' + (o.chaseWins > 1 ? ' ' + o.chaseWins + ' times' : '') + '. Crate back on the dock.');
   if (o.coinsToday > 0) page1.push('The purse grew by ' + o.coinsToday + ' coin' + (o.coinsToday === 1 ? '' : 's') + ' today. Ten points is a coin, and coins hire the crew.');
+  if (o.voyage) page1.push(o.voyage.complete
+    ? 'Voyage ' + o.voyage.no + ' is complete. Every island in the world had the same three jobs today, and ' + cap + ' finished all three.'
+    : 'Voyage ' + o.voyage.no + ' brought three jobs today and ' + cap + ' finished ' + o.voyage.done + ' of them. The rest keep, because nothing here is ever late.');
   if (o.tripsToday > 0) page1.push(o.tripsToday === 1
     ? 'One passenger rode the car today, paid a shiny coin, and got exactly where they asked to go.'
     : o.tripsToday + ' passengers rode the car today. Every fare was a coin, and every drop-off was exactly where they asked.');
@@ -1449,6 +1476,37 @@ const BLUEPRINTS = [
 ];
 function blueprintById(id) { for (let i = 0; i < BLUEPRINTS.length; i++) if (BLUEPRINTS[i].id === id) return BLUEPRINTS[i]; return null; }
 function scrollFor(day) { return BLUEPRINTS[dayHash(String(day) + ':scroll') % BLUEPRINTS.length]; }
+const VOYAGE_EPOCH = '2026-09-01';
+const VOYAGE_GOALS = [
+  { need: 'bpFinishedToday', n: 1, icon: '\u{1F4DC}', tell: 'finish the blueprint the boat brought' },
+  { need: 'tripsToday',      n: 3, icon: '\u{1F695}', tell: 'drive three islanders where they ask to go' },
+  { need: 'houses',          n: 3, icon: '\u{1F3E1}', tell: 'have three houses standing on the island' },
+  { need: 'palms',           n: 5, icon: '\u{1F334}', tell: 'plant five palms along the shore' },
+  { need: 'laps',            n: 1, icon: '\u{1F3C1}', tell: 'drive one full lap around your flag' },
+  { need: 'tallest',         n: 4, icon: '\u{1F5FC}', tell: 'build something four blocks tall' },
+  { need: 'arcades',         n: 1, icon: '\u{1F579}', tell: 'stand an arcade cabinet on the island' },
+  { need: 'symmetry',        n: 1, icon: '\u{1F98B}', tell: 'build one house that matches itself on both sides' },
+  { need: 'delivered',       n: 2, icon: '\u{1F4E6}', tell: 'carry two crates to where they belong' },
+  { need: 'plants',          n: 3, icon: '\u{1F331}', tell: 'get three seeds growing' },
+];
+function voyageNo(day) { return Math.round((Date.parse(day + 'T00:00:00') - Date.parse(VOYAGE_EPOCH + 'T00:00:00')) / 86400000) + 1; }
+function voyageFor(day) {
+  const pool = VOYAGE_GOALS.slice(), out = [];
+  let s = dayHash(String(day) + ':voyage');
+  for (let i = 0; i < 3; i++) {
+    s = Math.imul(s ^ (s >>> 13), 16777619) >>> 0;
+    out.push(pool.splice(s % pool.length, 1)[0]);
+  }
+  return { day: day, no: voyageNo(day), goals: out };
+}
+function voyageProgress(v, st) {
+  const marks = v.goals.map(function (g) { return ((st && st[g.need]) || 0) >= g.n; });
+  const done = marks.filter(Boolean).length;
+  return { marks: marks, done: done, all: v.goals.length, complete: done === v.goals.length };
+}
+function voyageGlyphs(v, pr) {
+  return v.goals.map(function (g, i) { return pr.marks[i] ? g.icon : '\u2B1C'; }).join('');
+}
 function bpBlocks(bp) { return bp.cols.reduce(function (a, c) { return a + c.ids.length; }, 0); }
 function bpPrice(n) { return Math.max(3, Math.ceil(n / 4)); }
 function bpSize(bp) { let w = 0, h2 = 0; bp.cols.forEach(function (c) { if (c.dx > w) w = c.dx; if (c.dy > h2) h2 = c.dy; }); return { w: w + 1, h: h2 + 1 }; }
@@ -1500,7 +1558,8 @@ function bpSpot(w, bp, near) {
   return null;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+  module.exports = { voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
+  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
@@ -4288,6 +4347,37 @@ if (typeof module !== 'undefined' && module.exports) {
     saveJournal(journal);
   }
   function keeperName() { return islanders.length ? islanders[0].name : 'COCO'; }
+  var voyDay = null, voyWasDone = false;
+  function voyage() { if (!voyDay || voyDay.day !== today()) voyDay = voyageFor(today()); return voyDay; }
+  function voyStatus() { return voyageProgress(voyage(), questStats()); }
+  function refreshVoyage() {
+    const v = voyage(), pr = voyStatus();
+    document.getElementById('voybtn').classList.toggle('done', pr.complete);
+    const list = document.getElementById('voylist'); if (!list) return;
+    document.getElementById('voyno').textContent = 'VOYAGE ' + v.no + ': ' + pr.done + ' OF ' + pr.all + ' DONE';
+    list.innerHTML = '';
+    v.goals.forEach(function (g, i) {
+      const row = document.createElement('div'); row.className = 'voyrow' + (pr.marks[i] ? ' got' : '');
+      row.innerHTML = '<span class="vi">' + (pr.marks[i] ? '\u2705' : g.icon) + '</span><span class="vt"></span>';
+      row.querySelector('.vt').textContent = g.tell;
+      list.appendChild(row);
+    });
+    if (pr.complete && !voyWasDone) {
+      voyWasDone = true;
+      if (journal.voyDone !== today()) {
+        journal.voyDone = today(); journal.voyagesDone = (journal.voyagesDone || 0) + 1; saveJournal(journal);
+        toast('VOYAGE ' + v.no + ' COMPLETE! Every island had the same three jobs today.');
+        blip(700); setTimeout(function () { blip(950); }, 110); setTimeout(function () { blip(1180); }, 220);
+      }
+    }
+  }
+  (function () {
+    const btn = document.getElementById('voybtn'), menu = document.getElementById('voymenu');
+    btn.addEventListener('click', function () { refreshVoyage(); menu.classList.add('on'); });
+    document.getElementById('voy-close').addEventListener('click', function () { menu.classList.remove('on'); });
+    menu.addEventListener('click', function (e) { if (e.target === menu) menu.classList.remove('on'); });
+    setTimeout(refreshVoyage, 0); setInterval(refreshVoyage, 4000);
+  })();
   function questStats() {
     const st = worldStats(world.ref);
     st.delivered = journal.deliveredToday || 0;
@@ -4352,6 +4442,7 @@ if (typeof module !== 'undefined' && module.exports) {
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
       bpToday: journal.bpToday || null, tripsToday: journal.tripsToday || 0,
+      voyage: (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, complete: pr.complete }; })(),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
       lapBeaten: !!journal.lapBeaten, questDone: journal.lastQuestDone,
@@ -4484,6 +4575,8 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
+    voyage: function () { const v = voyage(), pr = voyStatus(); return { no: v.no, day: v.day, goals: v.goals, done: pr.done, all: pr.all, complete: pr.complete, glyphs: voyageGlyphs(v, pr) }; },
+    refreshVoyage: refreshVoyage,
     trip: function () { return trip ? { name: trip.p.name, label: trip.label, x: trip.x, y: trip.y, kind: trip.dest.kind } : null; },
     warpCar: function (x, y) { car.x = x; car.y = y; car.sp = 0; },
     tripDest: tripDest, purse: purse,
