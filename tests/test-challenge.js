@@ -16,7 +16,9 @@ ck('voyage number survives', p.v && p.v.no === 4, p.v);
 ck('score survives', p.v && p.v.done === 3 && p.v.all === 3, p.v);
 ck('lap still survives beside it', p.t === 74100, p.t);
 ck('builder still survives beside it', p.b === 'OLLIE', p.b);
-ck('link stays short', withV.length - base.length <= 12, withV.length - base.length);
+const same = C.buildHash('ABC', 74100, 'OLLIE', [], null);
+ck('link stays short', withV.length - same.length <= 12, withV.length - same.length);
+ck('worst case field is 12 chars', C.buildHash('ABC', 0, '', [], null, { no: 99999, done: 3, all: 3 }).length - C.buildHash('ABC', 0, '', [], null).length === 12, 0);
 
 /* zero is a real answer and must survive, so a quiet day still challenges honestly */
 const zero = C.parseHash(C.buildHash('ABC', 0, 'PIP', [], null, { no: 9, done: 0, all: 3 }));
