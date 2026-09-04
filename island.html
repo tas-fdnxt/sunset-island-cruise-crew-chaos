@@ -311,6 +311,11 @@
    background:rgba(42,27,61,0.92); color:#FFD447; border:2px solid rgba(255,212,71,0.7); border-radius:999px; padding:7px 15px;
    font:900 12px system-ui; letter-spacing:0.05em; max-width:92vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
  #tripbar.on { display:block; }
+ #chalbar { position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 96px); z-index:7; display:none;
+   background:#FFD447; color:#2A1B3D; border:3px solid #2A1B3D; border-radius:18px; padding:10px 16px;
+   font:900 12px system-ui; letter-spacing:0.02em; max-width:88vw; text-align:center; line-height:1.35; cursor:pointer; }
+ #chalbar.on { display:block; }
+ body.driving #chalbar, body.walking #chalbar { display:none; }
 </style>
 <style>
  #voybtn { position:fixed; right:calc(env(safe-area-inset-right,0px) + 12px); top:calc(env(safe-area-inset-top,0px) + 108px); z-index:6;
@@ -404,6 +409,7 @@
   <button class="dbtn" id="d-right">&#9654;</button>
 </div>
 <div id="tripbar"></div>
+<button id="chalbar"></button>
 <button id="voybtn" title="Today's Voyage">⚑</button>
 <div id="posterwrap"><img id="posterimg" alt="Today's voyage poster"><button id="poster-share">SHARE THIS POSTER</button><button class="alt" id="poster-save">SAVE THE PICTURE</button><button class="alt" id="poster-close">BACK</button></div>
 <div id="voymenu"><div id="voycard">
@@ -669,19 +675,23 @@ function sanitizeName(s) {
 function parseHash(hash) {
   if (!hash || hash.indexOf('#i=') !== 0) return null;
   const segs = hash.slice(3).split('&');
-  const out = { enc: segs[0], t: 0, b: '', c: [], r: null };
+  const out = { enc: segs[0], t: 0, b: '', c: [], r: null, v: null };
   for (let i = 1; i < segs.length; i++) {
     const s = segs[i];
     try {
       if (s.indexOf('t=') === 0) { const v = parseInt(s.slice(2), 10); if (v > 0 && v < 3600000) out.t = v; }
       else if (s.indexOf('b=') === 0) out.b = sanitizeName(decodeURIComponent(s.slice(2)));
       else if (s.indexOf('c=') === 0) out.c = s.slice(2).split(',').map(function (x) { return sanitizeName(decodeURIComponent(x)); }).filter(Boolean).slice(0, 3);
+      else if (s.indexOf('v=') === 0) {
+        const q = s.slice(2).split('.').map(function (x) { return parseInt(x, 10); });
+        if (q.length === 3 && q.every(function (x) { return Number.isFinite(x) && x >= 0; }) && q[0] < 100000 && q[2] > 0 && q[2] <= 3 && q[1] <= q[2]) out.v = { no: q[0], done: q[1], all: q[2] };
+      }
       else if (s.indexOf('r=') === 0) { const p = s.slice(2).split('.').map(function (x) { return parseInt(x, 10); }); if (p.length === 3 && p.every(function (v) { return v >= 0 && v < 1000000; })) out.r = { coins: p[0], mask: p[1] & 1023, houses: Math.min(p[2], 99) }; }
     } catch (e) {}
   }
   return out;
 }
-function buildHash(enc, t, b, chain, rec) {
+function buildHash(enc, t, b, chain, rec, voy) {
   let s = '#i=' + enc;
   if (t > 0) s += '&t=' + Math.round(t);
   const bn = sanitizeName(b);
@@ -689,6 +699,7 @@ function buildHash(enc, t, b, chain, rec) {
   const c = (chain || []).map(sanitizeName).filter(Boolean).slice(0, 3);
   if (c.length) s += '&c=' + c.map(encodeURIComponent).join(',');
   if (rec && (rec.coins > 0 || rec.mask > 0 || rec.houses > 0)) s += '&r=' + [rec.coins | 0, rec.mask | 0, rec.houses | 0].join('.');
+  if (voy && voy.all > 0) s += '&v=' + [voy.no | 0, voy.done | 0, voy.all | 0].join('.');
   return s;
 }
 /* CAPTAIN PROFILE: who the game is for, carried in ?p= so no build is ever needed per child.
@@ -1512,6 +1523,13 @@ function voyageProgress(v, st) {
   const done = marks.filter(Boolean).length;
   return { marks: marks, done: done, all: v.goals.length, complete: done === v.goals.length };
 }
+function challengeLine(name, v, lap) {
+  const who = sanitizeName(name);
+  if (!who || !v || !(v.all > 0)) return '';
+  const s = who + ' sailed Voyage ' + v.no + ' and finished ' + v.done + ' of ' + v.all + ' jobs.';
+  const t = v.done >= v.all ? ' All three! Can you match it today?' : ' Same three jobs are waiting for you today.';
+  return s + t + (lap > 0 ? ' Best lap ' + fmtLap(lap) + '.' : '');
+}
 function posterText(o) {
   const name = sanitizeName(o.name) || 'A SAILOR';
   const g = voyageGlyphs(o.voyage, o.prog);
@@ -1577,7 +1595,7 @@ function bpSpot(w, bp, near) {
   return null;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
+  module.exports = { challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
@@ -2517,7 +2535,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function shareUrl() {
     const p = new URLSearchParams(location.search).get('crew');
     return location.origin + location.pathname + (p ? '?crew=' + encodeURIComponent(p) : '')
-      + buildHash(encode(world.ref), bestLap, builder || CREW, chain, { coins: purse.coins, mask: trophyMask(purse.trophies), houses: houses(world.ref).length });
+      + buildHash(encode(world.ref), bestLap, builder || CREW, chain, { coins: purse.coins, mask: trophyMask(purse.trophies), houses: houses(world.ref).length }, (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, all: pr.all }; })());
   }
   async function share() {
     sayPersonal('share');
@@ -2536,7 +2554,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const hp = parseHash(location.hash);
     if (hp) {
       w = decode(hp.enc);
-      if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; if (hp.r) linkRec = { name: hp.b, lap: hp.t, coins: hp.r.coins, mask: hp.r.mask, houses: hp.r.houses }; }
+      if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; linkVoy = hp.v || null; if (hp.r) linkRec = { name: hp.b, lap: hp.t, coins: hp.r.coins, mask: hp.r.mask, houses: hp.r.houses }; }
     }
     let restored = false;
     if (!w) {
@@ -2574,6 +2592,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!hp) return;
     const w = decode(hp.enc);
     if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; updateLineage(); }
+    if (w) { linkVoy = hp.v || null; tellChallenge(); }
     if (w) { world.ref = w; garden = {}; redrawWorld(); syncCargo(); rebuildIslanders(); setVisitor(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
   });
   // ISLANDERS: derived from houses, never stored. Curated names and phrases only.
@@ -3173,7 +3192,7 @@ if (typeof module !== 'undefined' && module.exports) {
     try { refreshQuest(); } catch (e) {}
     return ch;
   }
-  let visitor = null;
+  let visitor = null, linkVoy = null;
   function allFolk() { return visitor ? islanders.concat([visitor]) : islanders; }
   /* Bossing the islanders. "Get out of my house. What are they doing in my house?" Tap one, give an order, they obey. */
   const ordersEl = document.getElementById('orders');
@@ -4398,6 +4417,16 @@ if (typeof module !== 'undefined' && module.exports) {
     setTimeout(refreshVoyage, 0); setInterval(refreshVoyage, 4000);
   })();
   var posterBlob = null;
+  function tellChallenge() {
+    const el = document.getElementById('chalbar');
+    if (!el) return;
+    if (!linkVoy) { el.classList.remove('on'); return; }
+    const line = challengeLine(builder, linkVoy, ghostLap);
+    if (!line) { el.classList.remove('on'); return; }
+    el.textContent = line;
+    el.classList.add('on');
+    blip(560);
+  }
   function drawPoster() {
     const v = voyage(), pr = voyStatus(), W2 = 800, H2 = 1000;
     const c = document.createElement('canvas'); c.width = W2; c.height = H2;
@@ -4472,6 +4501,8 @@ if (typeof module !== 'undefined' && module.exports) {
     toast('POSTER SAVED to your pictures!');
   }
   (function () {
+    document.getElementById('chalbar').addEventListener('click', function () { this.classList.remove('on'); });
+    setTimeout(tellChallenge, 1100);
     document.getElementById('voy-poster').addEventListener('click', openPoster);
     document.getElementById('poster-share').addEventListener('click', sharePoster);
     document.getElementById('poster-save').addEventListener('click', savePoster);
@@ -4674,6 +4705,7 @@ if (typeof module !== 'undefined' && module.exports) {
     remix, lineage: () => ({ builder, chain, crew: CREW }), parseHash, buildHash, sanitizeName,
     saveNow, loadSave, openBook, closeBook, cards: CARDS, answers: loadAnswers,
     openStory, storyPages: () => storyPages, journal: () => journal, refreshQuest,
+    linkVoy: function () { return linkVoy; }, challengeLine: challengeLine, shareUrl: shareUrl, tellChallenge: tellChallenge,
     posterCard: posterCard, openPoster: openPoster, drawPoster: function () { return drawPoster().toDataURL('image/png'); },
     voyage: function () { const v = voyage(), pr = voyStatus(); return { no: v.no, day: v.day, goals: v.goals, done: pr.done, all: pr.all, complete: pr.complete, glyphs: voyageGlyphs(v, pr) }; },
     refreshVoyage: refreshVoyage,
