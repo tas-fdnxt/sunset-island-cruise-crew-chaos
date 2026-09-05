@@ -33,7 +33,7 @@ def run(pw, url, label, w, hgt):
     pg = b.new_page(viewport={'width': w, 'height': hgt})
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.on('request', lambda r: ext.append(r.url) if not r.url.startswith(('http://localhost', 'data:', 'blob:')) else None)
+    pg.on('request', lambda r: ext.append(r.url) if not r.url.startswith(('http://localhost', 'http://127.0.0.1', 'data:', 'blob:')) else None)
     pg.goto(url, wait_until='load'); pg.wait_for_timeout(2600)
     dismiss(pg)
 
