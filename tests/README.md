@@ -30,6 +30,7 @@ From the repo root:
     node tests/test-dream-dock.js
     node tests/test-chrome.js
     node tests/test-overnight.js
+    node tests/test-replay.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -135,6 +136,10 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   Overnight chapter line, quest `sleep1` appended, bedtime key `sleep`, compact NPC
   memory codec in `&m=`. One islander is 6 hash chars, eight is 15, worst-case island
   plus memory stays under 1700. PLAY and DREAM stay the dock heroes.
+- **test-replay.js** Build replay on UNDO. Same tap / hold / long-press clock as Dream.
+  Tap stays undo. Hold peels the trailing place ops and places them back. Encode
+  matches. Quest `replay1` appended. Nothing new in `#i=`. PLAY and DREAM stay
+  the dock heroes. No lock. No sell.
 
 `robot-chrome.py` drives the real island on a phone and a tablet and checks the
 picture: dock, chips, drawer, dream, games, toast, and the walk HUD all clear
