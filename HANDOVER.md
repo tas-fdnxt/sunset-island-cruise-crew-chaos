@@ -17,7 +17,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 
 | File | sha256 (first 8) | What it is |
 |---|---|---|
-| `island.html` | Wave B brick 2 (this PR) | Build replay on UNDO. Overnight + NPC memory already live. |
+| `island.html` | `25865790` | Build replay on UNDO. Overnight + NPC memory already live. |
 | `arcade.html` | `bc0420d9` | OLLIE'S. Do not edit without Fabian asking. |
 | `storybook.html` | `bef56030` | OLLIE'S. Do not edit without Fabian asking. |
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
@@ -25,7 +25,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 | `ollie-update-3.html` | live | Carousel three, Dream button. Shipped. |
 | `ollie-update-4.html` | live | Carousel four, walk soccer + PLAY. Shipped. |
 | `ollie-update-5.html` | live | Carousel five, overnight + NPC memory only. Shipped. |
-| `ollie-update-6.html` | this PR | Carousel six, build replay only. |
+| `ollie-update-6.html` | `86572075` | Carousel six, build replay only. |
 
 ```bash
 B=https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos
@@ -82,7 +82,8 @@ Nothing ships that has not been through all six rungs, in order:
 | test-houses | 8 | test-overnight | 110 |
 | test-replay | 104 | | |
 
-Robots: `robot-replay` (build replay on UNDO), `robot-overnight` (46), `robot-soccer` (74), `robot-chrome` (70), `robot-carousel5` (overnight + NPC memory),
+Robots: `robot-replay` (44, build replay on UNDO), `robot-overnight` (46), `robot-soccer` (74), `robot-chrome` (70),
+`robot-carousel6` (51, build replay only), `robot-carousel5` (overnight + NPC memory),
 `robot-carousel4`, `robot-carousel3`, plus `robot-carousel2`, `robot-carousel`, `robot-poster`, `robot-challenge`,
 `robot-blueprints`, `robot-voyage`, `robot-cast`, `robot-sync`, `robot-trips`.
 
