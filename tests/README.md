@@ -30,6 +30,7 @@ From the repo root:
     node tests/test-dream-dock.js
     node tests/test-chrome.js
     node tests/test-overnight.js
+    node tests/test-replay.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -46,6 +47,11 @@ in the same ship. Pretty modes still may not.
 Ollie quotes. Overnight sleep and NPC memory in the share hash MAY be claimed because both
 are live in the same ship. Pretty modes, a bigger dock, build replay, and a synth suite
 still may not.
+
+`robot-carousel6.py` drives `ollie-update-6.html`: nine cards, four real photos, no invented
+Ollie quotes. Build replay MAY be claimed because it shipped in the same PR. Overnight and
+NPC memory may be mentioned as already live. Pretty modes, a bigger dock, day/night sky,
+and a synth suite still may not.
 
 `robot-overnight.py` drives the live moon on both editions: tap opens tonight's chapter,
 hold opens the morning card with a remembered islander, the share link carries `&m=`,
@@ -135,7 +141,15 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   Overnight chapter line, quest `sleep1` appended, bedtime key `sleep`, compact NPC
   memory codec in `&m=`. One islander is 6 hash chars, eight is 15, worst-case island
   plus memory stays under 1700. PLAY and DREAM stay the dock heroes.
+- **test-replay.js** Build replay on UNDO. Same tap / hold / long-press clock as Dream.
+  Tap stays undo. Hold peels the trailing place ops and places them back. Encode
+  matches. Quest `replay1` appended. Nothing new in `#i=`. PLAY and DREAM stay
+  the dock heroes. No lock. No sell.
 
 `robot-chrome.py` drives the real island on a phone and a tablet and checks the
 picture: dock, chips, drawer, dream, games, toast, and the walk HUD all clear
 the edges. WARM is a flag. Nothing is claimed on a carousel.
+
+`robot-replay.py` drives the live UNDO on both editions: tap still undoes, hold
+peels the last placements and they go down again, encode matches, the share
+link gains nothing, and PLAY and DREAM stay the dock heroes.

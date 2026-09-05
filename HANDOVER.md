@@ -17,14 +17,15 @@ Verify every session with a cache-buster. These are the true shas as at this han
 
 | File | sha256 (first 8) | What it is |
 |---|---|---|
-| `island.html` | Wave B brick 1 (this PR) | Overnight chapter + NPC memory in `#i=`. |
+| `island.html` | `25865790` | Build replay on UNDO. Overnight + NPC memory already live. |
 | `arcade.html` | `bc0420d9` | OLLIE'S. Do not edit without Fabian asking. |
 | `storybook.html` | `bef56030` | OLLIE'S. Do not edit without Fabian asking. |
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
 | `ollie-update-2.html` | `304535ad` | Carousel two, 11 cards. Shipped. |
 | `ollie-update-3.html` | live | Carousel three, Dream button. Shipped. |
 | `ollie-update-4.html` | live | Carousel four, walk soccer + PLAY. Shipped. |
-| `ollie-update-5.html` | this PR | Carousel five, overnight + NPC memory only. |
+| `ollie-update-5.html` | live | Carousel five, overnight + NPC memory only. Shipped. |
+| `ollie-update-6.html` | `86572075` | Carousel six, build replay only. |
 
 ```bash
 B=https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos
@@ -56,13 +57,13 @@ python3 -m playwright install chromium --only-shell
 Nothing ships that has not been through all six rungs, in order:
 
 1. `node --check` on both script blocks of `island.html`
-2. All 31 headless suites green
+2. All 32 headless suites green
 3. Robots in real Chromium driving the actual UI, on BOTH editions
 4. Screenshots taken and actually looked at
 5. Hygiene: zero console errors, zero external requests
 6. Live curl sha match after deploy, plus proof Ollie's files are unchanged
 
-**Current state: 31 suites, 1456 checks, all green.** Includes `test-overnight` (110).
+**Current state: 32 suites, including `test-replay` (104) and `test-overnight` (110), all green.**
 
 | Suite | Checks | Suite | Checks |
 |---|---|---|---|
@@ -79,8 +80,10 @@ Nothing ships that has not been through all six rungs, in order:
 | test-compass | 20 | test-poster | 18 |
 | test-sync | 18 | test-drive | 12 |
 | test-houses | 8 | test-overnight | 110 |
+| test-replay | 104 | | |
 
-Robots: `robot-overnight` (46), `robot-soccer` (74), `robot-chrome` (70), `robot-carousel5` (overnight + NPC memory),
+Robots: `robot-replay` (44, build replay on UNDO), `robot-overnight` (46), `robot-soccer` (74), `robot-chrome` (70),
+`robot-carousel6` (51, build replay only), `robot-carousel5` (overnight + NPC memory),
 `robot-carousel4`, `robot-carousel3`, plus `robot-carousel2`, `robot-carousel`, `robot-poster`, `robot-challenge`,
 `robot-blueprints`, `robot-voyage`, `robot-cast`, `robot-sync`, `robot-trips`.
 
@@ -156,6 +159,12 @@ the overnight chapter line, opens the morning card, and bumps islander memory. L
 the existing shelf. Compact `&m=` in the share hash: 6 chars for one islander, 15 for eight,
 worst-case island plus memory 1277. Quest `sleep1` is appended. No lock. No sell.
 
+**Build replay.** UNDO is the Build path. PLAY and DREAM stay the dock heroes. Same clock
+(280ms / 900ms). Tap still undoes. Hold peels the trailing place ops and places them back
+so the kid watches the blocks go down again, then keeps playing. Long-press watches a longer
+recent run (up to 24). The tape is session-local from `w.undo`. Nothing new in `#i=`.
+Quest `replay1` is appended. No lock. No sell.
+
 **Carousel two**, `ollie-update-2.html`, 11 cards, five real screenshots of the live build baked in as a
 webp sprite sheet, same design language as carousel one.
 **Carousel four**, `ollie-update-4.html`, nine cards, four real photos: the walk ball, walk mode,
@@ -190,6 +199,8 @@ the remembered line, and the shelf. Claims only overnight + NPC memory.
   Soccer → Whale → Bonk → Stack, long-press opens the GAMES sheet. Same clock as Dream.
 - **Overnight sleep is live.** Hold the moon. Morning card, chapter line, journal, and
   `&m=` memory. Carousel five may claim it. Carousels one to four do not.
+- **Build replay is live.** Hold UNDO. Blocks go down again, then you keep playing.
+  Carousel six may claim it. Carousels one to five do not.
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **Real device test with Ollie on an actual iPad.** Still never done. This is not code, it is watching him.

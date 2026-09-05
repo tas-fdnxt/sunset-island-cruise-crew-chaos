@@ -85,7 +85,16 @@ ok('chapter: the chase', /chased it round the island, and caught it\./.test(p1),
 ok('chapter: the coins', /grew by 13 coins/.test(p1));
 ok('chapter: the trophy by the door', /trophy stands by the front door now: GULL CATCHER/.test(p1));
 ok('chapter: two wins say so', /caught it 2 times/.test(chapter({ name: 'OLLIE', stats: {}, prevStats: {}, chaseWins: 2 })[0].lines.join(' ')));
-ok('a chase idea is in the rotation, and it is the last one', (function () { let last = null; for (let k = 0; k < 20; k++) last = nextThing({ blocks: 30, houses: 1, flags: 1, ramp: true, hour: 11, tick: k }).key; for (let k = 0; k < 20; k++) if (nextThing({ blocks: 30, houses: 1, flags: 1, ramp: true, hour: 11, tick: k }).key === 'chase' && nextThing({ blocks: 30, houses: 1, flags: 1, ramp: true, hour: 11, tick: k + 1 }).key === 'tall') return true; return false; })());
+ok('a chase idea stays in the rotation, replay was appended last', (function () {
+  const keys = [];
+  const st = { blocks: 30, houses: 1, flags: 1, ramp: true, hour: 11 };
+  for (let k = 0; k < 24; k++) {
+    const key = nextThing(Object.assign({ tick: k }, st)).key;
+    if (k && key === 'tall') break;
+    keys.push(key);
+  }
+  return keys.indexOf('chase') !== -1 && keys.indexOf('replay') === keys.length - 1;
+})());
 
 console.log('RESULT: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

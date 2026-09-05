@@ -135,7 +135,9 @@
   #tip.on { display:block; }
   #tip b { color:var(--yellow); }
   #btn-drive { background:linear-gradient(180deg,#FF8A70,var(--coral)); color:var(--cream); }
-  #btn-undo  { background:linear-gradient(180deg,var(--peach),var(--coral)); color:var(--ink); }
+  #btn-undo  { background:linear-gradient(180deg,var(--peach),var(--coral)); color:var(--ink);
+    touch-action:none; user-select:none; -webkit-user-select:none; }
+  #btn-undo.on { background:linear-gradient(180deg,var(--yellow),#FFB067); color:var(--ink); }
   #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 124px);
     background:rgba(42,27,61,0.94); color:var(--yellow); font-weight:900; font-size:13px;
     padding:12px 18px; border-radius:22px; border:2px solid rgba(255,243,226,0.5); opacity:0;
@@ -1163,13 +1165,88 @@ function runSleepAct(act) {
   if (act.door === 'overnight') return { ok: true, door: 'overnight', kind: act.kind, slept: true };
   return { ok: true, door: 'story', kind: act.kind || 'tap' };
 }
+/* BUILD REPLAY. UNDO is the Build path. PLAY and DREAM stay the dock
+   heroes. Tap still undoes. Hold peels the trailing place ops and
+   places them back so the kid watches the blocks go down again.
+   Long-press watches a longer recent run. The clock is the Dream clock.
+   The tape never rides in the share hash. */
+const REPLAY_HOLD_MS = DREAM_HOLD_MS;
+const REPLAY_LONG_MS = DREAM_LONG_MS;
+const REPLAY_LAST = 12;
+const REPLAY_ALL = 24;
+function replayPressKind(ms) { return dreamPressKind(ms); }
+function replayPressAct(kind) {
+  if (kind === 'long') return { door: 'replayLong', kind: 'long' };
+  if (kind === 'hold') return { door: 'replayLast', kind: 'hold' };
+  return { door: 'undo', kind: 'tap' };
+}
+function replayTape(w, n) {
+  const cap = REPLAY_ALL;
+  let want = n | 0;
+  if (!(want > 0)) want = REPLAY_LAST;
+  if (want > cap) want = cap;
+  const tape = [];
+  const undos = (w && w.undo) || [];
+  for (let i = undos.length - 1; i >= 0 && tape.length < want; i--) {
+    const u = undos[i];
+    if (!u || u.op !== 'place') break;
+    const id = w.cols[idx(u.x, u.y, u.z)];
+    if (!(id >= 1)) break;
+    tape.push({ x: u.x, y: u.y, z: u.z, id: id });
+  }
+  tape.reverse();
+  return tape;
+}
+function peelReplay(w, tape) {
+  tape = tape || [];
+  let peeled = 0;
+  for (let i = 0; i < tape.length; i++) {
+    const last = w.undo[w.undo.length - 1];
+    if (!last || last.op !== 'place') break;
+    const r = undo(w);
+    if (!r.ok) break;
+    peeled++;
+  }
+  return { ok: peeled === tape.length, peeled: peeled };
+}
+function replayStep(w, tape, i) {
+  const t = tape && tape[i];
+  if (!t) return { ok: false, why: 'done' };
+  return place(w, t.x, t.y, t.id);
+}
+function runReplayAct(w, act, opts) {
+  opts = opts || {};
+  if (!act) return { ok: false, why: 'none', door: 'none' };
+  if (act.door === 'undo' || act.kind === 'tap') return { ok: true, door: 'undo', kind: 'tap' };
+  const n = (opts.n > 0) ? opts.n : (act.door === 'replayLong' ? REPLAY_ALL : REPLAY_LAST);
+  const tape = replayTape(w, n);
+  if (!tape.length) return { ok: false, why: 'empty', door: act.door, kind: act.kind, tape: [] };
+  const peel = peelReplay(w, tape);
+  if (!peel.ok) {
+    for (let i = tape.length - peel.peeled; i < tape.length; i++) place(w, tape[i].x, tape[i].y, tape[i].id);
+    return { ok: false, why: 'peel', door: act.door, kind: act.kind, tape: tape };
+  }
+  if (opts.instant !== false) {
+    for (let i = 0; i < tape.length; i++) replayStep(w, tape, i);
+  }
+  return { ok: true, door: act.door, kind: act.kind, tape: tape, n: tape.length, peeled: peel.peeled };
+}
+function replayLine(o) {
+  o = o || {};
+  const n = o.n || o.replayedN || 0;
+  if (n === 1) return 'One block went down again, and then you kept building.';
+  if (n > 1) return n + ' blocks went down again, and then you kept building.';
+  return 'The blocks went down again, and then you kept building.';
+}
 function questTable(dream) {
   const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
   const base = questTableBase().concat([
     { id: 'goal1', need: 'goalsToday', n: 1, tell: 'score a goal on the soccer pitch',
       done: 'A goal went in on the pitch, and the island cheered.' },
     { id: 'sleep1', need: 'sleptToday', n: 1, tell: 'sleep on the island and see who remembers you in the morning',
-      done: 'The island slept, and somebody remembered.' }]);
+      done: 'The island slept, and somebody remembered.' },
+    { id: 'replay1', need: 'replayedToday', n: 1, tell: 'watch your blocks go down again, then keep building',
+      done: 'The blocks went down again, and then you kept building.' }]);
   return d ? [d].concat(base) : base;
 }
 function questTableBase() {
@@ -1355,6 +1432,7 @@ function chapter(o) {
   else if (built > 0) page1.push('The island looked a little more like home than it did yesterday.');
   else page1.push('Today was a looking day, and looking days count too.');
   if (o.overnight) page1.push(overnightLine(o));
+  if (o.replayed) page1.push(replayLine(o));
   if (o.newIslanders && o.newIslanders.length) {
     page1.push(o.newIslanders.join(' and ') + ' moved in, and knocked on the door to say hello.');
   }
@@ -1480,6 +1558,7 @@ function bedtimeQuestion(o) {
   else if (keys.indexOf('factory') !== -1) q = { ask: 'How many houses make the chocolate factory open?', right: 'Three houses', wrong: 'Ten houses' };
   else if (keys.indexOf('tall') !== -1) q = { ask: 'How tall can a tower go on the island?', right: 'Eight blocks', wrong: 'Twenty blocks' };
   else if (keys.indexOf('sleep') !== -1) q = { ask: 'Who remembers you after the island sleeps?', right: 'The islanders', wrong: 'Nobody' };
+  else if (keys.indexOf('replay') !== -1) q = { ask: 'What happens when you watch your blocks again?', right: 'They go down again', wrong: 'They get locked away' };
   else if (keys.indexOf('house') !== -1 || keys.indexOf('count') !== -1) q = { ask: 'What makes an islander move in?', right: 'Walls with a door', wrong: 'A palm tree' };
   else if (st.houses > 0) q = { ask: 'How many houses are on your island right now?', right: String(st.houses), wrong: String(st.houses + 2) };
   else q = { ask: 'What does a house need before somebody moves in?', right: 'A door', wrong: 'A window' };
@@ -1539,6 +1618,7 @@ function nextThing(st) {
     { key: 'seed', line: st.plants ? 'Your garden is growing. Seeds take a whole day to sprout, so come back tomorrow.' : 'Plant a SEED on bare sand. Come back tomorrow and something will have happened.' },
     { key: 'walk', line: 'Tap WALK and stand on your island. Go and knock on a door.' },
     { key: 'chase', line: 'Tap DRIVE. A gull will pinch a crate off the dock. Catch it when it flies low and win a trophy.' },
+    { key: 'replay', line: 'Hold UNDO and watch your blocks go down again, then keep building.' },
   ];
   return spare[(st.tick || 0) % spare.length];
 }
@@ -2126,6 +2206,7 @@ if (typeof module !== 'undefined' && module.exports) {
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     PHONE_CAP, chromeEdge, dockSpan, dockFitsPhone, warmRgb,
+    REPLAY_HOLD_MS, REPLAY_LONG_MS, REPLAY_LAST, REPLAY_ALL, replayPressKind, replayPressAct, runReplayAct, replayTape, peelReplay, replayStep, replayLine,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
 }
 </script>
@@ -2518,6 +2599,7 @@ if (typeof module !== 'undefined' && module.exports) {
     tripTick(dt);
     stepIslanders(dt, t);
     crewStep(dt);
+    replayTick(dt);
     ballTick(dt);
     drawBall();
     drawIslanders(t);
@@ -2705,6 +2787,7 @@ if (typeof module !== 'undefined' && module.exports) {
      Every stroke is one press of UNDO, not thirty. */
   let stroke = null, strokes = [];
   function paintStart(sx, sy) {
+    if (replayLive) skipReplay();
     if (driving || walking) return false;
     const c = cellAt(sx, sy); if (!c) return false;
     if (islanderAt(sx, sy) || cleoAt(sx, sy)) return false;
@@ -2767,6 +2850,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (tool === 12) saveJournal(journal);
   }
   function tapAt(sx, sy) {
+    if (replayLive) skipReplay();
     if (driving || walking) return;
     const ch = cleoAt(sx, sy);
     if (ch) { talkToKeeper(ch); return; }
@@ -2835,7 +2919,7 @@ if (typeof module !== 'undefined' && module.exports) {
     b.innerHTML = '<span class="ic">' + icon + '</span>' + label;
     b.addEventListener('click', onClick); return b;
   }
-  let dreamDockGen = 0, playDockGen = 0, sleepDockGen = 0, journalReady = false;
+  let dreamDockGen = 0, playDockGen = 0, sleepDockGen = 0, replayDockGen = 0, journalReady = false;
   function dreamDockBtn() {
     const b = document.createElement('button');
     b.className = 'dock'; b.id = 'btn-dream'; b.type = 'button';
@@ -2858,14 +2942,115 @@ if (typeof module !== 'undefined' && module.exports) {
     wirePlayDock(b);
     return b;
   }
+  let replayLive = null, replayI = 0, replayT = 0;
+  function replayOn() { return !!replayLive; }
+  function finishReplay() {
+    const n = replayLive ? replayLive.length : 0;
+    replayLive = null; replayI = 0; replayT = 0;
+    if (n) { strokes.push(n); if (strokes.length > 60) strokes.shift(); }
+    journal.replayedToday = (journal.replayedToday || 0) + 1;
+    journal.replayedN = n;
+    journal.keys = journal.keys || [];
+    if (journal.keys.indexOf('replay') === -1) journal.keys.push('replay');
+    saveJournal(journal);
+    syncCargo(); popCheck(); saveSoon();
+    toast('AGAIN! NOW KEEP BUILDING.');
+    try { refreshQuest(); } catch (e) {}
+  }
+  function skipReplay() {
+    if (!replayLive) return false;
+    while (replayI < replayLive.length) {
+      replayStep(world.ref, replayLive, replayI);
+      replayI++;
+    }
+    redrawWorld();
+    finishReplay();
+    return true;
+  }
+  function replayTick(dt) {
+    if (!replayLive) return;
+    replayT += dt; if (replayT < 0.18) return; replayT = 0;
+    const r = replayStep(world.ref, replayLive, replayI);
+    if (r && r.ok) {
+      thunk(r.z);
+      redrawWorld({ x: r.x, y: r.y });
+      lastPlaced = { x: r.x, y: r.y };
+      heightPop = { x: r.x, y: r.y, z: r.z, n: r.z + 1, until: performance.now() + 800 };
+      centreOn(r.x, r.y);
+    }
+    replayI++;
+    if (replayI >= replayLive.length) finishReplay();
+  }
+  function doUndo() {
+    if (skipReplay()) return;
+    const n = strokes.length ? strokes.pop() : 1;
+    let any = false;
+    for (let i = 0; i < n; i++) { if (undo(world.ref).ok) any = true; else break; }
+    if (any) { blip(260); redrawWorld(); syncCargo(); popCheck(); saveSoon(); heightPop = null; }
+  }
+  function applyReplayAct(act) {
+    if (!act) return { ok: false, why: 'none', door: 'none' };
+    if (act.door === 'undo' || act.kind === 'tap') { doUndo(); return { ok: true, door: 'undo', kind: 'tap' }; }
+    if (replayLive) skipReplay();
+    const r = runReplayAct(world.ref, act, { instant: false });
+    if (!r.ok) {
+      if (r.why === 'empty') toast('BUILD SOMETHING FIRST!');
+      return r;
+    }
+    replayLive = r.tape; replayI = 0; replayT = 0.18;
+    redrawWorld();
+    if (r.tape[0]) centreOn(r.tape[0].x, r.tape[0].y);
+    toast(r.tape.length === 1 ? 'WATCH THIS!' : 'WATCH THEM GO DOWN!');
+    blip(700);
+    return r;
+  }
+  function replayDockBtn() {
+    const b = document.createElement('button');
+    b.className = 'dock'; b.id = 'btn-undo'; b.type = 'button';
+    b.setAttribute('aria-label', 'UNDO or hold to watch again');
+    b.innerHTML = '<span class="ic">\u21B6</span>UNDO';
+    wireReplayDock(b);
+    return b;
+  }
+  function wireReplayDock(b) {
+    const gen = ++replayDockGen;
+    let downAt = 0, holdOn = false, longOn = false, holdT = 0, longT = 0;
+    function clearT() { clearTimeout(holdT); clearTimeout(longT); }
+    function up() {
+      if (gen !== replayDockGen) return;
+      const held = Date.now() - downAt;
+      clearT();
+      b.classList.remove('on');
+      if (longOn) { longOn = false; holdOn = false; return; }
+      if (holdOn) { holdOn = false; applyReplayAct(replayPressAct('hold')); return; }
+      if (replayPressKind(held) === 'tap') applyReplayAct(replayPressAct('tap'));
+    }
+    function down(e) {
+      e.preventDefault();
+      try { b.setPointerCapture(e.pointerId); } catch (x) {}
+      downAt = Date.now(); holdOn = false; longOn = false; clearT();
+      holdT = setTimeout(function () {
+        if (gen !== replayDockGen) return;
+        holdOn = true;
+        b.classList.add('on');
+        toast('WATCH AGAIN!');
+        blip(700);
+      }, REPLAY_HOLD_MS);
+      longT = setTimeout(function () {
+        if (gen !== replayDockGen) return;
+        longOn = true; holdOn = false;
+        b.classList.remove('on');
+        applyReplayAct(replayPressAct('long'));
+      }, REPLAY_LONG_MS);
+    }
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
   function renderDock() {
     bar.innerHTML = '';
-    bar.appendChild(dockBtn('btn-undo', 'UNDO', '\u21B6', function () {
-      const n = strokes.length ? strokes.pop() : 1;
-      let any = false;
-      for (let i = 0; i < n; i++) { if (undo(world.ref).ok) any = true; else break; }
-      if (any) { blip(260); redrawWorld(); syncCargo(); popCheck(); saveSoon(); heightPop = null; }
-    }));
+    bar.appendChild(replayDockBtn());
     recent.filter(function (r) { return r !== tool; }).slice(0, 2).forEach(function (id) {
       const b = document.createElement('button'); b.className = 'dock pin'; b.dataset.val = id; b.appendChild(iconFor(id)); b.appendChild(document.createTextNode(nameOf(id)));
       b.addEventListener('click', function () { setTool(id); }); bar.appendChild(b);
@@ -2927,7 +3112,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const k = e.key.toLowerCase();
     if (k >= '1' && k <= '9') { setTool(Number(k)); }
     else if (k === '0') setTool(10); else if (k === 'f') setTool(11); else if (k === 'p') setTool(12);
-    else if (k === 'e') setTool(-1); else if (k === 'u') document.getElementById('btn-undo').click();
+    else if (k === 'e') setTool(-1); else if (k === 'u') doUndo();
     else if (k === 'd') document.getElementById('btn-drive').click(); else if (k === 'w' && !walking) setWalk(true); else if (k === 's') share();
     else if (k === 'escape') { drawer.classList.remove('on'); closeDream(); }
     else return;
@@ -5535,6 +5720,7 @@ if (typeof module !== 'undefined' && module.exports) {
     st.bpFinishedToday = journal.bpFinishedToday || 0;
     st.tripsToday = journal.tripsToday || 0;
     st.sleptToday = journal.sleptToday || 0;
+    st.replayedToday = journal.replayedToday || 0;
     st.gain = journal.lapGainToday || 0;
     const cs = compassStats(world.ref); st.north = cs.north; st.east = cs.east; st.south = cs.south; st.west = cs.west;
     return st;
@@ -5591,6 +5777,7 @@ if (typeof module !== 'undefined' && module.exports) {
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
       bpToday: journal.bpToday || null, tripsToday: journal.tripsToday || 0, goalsToday: journal.goalsToday || 0,
       overnight: !!(journal.overnight || journal.sleptToday), remembered: npcRememberedNames(npcMem),
+      replayed: !!(journal.replayedToday), replayedN: journal.replayedN || journal.replayedToday || 0,
       voyage: (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, complete: pr.complete }; })(),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
@@ -5604,7 +5791,7 @@ if (typeof module !== 'undefined' && module.exports) {
     journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; journal.cabinetToday = {}; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
-    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0; journal.goalsToday = 0; journal.goalCoinsToday = 0; journal.sleptToday = 0; journal.overnight = false; journal.npcMem = npcMem;
+    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0; journal.goalsToday = 0; journal.goalCoinsToday = 0; journal.sleptToday = 0; journal.overnight = false; journal.replayedToday = 0; journal.replayedN = 0; journal.npcMem = npcMem;
     journal.chapters = journal.book.length;
     saveJournal(journal);
     return entry;
@@ -5821,6 +6008,12 @@ if (typeof module !== 'undefined' && module.exports) {
     tapSleep: () => applySleepAct(sleepPressAct('tap')),
     holdSleep: () => applySleepAct(sleepPressAct('hold')),
     longSleep: () => applySleepAct(sleepPressAct('long')),
+    replayPressKind, replayPressAct, runReplayAct, replayTape, replayLine,
+    tapUndo: () => applyReplayAct(replayPressAct('tap')),
+    holdReplay: () => applyReplayAct(replayPressAct('hold')),
+    longReplay: () => applyReplayAct(replayPressAct('long')),
+    replayOn: () => replayOn(), replaySkip: () => skipReplay(),
+    replayLeft: () => replayLive ? Math.max(0, replayLive.length - replayI) : 0,
     npcMem: () => npcMem, encodeNpcMem, decodeNpcMem, overnightLine, npcRememberedNames,
     doOvernight,
     lastDream: () => journal.lastDream,
