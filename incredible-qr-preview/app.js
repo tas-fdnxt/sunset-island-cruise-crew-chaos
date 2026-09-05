@@ -4,11 +4,13 @@
    Preview only. Not a send. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const NAVY = 0x1b2a4a;
 const ORANGE = 0xee7202;
 const PAPER = 0xffffff;
 const SOFT = 0xf4f6f9;
+const INK = 0x202020;
 const MODULE = 0.041;
 
 const canvas = document.getElementById('stage');
@@ -44,9 +46,9 @@ const idleCam = {
   fov: 34,
 };
 const scanCam = {
-  pos: new THREE.Vector3(0, 3.7, 0.002),
+  pos: new THREE.Vector3(0, 4.4, 0.001),
   look: new THREE.Vector3(0, 0, 0),
-  fov: 26,
+  fov: 22,
 };
 
 try {
@@ -105,6 +107,20 @@ async function boot() {
   scanPlane = makeScanPlane();
   scene.add(scanPlane);
   await loadBoomModel();
+  window.__QR = {
+    scene,
+    camera,
+    boomRoot,
+    setFlat: (on) => {
+      flattenTo = on ? 1 : 0;
+      hopping = 1;
+      const open = flattenTo > 0.5;
+      hintEl.textContent = open
+        ? 'Scan with your camera. Tap again to raise the boom.'
+        : 'Tap the boom. Navy modules flatten into a scan-ready code.';
+      statusEl.textContent = open ? 'Scan-ready preview. Not a send.' : 'Preview only. Not a send.';
+    },
+  };
   requestAnimationFrame(tick);
 }
 
@@ -302,23 +318,25 @@ function fitBoom(model) {
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z, 0.001);
-  model.scale.setScalar(1.82 / maxDim);
+  model.scale.setScalar(2.28 / maxDim);
   box.setFromObject(model);
   model.position.x -= (box.min.x + box.max.x) * 0.5;
   model.position.y -= box.min.y;
   model.position.z -= (box.min.z + box.max.z) * 0.5;
   model.traverse((n) => {
-    if (n.isMesh) {
-      n.castShadow = true;
-      n.receiveShadow = true;
-      if (n.material) {
-        const mats = Array.isArray(n.material) ? n.material : [n.material];
-        mats.forEach((m) => {
-          if (!m) return;
-          m.shadowSide = THREE.FrontSide;
-        });
-      }
-    }
+    if (!n.isMesh) return;
+    n.castShadow = false;
+    n.receiveShadow = false;
+    n.frustumCulled = true;
+    const mats = Array.isArray(n.material) ? n.material : [n.material];
+    mats.forEach((m) => {
+      if (!m) return;
+      if (typeof m.metalness === 'number' && m.metalness > 0.28) m.metalness = 0.18;
+      if (typeof m.roughness === 'number' && m.roughness > 0.62) m.roughness = 0.46;
+      if (m.color && m.color.getHex() <= 0x111111) m.color.setHex(NAVY);
+      m.envMapIntensity = 0.35;
+      m.needsUpdate = true;
+    });
   });
 }
 
@@ -362,6 +380,9 @@ function buildFallbackBoom() {
 
 async function loadBoomModel() {
   const loader = new GLTFLoader();
+  const draco = new DRACOLoader();
+  draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/');
+  loader.setDRACOLoader(draco);
   try {
     const gltf = await loader.loadAsync('./pb4000_named.glb');
     const model = gltf.scene;
@@ -369,6 +390,7 @@ async function loadBoomModel() {
     fitBoom(model);
     boomRoot.add(model);
   } catch (err) {
+    console.warn('pb4000_named.glb failed, using procedural boom', err);
     const fallback = buildFallbackBoom();
     fitBoom(fallback);
     boomRoot.add(fallback);
@@ -408,7 +430,7 @@ function updateModules(t, k, alive) {
     const idleH = idleHeights[i];
     const breathe = reduced ? 1 : 1 + Math.sin(t * 1.85 + phase) * 0.09 * alive;
     const hop = reduced ? 0 : (Math.max(0, Math.sin(t * 2.45 + phase * 0.16)) ** 8) * 0.11 * alive;
-    const h = THREE.MathUtils.lerp(idleH * breathe + hop, MODULE * 0.2, k);
+    const h = THREE.MathUtils.lerp(idleH * breathe + hop, MODULE * 0.08, k);
     dummy.position.set(modX(x, size), 0.02 + h * 0.5, modZ(y, size));
     dummy.scale.set(
       THREE.MathUtils.lerp(0.9, 1, k),
@@ -424,7 +446,7 @@ function updateModules(t, k, alive) {
 function tick() {
   const t = clock.getElapsedTime();
   const dt = Math.min(clock.getDelta(), 0.05);
-  flatten += (flattenTo - flatten) * Math.min(1, dt * 4.6);
+  flatten += (flattenTo - flatten) * Math.min(1, dt * 6.2);
   const k = ease(flatten);
   const alive = 1 - k;
 
@@ -433,11 +455,11 @@ function tick() {
   hopping = Math.max(0, hopping - dt * 2.0);
   const tapHop = hopping * hopping * 0.1 * alive;
 
-  boomRoot.scale.setScalar(THREE.MathUtils.lerp(breathe, 0.12, k));
-  boomRoot.position.y = THREE.MathUtils.lerp(jump + tapHop, -0.62, k);
+  boomRoot.scale.setScalar(THREE.MathUtils.lerp(breathe, 0.04, k));
+  boomRoot.position.y = THREE.MathUtils.lerp(jump + tapHop, -0.85, k);
   boomRoot.rotation.y = THREE.MathUtils.lerp(0.06 * Math.sin(t * 0.55), 0, k);
   boomRoot.rotation.z = THREE.MathUtils.lerp(0.02 * Math.sin(t * 0.9), 0, k);
-  boomRoot.visible = k < 0.97;
+  boomRoot.visible = k < 0.82;
 
   const flash = reduced ? 0.35 : 0.22 + 0.9 * Math.max(0, Math.sin(t * 3.35));
   if (brandRim) brandRim.intensity = 0.12 + 0.32 * flash * alive;
@@ -448,21 +470,21 @@ function tick() {
   if (window.innerWidth < 520) {
     camera.position.set(
       THREE.MathUtils.lerp(1.42, 0, k),
-      THREE.MathUtils.lerp(1.95, 4.05, k),
-      THREE.MathUtils.lerp(2.95, 0.002, k),
+      THREE.MathUtils.lerp(1.95, 4.55, k),
+      THREE.MathUtils.lerp(2.95, 0.001, k),
     );
-    camera.fov = THREE.MathUtils.lerp(38, 28, k);
+    camera.fov = THREE.MathUtils.lerp(38, 24, k);
   } else {
     camera.position.lerpVectors(idleCam.pos, scanCam.pos, k);
-    camera.fov = THREE.MathUtils.lerp(idleCam.fov, scanCam.fov, k);
+    camera.fov = THREE.MathUtils.lerp(idleCam.fov, 22, k);
   }
   camera.lookAt(look);
   camera.updateProjectionMatrix();
 
   if (scanPlane) {
-    scanPlane.visible = k > 0.52;
-    scanPlane.material.opacity = THREE.MathUtils.smoothstep(k, 0.58, 0.9);
-    const s = THREE.MathUtils.lerp(0.9, 1, k);
+    scanPlane.visible = k > 0.38;
+    scanPlane.material.opacity = THREE.MathUtils.smoothstep(k, 0.42, 0.78);
+    const s = THREE.MathUtils.lerp(0.94, 1, k);
     scanPlane.scale.set(qrPlane * s, qrPlane * s, 1);
   }
 
