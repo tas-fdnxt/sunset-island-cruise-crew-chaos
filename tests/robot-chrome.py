@@ -130,7 +130,8 @@ def run(pw, w, hgt, label):
         box = measure(pg, sel)
         ck(label + ' ' + name + ' clears the sides', inset_ok(box, vw, vh), box)
     look = measure(pg, '#lookchip')
-    ck(label + ' LOOK is a kid target', look and look['w'] >= 76 and look['h'] >= 76, look)
+    ck(label + ' LOOK is a kid-can-not-miss chip', look and look['w'] >= 90 and look['h'] >= 90, look)
+    ck(label + ' LOOK is labeled LOOK', 'LOOK' in pg.locator('#lookchip').inner_text().upper())
     rad = pg.evaluate("parseFloat(getComputedStyle(document.getElementById('lookchip')).borderRadius)")
     ck(label + ' LOOK has a soft corner', rad >= 18, rad)
 
