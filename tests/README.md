@@ -48,6 +48,11 @@ Ollie quotes. Overnight sleep and NPC memory in the share hash MAY be claimed be
 are live in the same ship. Pretty modes, a bigger dock, build replay, and a synth suite
 still may not.
 
+`robot-carousel6.py` drives `ollie-update-6.html`: nine cards, four real photos, no invented
+Ollie quotes. Build replay MAY be claimed because it shipped in the same PR. Overnight and
+NPC memory may be mentioned as already live. Pretty modes, a bigger dock, day/night sky,
+and a synth suite still may not.
+
 `robot-overnight.py` drives the live moon on both editions: tap opens tonight's chapter,
 hold opens the morning card with a remembered islander, the share link carries `&m=`,
 and long-press opens the shelf. PLAY and DREAM stay the dock heroes.
