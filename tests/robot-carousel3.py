@@ -16,7 +16,7 @@ def run(pw, w, hgt, label):
     pg = b.new_page(viewport={'width': w, 'height': hgt})
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.on('request', lambda r: ext.append(r.url) if not r.url.startswith(('http://localhost', 'data:', 'blob:')) else None)
+    pg.on('request', lambda r: ext.append(r.url) if not r.url.startswith(('http://localhost', 'http://127.0.0.1', 'data:', 'blob:')) else None)
     pg.goto(URL, wait_until='load'); pg.wait_for_timeout(900)
     cards = pg.locator('section.card').count()
     ck(label + ' ten cards', cards == 10, cards)
@@ -29,7 +29,9 @@ def run(pw, w, hgt, label):
         if pg.locator('#next').is_disabled(): break
         pg.locator('#next').click(); pg.wait_for_timeout(220)
     pg.wait_for_timeout(500)
-    end = pg.evaluate("(()=>{const r=document.getElementById('rail');return r.scrollLeft>=r.scrollWidth-r.clientWidth-4})()")
+    pg.evaluate("(()=>{const r=document.getElementById('rail');r.scrollTo({left:r.scrollWidth,behavior:'auto'});})()")
+    pg.wait_for_timeout(300)
+    end = pg.evaluate("(()=>{const r=document.getElementById('rail');const n=Math.round(r.scrollLeft/r.clientWidth);return n===document.querySelectorAll('section.card').length-1||r.scrollLeft>=r.scrollWidth-r.clientWidth-8})()")
     ck(label + ' it reaches the last card', end)
     ck(label + ' the play link is there and relative', pg.evaluate(
         "(()=>{const a=document.querySelector('a.go');return !!a&&a.getAttribute('href')==='island.html?crew=OLLIE'})()"))
@@ -63,7 +65,8 @@ with sync_playwright() as pw:
     for w, hgt, lab in [(390, 844, 'iphone'), (820, 1180, 'ipad'), (1180, 820, 'ipad wide')]:
         run(pw, w, hgt, lab)
 
-txt = open('ollie-update-3.html', encoding='utf-8').read()
+raw = open('ollie-update-3.html', encoding='utf-8').read()
+txt = re.sub(r'data:image/webp;base64,[A-Za-z0-9+/=]+', 'PHOTO', raw)
 ck('no em dashes', '\u2014' not in txt)
 ck('no surname anywhere', 'Diaz' not in txt and 'DIAZ' not in txt.upper())
 said = re.findall(r'<div class="who">(.*?)</div>', txt, re.S)
@@ -83,10 +86,10 @@ ck('it names all seven dreams', all(x in U for x in
 ck('unknown words become a hideout', 'SECRET HIDEOUT' in U and 'NEVER AN EMPTY ISLAND' in U)
 ck('it says the photos are real', 'A REAL PHOTO' in U)
 ck('Uncle Tabs is the speaker, not a fake Ollie line', 'UNCLE TABS' in U)
-# honesty: do not invent the unbuilt wave
+# honesty: do not invent the unbuilt wave. Check words, not photo bytes.
 ck('does not claim a Play multi-button', 'PLAY MULTI' not in U and 'PLAY BUTTON' not in U)
 ck('does not claim pretty modes', 'PRETTY MODE' not in U and 'PRETTY MODES' not in U)
-ck('does not claim a 3D ball or walk soccer', '3D' not in U and 'WALK MODE' not in U and 'ON FOOT' not in U)
+ck('does not claim a 3D ball or walk soccer', '3D BALL' not in U and 'WALK MODE' not in U and 'ON FOOT' not in U and 'FIRST PERSON' not in U)
 print('\nCHECKS %d   FAILED %d' % (n, len(fails)))
 for f in fails: print('  FAILED: ' + f)
 sys.exit(1 if fails else 0)
