@@ -190,8 +190,10 @@ synth suite and the bigger dock. Pretty, overnight, and replay are named as alre
 
 **Synth suite + bigger kid dock.** Seven WebAudio voices: place, erase, dream, sleep,
 look, goal, toast. Mute lives on the look sheet and silences every one. Tools stay
-about 2cm. PLAY is 120 and DREAM is 112 on a phone, so a hard refresh shows the jump.
-LOOK stays sand-side. Nothing new in `#i=`. Worst-case link stayed 1262. No lock. No sell.
+about 2cm. PLAY is 120 and DREAM is 112 on a phone, so a hard refresh shows the jump
+against live main (PLAY 84, DREAM 80). LOOK stays sand-side. Nothing new in `#i=`.
+Worst-case link stayed 1262. No lock. No sell. PR #11 is merge-ready. Do not merge
+from a sandbox. Do not expand this brick into a LOOK punch.
 
 ---
 
