@@ -54,7 +54,11 @@
   #cargo.full { color:var(--coral); }
   /* THE DOCK. Fixed places, thumb sized, never scrolls. Undo, two pinned blocks, the current block, erase, drive, share. */
   #bottombar { position:fixed; left:0; right:0; bottom:0; padding:8px 6px calc(env(safe-area-inset-bottom,0px) + 8px);
-    display:flex; gap:6px; align-items:flex-end; justify-content:center; background:linear-gradient(180deg, rgba(42,27,61,0) , rgba(42,27,61,0.88) 30%); z-index:5; }
+    display:flex; gap:6px; align-items:flex-end; justify-content:flex-start; background:linear-gradient(180deg, rgba(42,27,61,0) , rgba(42,27,61,0.88) 30%); z-index:5;
+    overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior-x:contain; scroll-snap-type:x proximity; }
+  #bottombar::-webkit-scrollbar { display:none; }
+  #bottombar::before, #bottombar::after { content:''; flex:0 0 0px; margin:auto; }
+  #bottombar .dock { scroll-snap-align:center; }
   .dock { flex:0 0 auto; width:46px; height:58px; border-radius:14px; border:3px solid rgba(255,243,226,0.5); background:rgba(42,27,61,0.92);
     color:var(--cream); font-weight:900; font-size:9px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
     box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.04em; padding:0; touch-action:manipulation; }
@@ -72,6 +76,14 @@
     background:rgba(255,243,226,0.97); border:4px solid var(--ink); border-radius:22px; padding:12px 12px 8px; box-shadow:0 8px 0 rgba(20,8,30,0.5);
     max-height:60dvh; overflow-y:auto; }
   #drawer.on { display:block; }
+  #gamemenu { position:fixed; left:10px; right:10px; bottom:calc(env(safe-area-inset-bottom,0px) + 84px); z-index:9; display:none;
+    background:rgba(255,243,226,0.98); border:4px solid var(--ink); border-radius:22px; padding:12px; box-shadow:0 8px 0 rgba(20,8,30,0.5); max-height:66dvh; overflow-y:auto; }
+  #gamemenu.on { display:block; }
+  #gamemenu .gm-hd { font-size:11px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:2px 4px 10px; }
+  #gamemenu button.gm { display:block; width:100%; margin-bottom:8px; min-height:56px; border-radius:16px; border:3px solid var(--ink); background:#fff;
+    color:var(--ink); font-weight:900; font-size:14px; cursor:pointer; text-align:left; padding:8px 14px; }
+  #gamemenu button.gm small { display:block; font-size:10px; font-weight:700; opacity:0.7; letter-spacing:0.04em; margin-top:3px; }
+  #gm-close { width:100%; min-height:48px; border-radius:16px; border:3px solid var(--ink); background:var(--dusk); color:var(--cream); font-weight:900; font-size:12px; cursor:pointer; }
   #drawer .grp { font-size:10px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:6px 4px 4px; }
   #drawer .tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px; margin-bottom:6px; }
   .tool { height:70px; border-radius:14px; border:3px solid var(--ink); background:#fff; color:var(--ink); font-weight:900; font-size:9px; cursor:pointer;
@@ -397,6 +409,7 @@
 <div id="rail"></div>
 <div id="bottombar"></div>
 <div id="drawer"></div>
+<div id="gamemenu"><div class="gm-hd">PICK A GAME</div><div id="gm-list"></div><button id="gm-close">BACK TO THE ISLAND</button></div>
 <div id="tip"></div>
 <button id="keeper" aria-label="Ask the keeper"></button>
 <div id="toast"></div>
@@ -756,7 +769,9 @@ function parseProfile(str) {
 }
 function questTable(dream) {
   const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
-  const base = questTableBase();
+  const base = questTableBase().concat([
+    { id: 'goal1', need: 'goalsToday', n: 1, tell: 'score a goal on the soccer pitch',
+      done: 'A goal went in on the pitch, and the island cheered.' }]);
   return d ? [d].concat(base) : base;
 }
 function questTableBase() {
@@ -971,6 +986,9 @@ function chapter(o) {
   if (o.tripsToday > 0) page1.push(o.tripsToday === 1
     ? 'One passenger rode the car today, paid a shiny coin, and got exactly where they asked to go.'
     : o.tripsToday + ' passengers rode the car today. Every fare was a coin, and every drop-off was exactly where they asked.');
+  if (o.goalsToday > 0) page1.push(o.goalsToday === 1
+    ? 'One goal went in on the pitch today, and every islander stopped to cheer.'
+    : o.goalsToday + ' goals went in on the pitch today, and every islander stopped to cheer each one.');
   if (o.trophyNew) page1.push('A new trophy stands by the front door now: ' + o.trophyNew + '.');
   const cab = Object.keys(o.cabinet || {});
   if (cab.length) page1.push('The arcade was switched on: ' + cab.map(function (k) { return k + ' best ' + o.cabinet[k]; }).join(', ') + '. Ten points is a coin, every time.');
@@ -1471,6 +1489,19 @@ function coinArc(p, t) { return { x: p.x + p.vx * t, y: p.y + p.vy * t + 520 * t
 /* BLUEPRINTS AND THE CREW. Pure parts. The boat brings a rolled-up scroll, and tapping it lays a glowing
    outline on the sand. Hands are free, always. Coins hire the crew, who build it block by block in front of
    the child. Coins buy labour, never access. Every column is a stack of block ids from the ground up. */
+const PITCH_W = 9, PITCH_H = 6, PITCH_GY = 2, PITCH_GH = 2;
+function bpPitchCols() {
+  const cols = [];
+  for (let dx = 0; dx < PITCH_W; dx++) { cols.push({ dx: dx, dy: 0, ids: [2] }); cols.push({ dx: dx, dy: PITCH_H - 1, ids: [2] }); }
+  for (let dy = 1; dy < PITCH_H - 1; dy++) {
+    if (dy < PITCH_GY || dy >= PITCH_GY + PITCH_GH) { cols.push({ dx: 0, dy: dy, ids: [2] }); cols.push({ dx: PITCH_W - 1, dy: dy, ids: [2] }); }
+  }
+  return cols;
+}
+function pitchGoals(bp) {
+  return [{ end: 'west', dx: 0, dy: PITCH_GY, x: 0, y: PITCH_GY, h: PITCH_GH },
+          { end: 'east', dx: PITCH_W - 1, dy: PITCH_GY, x: PITCH_W - 1, y: PITCH_GY, h: PITCH_GH }];
+}
 const BLUEPRINTS = [
   { id: 'house', name: 'LITTLE HOUSE', cols: [
     { dx: 0, dy: 0, ids: [3, 3, 7] }, { dx: 1, dy: 0, ids: [3, 3, 7] }, { dx: 2, dy: 0, ids: [3, 3, 7] },
@@ -1492,11 +1523,13 @@ const BLUEPRINTS = [
     { dx: 0, dy: 0, ids: [6, 3] }, { dx: 1, dy: 0, ids: [3, 3] }, { dx: 0, dy: 1, ids: [3, 3] }, { dx: 1, dy: 1, ids: [3, 3] }, { dx: 0, dy: 2, ids: [3, 3] }, { dx: 1, dy: 2, ids: [3, 3] },
     { dx: 7, dy: 0, ids: [6, 3] }, { dx: 8, dy: 0, ids: [3, 3] }, { dx: 7, dy: 1, ids: [3, 3] }, { dx: 8, dy: 1, ids: [3, 3] }, { dx: 7, dy: 2, ids: [3, 3] }, { dx: 8, dy: 2, ids: [3, 3] },
     { dx: 14, dy: 0, ids: [6, 3] }, { dx: 15, dy: 0, ids: [3, 3] }, { dx: 14, dy: 1, ids: [3, 3] }, { dx: 15, dy: 1, ids: [3, 3] }, { dx: 14, dy: 2, ids: [3, 3] }, { dx: 15, dy: 2, ids: [3, 3] } ] },
+  { id: 'pitch', name: 'SOCCER PITCH', cols: bpPitchCols() }
 ];
 function blueprintById(id) { for (let i = 0; i < BLUEPRINTS.length; i++) if (BLUEPRINTS[i].id === id) return BLUEPRINTS[i]; return null; }
 function scrollFor(day) { return BLUEPRINTS[dayHash(String(day) + ':scroll') % BLUEPRINTS.length]; }
 const VOYAGE_EPOCH = '2026-09-01';
 const VOYAGE_GOALS = [
+  { need: 'goalsToday', n: 1, icon: '\u26BD', tell: 'score a goal on the soccer pitch' },
   { need: 'bpFinishedToday', n: 1, icon: '\u{1F4DC}', tell: 'finish the blueprint the boat brought' },
   { need: 'tripsToday',      n: 3, icon: '\u{1F695}', tell: 'drive three islanders where they ask to go' },
   { need: 'houses',          n: 3, icon: '\u{1F3E1}', tell: 'have three houses standing on the island' },
@@ -1594,8 +1627,50 @@ function bpSpot(w, bp, near) {
   }
   return null;
 }
+function ballBlocked(w, x, y) {
+  const cx = Math.floor(x), cy = Math.floor(y);
+  if (!inBounds(cx, cy)) return true;
+  return topZ(w, cx, cy) >= 1;
+}
+function pitchOf(w) {
+  const bp = BLUEPRINTS.filter(function (b) { return b.id === 'pitch'; })[0];
+  if (!bp) return null;
+  const need = bpBlocks(bp);
+  for (let y = 0; y + PITCH_H <= ISLE.N; y++) {
+    for (let x = 0; x + PITCH_W <= ISLE.N; x++) {
+      if (topZ(w, x, y) !== 0) continue;
+      if (bpLaid(w, bp, x, y) === need) return { x: x, y: y, bp: bp };
+    }
+  }
+  return null;
+}
+function ballStart(p) {
+  if (!p) return null;
+  return { x: p.x + PITCH_W / 2, y: p.y + PITCH_H / 2, vx: 0, vy: 0 };
+}
+function goalScored(p, pt) {
+  if (!p || !pt) return null;
+  const rx = pt.x - p.x, ry = pt.y - p.y;
+  if (ry < PITCH_GY || ry >= PITCH_GY + PITCH_GH) return null;
+  if (rx >= 0 && rx < 1) return 'west';
+  if (rx >= PITCH_W - 1 && rx < PITCH_W) return 'east';
+  return null;
+}
+function stepBall(w, b, dt) {
+  const nb = { x: b.x, y: b.y, vx: b.vx || 0, vy: b.vy || 0 };
+  const nx = nb.x + nb.vx * dt, ny = nb.y + nb.vy * dt;
+  if (!ballBlocked(w, nx, nb.y)) nb.x = nx; else nb.vx = -nb.vx * 0.45;
+  if (!ballBlocked(w, nb.x, ny)) nb.y = ny; else nb.vy = -nb.vy * 0.45;
+  const f = Math.pow(0.12, dt);
+  nb.vx *= f; nb.vy *= f;
+  if (Math.abs(nb.vx) < 0.02) nb.vx = 0;
+  if (Math.abs(nb.vy) < 0.02) nb.vy = 0;
+  if (nb.x < 0.5) nb.x = 0.5; if (nb.x > ISLE.N - 0.5) nb.x = ISLE.N - 0.5;
+  if (nb.y < 0.5) nb.y = 0.5; if (nb.y > ISLE.N - 0.5) nb.y = ISLE.N - 0.5;
+  return nb;
+}
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
+  module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
@@ -1991,6 +2066,8 @@ if (typeof module !== 'undefined' && module.exports) {
     tripTick(dt);
     stepIslanders(dt, t);
     crewStep(dt);
+    ballTick(dt);
+    drawBall();
     drawIslanders(t);
     stepCar(dt);
     drawCar();
@@ -2244,6 +2321,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const hit = islanderAt(sx, sy);
     if (hit) { chat(hit); return; }
     if (scrollAt(sx, sy)) { openBlueprint(); return; }
+    if (tapKick(sx, sy)) return;
     const c = cellAt(sx, sy);
     if (!c) return;
     if (tool !== -1 && arcadeCells.some(function (a) { return a.x === c.x && a.y === c.y; })) { openCabinet(c.x, c.y); return; }
@@ -2325,6 +2403,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const rm = dockBtn('btn-remix', 'REMIX', '\u2728', function () { remix(); }); if (builder && builder !== CREW) rm.classList.add('on'); bar.appendChild(rm);
     bar.appendChild(dockBtn('btn-walk', 'WALK', '\uD83D\uDEB6', function () { setWalk(true); }));
     bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
+    bar.appendChild(dockBtn('btn-games', 'GAMES', '\uD83C\uDFAE', function () { openGames(); }));
     bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
   function renderDrawer() {
@@ -3860,6 +3939,101 @@ if (typeof module !== 'undefined' && module.exports) {
     blip(700); setTimeout(function () { blip(950); }, 110);
     agLast = performance.now(); cancelAnimationFrame(agRaf); agRaf = requestAnimationFrame(agFrame);
   }
+  function layPitch() {
+    const bp = blueprintById('pitch');
+    const sp = bpSpot(world.ref, bp, dockCell()) || bpSpot(world.ref, bp, { x: ISLE.N / 2, y: ISLE.N / 2 });
+    if (!sp) { toast('No room for the pitch yet. Clear a patch of sand and try again!'); return; }
+    journal.bp = { id: bp.id, x: sp.x, y: sp.y };
+    journal.bpToday = journal.bpToday || {}; journal.bpToday.started = bp.name;
+    saveJournal(journal); updateBpBar(); refreshNext();
+    centreOn(sp.x + PITCH_W / 2, sp.y + PITCH_H / 2);
+    toast('SOCCER PITCH PLAN! Build into the glowing shape, or hire the crew.');
+  }
+  function openGames() {
+    const menu = document.getElementById('gamemenu'), list = document.getElementById('gm-list');
+    drawer.classList.remove('on'); list.innerHTML = '';
+    function mk(title, sub, go) {
+      const b = document.createElement('button'); b.className = 'gm';
+      const t = document.createElement('span'); t.textContent = title; b.appendChild(t);
+      const s2 = document.createElement('small'); s2.textContent = sub; b.appendChild(s2);
+      b.addEventListener('click', function () { menu.classList.remove('on'); blip(760); go(); });
+      list.appendChild(b);
+    }
+    const pp = pitchOf(world.ref);
+    mk('\u26BD SOCCER', pp ? 'Your pitch is ready. Tap the ball to kick it, or drive into it.' : 'Get the pitch plan and build it. Hands are free.',
+      function () {
+        if (pp) { centreOn(pp.x + PITCH_W / 2, pp.y + PITCH_H / 2); toast('KICK IT INTO A GOAL! Tap the ball, or drive at it.'); }
+        else layPitch();
+      });
+    CABINETS.forEach(function (nm, i) {
+      mk('\uD83D\uDD79\uFE0F ' + nm, 'Play it right now. Points turn into coins.', function () { openCabinet(i, 0); });
+    });
+    menu.classList.add('on'); blip(700);
+  }
+  document.getElementById('gm-close').addEventListener('click', function () {
+    document.getElementById('gamemenu').classList.remove('on'); blip(420);
+  });
+  /* THE BALL. Derived from the pitch, so it costs the link nothing. */
+  let ball = null, ballPitch = null, goalT = 0;
+  function ballSync() {
+    const pp = pitchOf(world.ref);
+    if (!pp) { ball = null; ballPitch = null; return; }
+    if (!ballPitch || ballPitch.x !== pp.x || ballPitch.y !== pp.y) { ballPitch = pp; ball = ballStart(pp); }
+  }
+  function kickBall(vx, vy) {
+    if (!ball) return;
+    ball.vx = vx; ball.vy = vy;
+    blip(880); setTimeout(function () { blip(620); }, 70);
+  }
+  function tapKick(sx, sy) {
+    if (!ball || !ballPitch || walking) return false;
+    const bx = isoX(ball.x, ball.y) * cam.zoom + cam.x, by = (isoY(ball.x, ball.y, 0) + ZH) * cam.zoom + cam.y;
+    if (Math.abs(sx - bx) > 30 || Math.abs(sy - by) > 30) return false;
+    const gs = pitchGoals(ballPitch.bp);
+    const rel = ball.x - ballPitch.x;
+    const far = rel < PITCH_W / 2 ? gs[1] : gs[0];
+    const tx = ballPitch.x + far.dx + 0.5, ty = ballPitch.y + far.dy + 1;
+    const dx = tx - ball.x, dy = ty - ball.y, L = Math.hypot(dx, dy) || 1;
+    kickBall(dx / L * 7.5, dy / L * 7.5);
+    return true;
+  }
+  function ballTick(dt) {
+    ballSync();
+    if (!ball || !ballPitch) return;
+    if (driving && car) {
+      const d = Math.hypot(car.x - ball.x, car.y - ball.y);
+      if (d < 1.1) { const L = d || 1; kickBall((ball.x - car.x) / L * (3 + car.sp * 1.3), (ball.y - car.y) / L * (3 + car.sp * 1.3)); }
+    }
+    ball = stepBall(world.ref, ball, dt);
+    if (goalScored(ballPitch, ball)) {
+      goalT = performance.now();
+      journal.goalsToday = (journal.goalsToday || 0) + 1; journal.goals = (journal.goals || 0) + 1;
+      const paid = journal.goalCoinsToday || 0;
+      if (paid < 5) { journal.goalCoinsToday = paid + 1; awardCoins(1, 'GOAL!'); } else toast('GOAL!');
+      if (!journal.goalSaid) { journal.goalSaid = true; noteLearned('A goal only counts if the ball goes right through the mouth of the goal, not past the side of it.', 'goal', 'geometry'); }
+      saveJournal(journal);
+      islanders.forEach(function (p) { p.wait = 3; });
+      ball = ballStart(ballPitch);
+    }
+  }
+  function drawBall() {
+    if (!ball || !ballPitch) return;
+    const sx = isoX(ball.x, ball.y) * cam.zoom + cam.x, sy = (isoY(ball.x, ball.y, 0) + ZH) * cam.zoom + cam.y;
+    if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) return;
+    const s = Math.max(cam.zoom, 0.8), r = 5.5 * s;
+    ctx.save();
+    ctx.fillStyle = 'rgba(20,8,30,0.25)';
+    ctx.beginPath(); ctx.ellipse(sx, sy + 2 * s, r, r * 0.42, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#FFF3E2'; ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 1.6 * s;
+    ctx.beginPath(); ctx.arc(sx, sy - r * 0.7, r, 0, 6.29); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2A1B3D';
+    ctx.beginPath(); ctx.arc(sx, sy - r * 0.7, r * 0.34, 0, 6.29); ctx.fill();
+    if (performance.now() - goalT < 900) {
+      ctx.fillStyle = '#F2A65A'; ctx.font = 'bold ' + Math.round(15 * s) + 'px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText('GOAL!', sx, sy - r * 3.2); ctx.textAlign = 'left';
+    }
+    ctx.restore();
+  }
   function closeCabinet() { cancelAnimationFrame(agRaf); ag = null; agEl.classList.remove('on'); blip(400); }
   function agReplay() { ag.score = 0; ag.over = false; ag.msg = ''; agScore(0); GAMES[ag.game].reset(ag); journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal); purse.arcadeGoes++; savePurse(); }
   agc.addEventListener('pointerdown', function (e) {
@@ -4571,7 +4745,7 @@ if (typeof module !== 'undefined' && module.exports) {
       chaseWins: journal.chaseWinsToday || 0, coinsToday: journal.coinsToday || 0, trophyNew: journal.trophyNew || '', cabinet: journal.cabinetToday || {},
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
-      bpToday: journal.bpToday || null, tripsToday: journal.tripsToday || 0,
+      bpToday: journal.bpToday || null, tripsToday: journal.tripsToday || 0, goalsToday: journal.goalsToday || 0,
       voyage: (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, complete: pr.complete }; })(),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
@@ -4585,7 +4759,7 @@ if (typeof module !== 'undefined' && module.exports) {
     journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; journal.cabinetToday = {}; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
-    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0;
+    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0; journal.goalsToday = 0; journal.goalCoinsToday = 0;
     journal.chapters = journal.book.length;
     saveJournal(journal);
     return entry;
@@ -4697,7 +4871,9 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('snext').addEventListener('click', function () { if (storyIdx < storyPages.length - 1) { storyIdx++; renderStory(); blip(640); } });
   document.getElementById('sprev').addEventListener('click', function () { if (storyIdx > 0) { storyIdx--; renderStory(); blip(560); } });
 
-  window.__ISLAND = { world, islandersRef: () => islanders, familyVisitor, giveOrder, keep: KEEP, dog: DOG, keeperName, houses: () => houses(world.ref), popCheck,
+  window.__ISLAND = { pitch: () => pitchOf(world.ref), ballAt: () => ball, kick: (vx, vy) => kickBall(vx, vy),
+    layPitch, openGames, tapKick, PITCH_W, PITCH_H, pitchGoals, goalScored,
+    world, islandersRef: () => islanders, familyVisitor, giveOrder, keep: KEEP, dog: DOG, keeperName, houses: () => houses(world.ref), popCheck,
     car, flags: () => flags(world.ref), fmtLap, setDrive: (b) => setDrive(b),
     isDriving: () => driving, steer: (v) => { car.steer = v; },
     lapInfo: () => ({ best: bestLap, ghost: ghostLap, started: !!lapStart, armed: lapArmed }),
