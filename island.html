@@ -5725,6 +5725,13 @@ if (typeof module !== 'undefined' && module.exports) {
     refreshQuest();
     const last = (journal.book || [])[journal.book ? journal.book.length - 1 : -1];
     if (!last || last.day !== today()) writeChapter();
+    else {
+      const line = overnightLine({ remembered: npcRememberedNames(npcMem) });
+      if (last.pages && last.pages[0] && last.pages[0].lines && last.pages[0].lines.indexOf(line) === -1) {
+        last.pages[0].lines.push(line);
+        saveJournal(journal);
+      }
+    }
     openMorning();
     toast('GOOD MORNING! THEY REMEMBERED.');
     blip(520); setTimeout(function () { blip(700); }, 110);

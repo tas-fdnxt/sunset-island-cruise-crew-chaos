@@ -138,7 +138,8 @@ def run(pw, url, label, w, hgt):
     ck(label + ' long-press opens the story card', pg.evaluate("document.getElementById('story').classList.contains('on')===true"))
     ck(label + ' long-press opens the shelf', pg.evaluate("document.getElementById('shelf').classList.contains('on')===true"))
     shot(pg, '%s-shelf' % label.replace(' ', '-'))
-    pg.evaluate("document.getElementById('shelf').classList.remove('on')")
+    pg.evaluate("document.getElementById('shelf').classList.remove('on');document.getElementById('story').classList.remove('on')")
+    pg.wait_for_timeout(200)
 
     ck(label + ' zero console errors', len(errs) == 0, errs[:3])
     ck(label + ' zero external requests', len(ext) == 0, ext[:3])
