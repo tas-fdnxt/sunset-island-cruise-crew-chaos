@@ -28,6 +28,7 @@ From the repo root:
     node tests/test-play-dock.js
     node tests/test-dream-voice.js
     node tests/test-dream-dock.js
+    node tests/test-chrome.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -116,3 +117,11 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   games that already exist: tap continues (kick or cabinet), hold cycles Soccer → Whale →
   Bonk → Stack, long-press opens the GAMES sheet. Same clock as Dream. No fourth engine,
   no lock or sell, nothing rides in the share link.
+- **test-chrome.js** PHONE_CAP honesty. A 390-point phone cannot hold the dock once
+  PLAY and DREAM are kid-sized, so the bar must scroll. Chrome never sits closer
+  than 16 points to a side. Warmth is a colour mix, not a second walk engine.
+  LINK_MAX stays 1900.
+
+`robot-chrome.py` drives the real island on a phone and a tablet and checks the
+picture: dock, chips, drawer, dream, games, toast, and the walk HUD all clear
+the edges. WARM is a flag. Nothing is claimed on a carousel.
