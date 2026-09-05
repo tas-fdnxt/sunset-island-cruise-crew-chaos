@@ -9,9 +9,9 @@ function ok(name, cond, info) { if (cond) { pass++; } else { fail++; console.log
 ok('PHONE_CAP is the honest phone width', PHONE_CAP.W === 390);
 ok('chrome never sits closer than 16 points to a side', PHONE_CAP.EDGE === 16 && chromeEdge() === 16);
 ok('dock side pad matches the edge', PHONE_CAP.DOCK_PAD === PHONE_CAP.EDGE);
-ok('tool buttons are at least a kid thumb', PHONE_CAP.TOOL_W >= 52);
-ok('PLAY is the hero and bigger than a tool', PHONE_CAP.PLAY_W >= 80 && PHONE_CAP.PLAY_W > PHONE_CAP.TOOL_W);
-ok('DREAM is the second hero', PHONE_CAP.DREAM_W >= 76 && PHONE_CAP.DREAM_W > PHONE_CAP.TOOL_W);
+ok('tool buttons are at least about 2cm', PHONE_CAP.TOOL_W >= 76);
+ok('PLAY is the hero and bigger than a tool', PHONE_CAP.PLAY_W >= 92 && PHONE_CAP.PLAY_W > PHONE_CAP.TOOL_W);
+ok('DREAM is the second hero', PHONE_CAP.DREAM_W >= 84 && PHONE_CAP.DREAM_W > PHONE_CAP.TOOL_W);
 ok('the current block is bigger than a pin', PHONE_CAP.CUR_W > PHONE_CAP.TOOL_W);
 ok('ten slots show when remix is hidden', PHONE_CAP.SLOTS_VISIBLE === 10);
 ok('eleven slots when a foreign island is open', PHONE_CAP.SLOTS_ALL === 11);
@@ -23,7 +23,8 @@ ok('remix makes it wider still', spanRemix > span);
 ok('a 390 phone does not fit the dock', dockFitsPhone(390, false) === false);
 ok('a 390 phone does not fit even without remix', dockFitsPhone(PHONE_CAP.W) === false);
 ok('an invented "never scrolls" claim is false on a phone', dockFitsPhone(390, false) === false);
-ok('the same phone-sized buttons do fit an 820 tablet width', dockFitsPhone(820, false) === true, span);
+ok('an 820 tablet portrait cannot hold the bigger phone dock', dockFitsPhone(820, false) === false, span);
+ok('a 1180 landscape can hold the phone-sized dock', dockFitsPhone(1180, false) === true, span);
 ok('a 2000 point desk can hold it', dockFitsPhone(2000, false) === true);
 ok('missing width uses the phone width', dockFitsPhone() === false);
 
