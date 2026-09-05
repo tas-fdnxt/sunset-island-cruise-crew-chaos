@@ -48,15 +48,22 @@
   #w-jump { bottom:calc(env(safe-area-inset-bottom,0px) + 28px); width:104px; height:104px; border-radius:50%; font-size:16px; padding:0; }
   #w-exit { bottom:calc(env(safe-area-inset-bottom,0px) + 148px); min-width:108px; background:var(--coral); color:var(--cream); }
   #w-pretty { position:fixed; left:var(--pad-l); top:calc(env(safe-area-inset-top,0px) + 58px); z-index:7;
-    min-width:80px; height:52px; border-radius:var(--radius); border:3px solid var(--ink); background:rgba(255,243,226,0.92);
-    color:var(--ink); font:900 12px system-ui; box-shadow:0 4px 0 var(--ink); padding:0 12px; letter-spacing:0.06em; }
+    min-width:96px; height:64px; border-radius:var(--radius); border:4px solid var(--ink); background:var(--peach);
+    color:var(--ink); font:900 11px/1.05 system-ui; box-shadow:0 4px 0 var(--ink); padding:6px 10px; letter-spacing:0.06em;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+  #w-pretty small { display:block; letter-spacing:0.16em; font-size:10px; }
+  #w-pretty b { display:block; font-size:16px; letter-spacing:0.04em; }
   #w-pretty.on { background:var(--peach); }
   #lookchip { position:fixed; left:var(--pad-l); bottom:calc(env(safe-area-inset-bottom,0px) + 176px); z-index:6;
-    width:80px; height:80px; border-radius:22px; border:3px solid var(--ink); background:rgba(255,243,226,0.94);
-    color:var(--ink); font:900 13px/1.1 system-ui; box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.06em;
-    padding:6px; cursor:pointer; touch-action:manipulation; }
+    width:96px; height:96px; border-radius:24px; border:4px solid var(--ink); background:var(--peach);
+    color:var(--ink); font:900 11px/1.05 system-ui; box-shadow:0 5px 0 rgba(20,8,30,0.55); letter-spacing:0.06em;
+    padding:8px 6px; cursor:pointer; touch-action:manipulation;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; }
+  #lookchip small { display:block; letter-spacing:0.18em; font-size:12px; }
+  #lookchip b { display:block; font-size:20px; letter-spacing:0.04em; }
   #lookchip.on { background:var(--peach); }
-  #lookchip:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #lookchip:active, #lookchip.held { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #lookchip.flash { transform:scale(1.08); }
   #lookmenu { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 166px); z-index:9; display:none;
     background:rgba(255,243,226,0.98); border:4px solid var(--ink); border-radius:22px; padding:16px; box-shadow:0 8px 0 rgba(20,8,30,0.5); max-height:66dvh; overflow-y:auto; }
   #lookmenu.on { display:block; }
@@ -68,13 +75,22 @@
   #lk-sound { width:100%; min-height:48px; margin-bottom:8px; border-radius:var(--radius); border:3px solid var(--ink); background:var(--yellow); color:var(--ink); font-weight:900; font-size:14px; cursor:pointer; }
   #lk-sound.off { background:var(--dusk); color:var(--cream); }
   #lookveil { position:fixed; inset:0; z-index:3; pointer-events:none; display:none; }
-  body.look-soft #lookveil { display:block; background:rgba(255,243,226,0.10); }
-  body.look-warm #lookveil { display:block; background:rgba(255,176,103,0.10); }
-  body.look-crisp #lookveil { display:block; background:rgba(160,210,255,0.08); }
-  body.look-night #lookveil { display:block; background:rgba(20,26,60,0.20); }
-  body.look-soft canvas#world { filter:saturate(1.06) contrast(0.94); }
-  body.look-warm canvas#world { filter:saturate(1.12) sepia(0.10); }
-  body.look-crisp canvas#world { filter:saturate(0.96) contrast(1.10); }
+  body.look-soft #lookveil { display:block; background:rgba(255,243,226,0.30); }
+  body.look-warm #lookveil { display:block; background:rgba(255,140,56,0.34); }
+  body.look-crisp #lookveil { display:block; background:rgba(110,186,255,0.28); }
+  body.look-night #lookveil { display:block; background:rgba(8,12,36,0.52); }
+  body.look-soft #lookchip { background:#FFF3E2; color:var(--ink); }
+  body.look-warm #lookchip { background:var(--peach); color:var(--ink); }
+  body.look-crisp #lookchip { background:#9AD0FF; color:var(--ink); }
+  body.look-night #lookchip { background:var(--dusk); color:var(--cream); border-color:var(--yellow); }
+  body.look-soft #w-pretty { background:#FFF3E2; color:var(--ink); }
+  body.look-warm #w-pretty { background:var(--peach); color:var(--ink); }
+  body.look-crisp #w-pretty { background:#9AD0FF; color:var(--ink); }
+  body.look-night #w-pretty { background:var(--dusk); color:var(--cream); }
+  body.look-soft canvas#world { filter:saturate(1.22) contrast(0.86) brightness(1.10); }
+  body.look-warm canvas#world { filter:saturate(1.42) sepia(0.32) contrast(1.08); }
+  body.look-crisp canvas#world { filter:saturate(0.84) contrast(1.22) hue-rotate(14deg) brightness(1.06); }
+  body.look-night canvas#world { filter:brightness(0.62) saturate(0.78) contrast(1.18); }
   #w-hint { position:fixed; left:var(--pad-l); right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 118px); z-index:7; background:rgba(42,27,61,0.75); color:var(--cream); font:800 13px/1.35 system-ui; padding:10px 16px; border-radius:16px; opacity:0; transition:opacity .4s; pointer-events:none; text-align:center; overflow-wrap:anywhere; }
   #w-hint.on { opacity:1; }
   #topbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 10px); left:var(--pad-l); right:var(--pad-r);
@@ -397,8 +413,12 @@
     #w-jump { width:128px; height:128px; font-size:20px; }
     #w-exit { height:82px; font-size:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
     #w-hint { font-size:18px; padding:14px 22px; }
-    #w-pretty { min-width:96px; height:64px; font-size:15px; border-radius:22px; }
-    #lookchip { width:96px; height:96px; font-size:16px; border-radius:26px; bottom:calc(env(safe-area-inset-bottom,0px) + 204px); }
+    #w-pretty { min-width:112px; height:76px; font-size:16px; border-radius:22px; }
+    #w-pretty small { font-size:12px; }
+    #w-pretty b { font-size:20px; }
+    #lookchip { width:112px; height:112px; font-size:16px; border-radius:28px; bottom:calc(env(safe-area-inset-bottom,0px) + 204px); }
+    #lookchip small { font-size:14px; }
+    #lookchip b { font-size:24px; }
     #lookmenu { left:8vw; right:8vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px; }
     #lookmenu button.lk { min-height:72px; font-size:22px; border-radius:20px; }
     #lk-close { min-height:60px; font-size:16px; }
@@ -446,7 +466,7 @@
 <canvas id="world"></canvas>
 <canvas id="gl"></canvas>
 <div id="lookveil"></div>
-<div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-pretty" type="button">SOFT</button><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
+<div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-pretty" type="button"><small>LOOK</small><b>WARM</b></button><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
 <div id="topbar">
   <div class="badge" id="title-badge" style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis">OLLIE'S ISLAND</div>
   <div class="badge" id="pop" style="color:#8FD8E8" aria-label="Islanders 0"><span class="folk"></span>0</div>
@@ -463,7 +483,7 @@
 <div id="agame"><div id="ag-top"><span id="ag-name"></span><span id="ag-score">0</span><button id="ag-exit" aria-label="Back to the island">&#10005;</button></div><canvas id="agc"></canvas></div>
 <div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="knob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
 <canvas id="mini" width="192" height="192" aria-label="Map of the island"></canvas>
-<button id="lookchip" type="button" aria-label="LOOK SOFT">SOFT</button>
+<button id="lookchip" type="button" aria-label="LOOK WARM"><small>LOOK</small><b>WARM</b></button>
 <div id="lookmenu">
   <div class="gm-hd">PICK A LOOK</div>
   <div id="lk-list"></div>
@@ -1999,7 +2019,7 @@ const PHONE_CAP = {
   W: 390, EDGE: 16, DOCK_PAD: 16, DOCK_GAP: 8,
   CM: 38, TOOL_CM: 2,
   TOOL_W: 76, TOOL_H: 84, CUR_W: 96, PLAY_W: 120, PLAY_H: 120, DREAM_W: 112, DREAM_H: 112,
-  LOOK_W: 80, LOOK_H: 80, CORNER: 20,
+  LOOK_W: 96, LOOK_H: 96, CORNER: 20,
   SLOTS_VISIBLE: 10, SLOTS_ALL: 11
 };
 function chromeEdge() { return PHONE_CAP.EDGE; }
@@ -2017,19 +2037,34 @@ function dockFitsPhone(w, remixOn) {
 function warmRgb(rgb, on) {
   if (!on || !rgb) return rgb;
   const p = [1, 176 / 255, 103 / 255];
-  return [rgb[0] * 0.82 + p[0] * 0.18, rgb[1] * 0.82 + p[1] * 0.18, rgb[2] * 0.82 + p[2] * 0.18];
+  return [rgb[0] * 0.56 + p[0] * 0.44, rgb[1] * 0.58 + p[1] * 0.42, rgb[2] * 0.64 + p[2] * 0.36];
 }
-/* PRETTY MODES + DAY/NIGHT. LOOK is a kid-clear control, not a dock hero.
-   Tap cycles soft / warm / crisp. Hold peeks day or night on the living
-   skyAt clock. Long-press opens the sheet. Sleep overnight still wakes
-   into morning. Colour mixes only. Nothing rides in the share hash. */
+/* PRETTY PUNCH. Default look is WARM so a hard refresh is not the old
+   island. Soft, warm and crisp stay three colour mixes. Hold peeks day
+   or night on the living skyAt clock. Long-press opens the sheet. Sleep
+   overnight still wakes into morning. Nothing rides in the share hash. */
 const PRETTY_HOLD_MS = DREAM_HOLD_MS;
 const PRETTY_LONG_MS = DREAM_LONG_MS;
 const PRETTY_IDS = ['soft', 'warm', 'crisp'];
 const PRETTY_NAMES = { soft: 'SOFT', warm: 'WARM', crisp: 'CRISP' };
+const PRETTY_DEFAULT = 'warm';
 function prettyPressKind(ms) { return dreamPressKind(ms); }
 function prettyOf(id) {
-  return (id === 'warm' || id === 'crisp') ? id : 'soft';
+  return (id === 'soft' || id === 'crisp') ? id : PRETTY_DEFAULT;
+}
+function prettyDist(a, b) {
+  if (!a || !b) return 0;
+  return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+}
+function prettyNightMix(rgb, night) {
+  if (!rgb || !(night > 0.45)) return rgb;
+  const n = [10 / 255, 14 / 255, 46 / 255];
+  const k = 0.46 + 0.28 * Math.min(1, night);
+  return [
+    rgb[0] * (1 - k) + n[0] * k,
+    rgb[1] * (1 - k) + n[1] * k,
+    rgb[2] * (1 - k) + n[2] * k
+  ];
 }
 function prettyNextOf(id) {
   const i = PRETTY_IDS.indexOf(prettyOf(id));
@@ -2081,21 +2116,22 @@ function prettyMixRgb(rgb, mode) {
   const m = prettyOf(mode);
   if (m === 'warm') return warmRgb(rgb, true);
   if (m === 'crisp') {
+    const c = [140 / 255, 200 / 255, 1];
     return [
-      Math.max(0, Math.min(1, rgb[0] * 1.06 + 0.02)),
-      Math.max(0, Math.min(1, rgb[1] * 1.04 + 0.04)),
-      Math.max(0, Math.min(1, rgb[2] * 1.14 + 0.06))
+      Math.max(0, Math.min(1, rgb[0] * 0.58 + c[0] * 0.42)),
+      Math.max(0, Math.min(1, rgb[1] * 0.64 + c[1] * 0.36)),
+      Math.max(0, Math.min(1, rgb[2] * 0.48 + c[2] * 0.52))
     ];
   }
   const s = [1, 243 / 255, 226 / 255];
-  return [rgb[0] * 0.78 + s[0] * 0.22, rgb[1] * 0.80 + s[1] * 0.20, rgb[2] * 0.84 + s[2] * 0.16];
+  return [rgb[0] * 0.58 + s[0] * 0.42, rgb[1] * 0.60 + s[1] * 0.40, rgb[2] * 0.68 + s[2] * 0.32];
 }
 function prettySky(sky, mode) {
   if (!sky) return sky;
   function tint(c) {
     const rgb = prettyParse(c);
     if (!rgb) return c;
-    return prettyCss(prettyMixRgb(rgb, mode));
+    return prettyCss(prettyNightMix(prettyMixRgb(rgb, mode), sky.night));
   }
   return {
     top: tint(sky.top), mid: tint(sky.mid), low: tint(sky.low), sea: tint(sky.sea),
@@ -2385,8 +2421,8 @@ if (typeof module !== 'undefined' && module.exports) {
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     PHONE_CAP, chromeEdge, chromeCorner, dockSpan, dockFitsPhone, warmRgb,
-    PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES, prettyPressKind, prettyPressAct, runPrettyAct,
-    prettyOf, prettyNextOf, prettyTimeOf, prettyPeekTime, prettyClockHour, prettyMixRgb, prettySky, prettyLine, prettyAfterSleep,
+    PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES, PRETTY_DEFAULT, prettyPressKind, prettyPressAct, runPrettyAct,
+    prettyOf, prettyNextOf, prettyTimeOf, prettyPeekTime, prettyClockHour, prettyMixRgb, prettySky, prettyLine, prettyAfterSleep, prettyDist, prettyNightMix,
     REPLAY_HOLD_MS, REPLAY_LONG_MS, REPLAY_LAST, REPLAY_ALL, replayPressKind, replayPressAct, runReplayAct, replayTape, peelReplay, replayStep, replayLine,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc,
     SFX_IDS, SFX, sfxOf, sfxMuted, sfxSafe, sfxVoice, sfxPlayPlan };
@@ -2414,7 +2450,7 @@ if (typeof module !== 'undefined' && module.exports) {
      book in everyone's edition the way Coco always has in Ollie's. Her code stays behind the switch, never drawn. */
   const DOG = false;
   const KEEP = OWNER || !DOG;
-  let prettyMode = 'soft', prettyTime = 'auto', prettyDockGen = 0;
+  let prettyMode = PRETTY_DEFAULT, prettyTime = 'auto', prettyDockGen = 0;
   /* Sibella comes and goes on the morning boat in Ollie's edition, and Ollie visits hers. Every second visitor day. */
   function familyVisitor(name) { if (!OWNER) return name; return (new Date().getDate() % 2 === 0) ? (CREW === 'OLLIE' ? 'SIBELLA' : 'OLLIE') : name; }
   /* S2B. The boot boundary. ANON is the whole game with zero network. SIGNED needs two things at once:
@@ -2742,12 +2778,17 @@ if (typeof module !== 'undefined' && module.exports) {
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, SKY.top); sky.addColorStop(0.4, SKY.mid); sky.addColorStop(0.75, SKY.low); sky.addColorStop(1, SKY.low);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-    if (SKY.night > 0.05) { // stars
-      ctx.fillStyle = 'rgba(255,243,226,' + (0.85 * SKY.night) + ')';
-      for (let i = 0; i < 40; i++) { const sx = ((i * 97) % 101) / 101 * W, sy = ((i * 53) % 89) / 89 * H * 0.3, tw = 0.6 + 0.4 * Math.sin(t * 2 + i); ctx.beginPath(); ctx.arc(sx, sy, tw * (i % 3 ? 1 : 1.6), 0, 6.29); ctx.fill(); }
+    if (SKY.night > 0.05) { // stars. Night must read in one glance, not a scavenger hunt.
+      const nStar = SKY.night > 0.45 ? 96 : 40;
+      for (let i = 0; i < nStar; i++) {
+        const sx = ((i * 97) % 101) / 101 * W, sy = ((i * 53) % 89) / 89 * H * (SKY.night > 0.45 ? 0.46 : 0.3);
+        const tw = (SKY.night > 0.45 ? 1.15 : 0.6) + 0.55 * Math.sin(t * 2 + i);
+        ctx.fillStyle = 'rgba(255,243,226,' + ((SKY.night > 0.45 ? 0.98 : 0.85) * SKY.night) + ')';
+        ctx.beginPath(); ctx.arc(sx, sy, tw * (i % 3 ? 1.2 : 2.2), 0, 6.29); ctx.fill();
+      }
     }
     if (SKY.sun) { ctx.fillStyle = WX.kind === 'rain' ? 'rgba(255,228,158,0.35)' : '#FFE49E'; ctx.beginPath(); ctx.arc(W * SKY.sun.x, H * SKY.sun.y, 42, 0, 6.29); ctx.fill(); }
-    if (SKY.moon) { ctx.fillStyle = '#FFF3E2'; ctx.beginPath(); ctx.arc(W * SKY.moon.x, H * SKY.moon.y, 26, 0, 6.29); ctx.fill(); ctx.fillStyle = SKY.top; ctx.beginPath(); ctx.arc(W * SKY.moon.x + 10, H * SKY.moon.y - 6, 22, 0, 6.29); ctx.fill(); }
+    if (SKY.moon) { ctx.fillStyle = '#FFF3E2'; ctx.beginPath(); ctx.arc(W * SKY.moon.x, H * SKY.moon.y, SKY.night > 0.45 ? 36 : 26, 0, 6.29); ctx.fill(); ctx.fillStyle = SKY.top; ctx.beginPath(); ctx.arc(W * SKY.moon.x + (SKY.night > 0.45 ? 12 : 10), H * SKY.moon.y - (SKY.night > 0.45 ? 8 : 6), SKY.night > 0.45 ? 28 : 22, 0, 6.29); ctx.fill(); }
     if (WX.kind === 'rain') { ctx.fillStyle = 'rgba(60,70,110,0.35)'; ctx.fillRect(0, 0, W, H); }
     if (WX.kind === 'rainbow') { ctx.save(); ctx.lineWidth = 6; ['#FF6E6C', '#FFB067', '#FFD447', '#3FA96B', '#8FD8E8', '#8C5BC9'].forEach(function (c, i) { ctx.strokeStyle = c; ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.arc(W * 0.5, H * 0.62, W * 0.62 - i * 7, Math.PI, 0); ctx.stroke(); }); ctx.restore(); }
     const sea = ctx.createLinearGradient(0, H * 0.3, 0, H);
@@ -2771,7 +2812,7 @@ if (typeof module !== 'undefined' && module.exports) {
     drawTide(hour);
     drawBoat(t, hour);
     drawScroll(t);
-    if (SKY.night > 0.05) { ctx.fillStyle = 'rgba(20,26,60,' + (0.45 * SKY.night) + ')'; ctx.fillRect(0, 0, W, H); drawLamps(SKY.night); }
+    if (SKY.night > 0.05) { ctx.fillStyle = 'rgba(8,12,36,' + ((SKY.night > 0.45 ? 0.62 : 0.45) * SKY.night) + ')'; ctx.fillRect(0, 0, W, H); drawLamps(SKY.night); }
     if (WX.kind === 'rain') drawRain(t);
     drawGulls(t, hour);
     drawGhost();
@@ -4068,24 +4109,30 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('w-exit').addEventListener('click', function () { setWalk(false); });
   document.getElementById('w-jump').addEventListener('pointerdown', function (e) { winp.jump = true; e.preventDefault(); });
   function walkPretty() { return prettyMode === 'warm'; }
-  function paintLook() {
+  function paintLook(flash) {
     document.body.classList.toggle('look-soft', prettyMode === 'soft');
     document.body.classList.toggle('look-warm', prettyMode === 'warm');
     document.body.classList.toggle('look-crisp', prettyMode === 'crisp');
     const h = prettyClockHour(today(), hourNow(), prettyTime);
     const sky = prettySky(skyAt(h), prettyMode);
-    document.body.classList.toggle('look-night', !!(sky && sky.night > 0.45));
-    document.body.classList.toggle('look-day', !(sky && sky.night > 0.45));
+    const nightOn = !!(sky && sky.night > 0.45);
+    document.body.classList.toggle('look-night', nightOn);
+    document.body.classList.toggle('look-day', !nightOn);
+    const face = nightOn ? 'NIGHT' : PRETTY_NAMES[prettyMode];
     const chip = document.getElementById('lookchip');
     if (chip) {
-      chip.textContent = PRETTY_NAMES[prettyMode];
+      chip.innerHTML = '<small>LOOK</small><b>' + face + '</b>';
       chip.classList.toggle('on', prettyMode === 'warm' || prettyTime !== 'auto');
-      chip.setAttribute('aria-label', 'LOOK ' + PRETTY_NAMES[prettyMode]);
+      chip.setAttribute('aria-label', 'LOOK ' + face);
+      if (flash) {
+        chip.classList.add('flash');
+        setTimeout(function () { chip.classList.remove('flash'); }, 180);
+      }
     }
     const wp = document.getElementById('w-pretty');
     if (wp) {
-      wp.textContent = prettyMode === 'warm' ? 'WARM ON' : PRETTY_NAMES[prettyMode];
-      wp.classList.toggle('on', prettyMode === 'warm');
+      wp.innerHTML = '<small>LOOK</small><b>' + face + '</b>';
+      wp.classList.toggle('on', prettyMode === 'warm' || nightOn);
     }
   }
   function markPrettyUsed() {
@@ -4109,7 +4156,7 @@ if (typeof module !== 'undefined' && module.exports) {
       prettyTime = prettyTimeOf(r.time);
       journal.prettyTime = prettyTime;
       markPrettyUsed();
-      paintLook();
+      paintLook(true);
       playSfx('look');
       toast(prettyTime === 'night' ? 'NIGHT SKY' : 'DAY SKY');
       return r;
@@ -4117,7 +4164,7 @@ if (typeof module !== 'undefined' && module.exports) {
     prettyMode = prettyOf(r.mode);
     journal.prettyMode = prettyMode;
     markPrettyUsed();
-    paintLook();
+    paintLook(true);
     playSfx('look');
     toast(PRETTY_NAMES[prettyMode] + ' LOOK');
     return r;
@@ -4147,7 +4194,7 @@ if (typeof module !== 'undefined' && module.exports) {
         prettyMode = id;
         journal.prettyMode = prettyMode;
         markPrettyUsed();
-        paintLook();
+        paintLook(true);
         openLook();
         playSfx('look');
         toast(PRETTY_NAMES[id] + ' LOOK');
@@ -4163,7 +4210,7 @@ if (typeof module !== 'undefined' && module.exports) {
         prettyTime = prettyTimeOf(row[0]);
         journal.prettyTime = prettyTime;
         markPrettyUsed();
-        paintLook();
+        paintLook(true);
         openLook();
         playSfx('look');
         toast(row[1] === 'SKY' ? 'THE SKY FOLLOWS ALONG' : (row[1] + ' SKY'));
@@ -4261,9 +4308,10 @@ if (typeof module !== 'undefined' && module.exports) {
     walkStep(world.ref, walker, winp, dt); winp.jump = false;
     if (meshDirty) uploadMesh();
     const hour = hourNow(), SKY = prettySky(skyAt(prettyClockHour(today(), hour, prettyTime)), prettyMode), WX = weatherAt(today(), hour);
-    const light0 = 1 - 0.55 * SKY.night, fog0 = colRGB(SKY.low).map(function (c) { return c * (1 - 0.35 * SKY.night); });
-    const fog = prettyMixRgb(fog0, prettyMode);
-    const light = prettyMode === 'warm' ? Math.min(1, light0 * 1.06) : (prettyMode === 'crisp' ? Math.min(1, light0 * 1.04) : light0);
+    const light0 = 1 - (SKY.night > 0.45 ? 0.74 : 0.55) * SKY.night;
+    const fog0 = colRGB(SKY.low).map(function (c) { return c * (1 - (SKY.night > 0.45 ? 0.58 : 0.35) * SKY.night); });
+    const fog = prettyNightMix(prettyMixRgb(fog0, prettyMode), SKY.night);
+    const light = prettyMode === 'warm' ? Math.min(1, light0 * 1.10) : (prettyMode === 'crisp' ? Math.min(1, light0 * 1.08) : light0 * (prettyMode === 'soft' ? 1.06 : 1));
     const eye = [walker.x, walker.y, walker.z + WALK.EYE];
     const cp = Math.cos(walker.pitch), f = [Math.cos(walker.yaw) * cp, Math.sin(walker.yaw) * cp, Math.sin(walker.pitch)];
     const aspect = glc.width / glc.height, VP = viewProj(eye, f, aspect);
