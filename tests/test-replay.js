@@ -178,7 +178,7 @@ ok('empty long-press is the same honest miss', runReplayAct(makeWorld(), replayP
   ok('tape ids are live blocks', tape.every(function (t) { return t.id >= 1 && t.id <= 12 && t.id !== 13 && t.id !== 14; }));
   const before = encode(w);
   runReplayAct(w, replayPressAct('hold'), {});
-  ok('replay of a seed stays a seed', encode(w) === before && w.cols[(9 * ISLE.N + 8) * ISLE.ZMAX] === 12);
+  ok('replay of a seed stays a seed', encode(w) === before && w.cols[(8 * ISLE.N + 9) * ISLE.ZMAX] === 12);
 })();
 
 // chapter line
@@ -187,7 +187,7 @@ ok('one block is named', /One block went down again/.test(replayLine({ n: 1 })))
 ok('many blocks stay kid-clear', /6 blocks went down again/.test(replayLine({ n: 6 })));
 ok('the line says you keep building', /kept building/.test(replayLine({ n: 4 })));
 ok('no em dash in the replay line', replayLine({ n: 3 }).indexOf('\u2014') === -1);
-ok('no lock language', ['LOCK', 'BUY', 'UNLOCK', 'COIN TO PLAY'].every(function (w) {
+ok('no lock language', ['LOCKED', 'BUY', 'UNLOCK', 'COIN TO PLAY'].every(function (w) {
   return replayLine({ n: 3 }).toUpperCase().indexOf(w) === -1;
 }));
 

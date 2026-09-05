@@ -144,3 +144,7 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
 `robot-chrome.py` drives the real island on a phone and a tablet and checks the
 picture: dock, chips, drawer, dream, games, toast, and the walk HUD all clear
 the edges. WARM is a flag. Nothing is claimed on a carousel.
+
+`robot-replay.py` drives the live UNDO on both editions: tap still undoes, hold
+peels the last placements and they go down again, encode matches, the share
+link gains nothing, and PLAY and DREAM stay the dock heroes.

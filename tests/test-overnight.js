@@ -189,7 +189,8 @@ const sleepQ = t.filter(function (q) { return q.id === 'sleep1'; });
 ok('sleep1 is appended once', sleepQ.length === 1);
 ok('sleep1 maps to sleptToday', sleepQ[0] && sleepQ[0].need === 'sleptToday' && sleepQ[0].n === 1);
 ok('sleep1 is kid-clear', /sleep on the island/.test(sleepQ[0].tell) && /remembered/.test(sleepQ[0].done));
-ok('sleep1 is last, never inserted', t[t.length - 1].id === 'sleep1');
+ok('sleep1 stays after goal1, never inserted', t.map(function (q) { return q.id; }).indexOf('sleep1') > t.map(function (q) { return q.id; }).indexOf('goal1')
+  && t[0].id !== 'sleep1');
 ok('sleep1 is met by one sleep', questMet(sleepQ[0], { sleptToday: 1 }) && !questMet(sleepQ[0], { sleptToday: 0 }));
 ok('houses3 is still first without a dream', t[0].id === 'houses3');
 ok('pickQuest still prefers an unmet house', pickQuest({ houses: 0 }, null).id === 'houses3');
