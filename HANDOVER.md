@@ -129,9 +129,9 @@ so it costs the share link nothing. Tap it (`tapKick`, wired into `tapAt` ahead 
 flies at the far goal. Drive within 1.1 cells and the car nudges it with force scaled to `car.sp`.
 A goal pays 1 coin capped at 5 a day (`journal.goalCoinsToday`), islanders stop and cheer, the ball resets.
 `journal.goalsToday` feeds a voyage goal, quest row `goal1`, and a chapter line.
-Walk mode draws that same ball in first person and kicks it with the same helpers. Tap the projected
-ball (96px target) or walk into it. Standing still is not a kick. Carousel three is unchanged and
-still does not claim this.
+Walk mode draws that same ball in first person as a sixteen-triangle cream-and-ink chunk and
+kicks it with the same helpers. Tap the projected ball (96px target) or walk into it. Standing
+still is not a kick. Carousel three is unchanged and still does not claim this.
 
 **Carousel two**, `ollie-update-2.html`, 11 cards, five real screenshots of the live build baked in as a
 webp sprite sheet, same design language as carousel one.
@@ -158,8 +158,8 @@ webp sprite sheet, same design language as carousel one.
 
 - **The ball in walk / 3D is now drawn and kickable.** Same `pitchOf` / `ballStart` / `stepBall` /
   `goalScored`. A walk tap uses `kickTowardGoal`. Walking into the ball uses `walkKick` (the car
-  nudge). It is a camera-facing cream-and-pentagon sprite at the real pitch coordinates, the same
-  mark as the island view, not a stitched sphere. Carousel three still does not claim walk soccer.
+  nudge). Walk draws a sixteen-triangle cream-and-ink ball at the real pitch coordinates,
+  the same colours as the island ball, not a smooth sphere. Carousel three still does not claim walk soccer.
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **Real device test with Ollie on an actual iPad.** Still never done. This is not code, it is watching him.

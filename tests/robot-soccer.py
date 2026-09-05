@@ -137,6 +137,7 @@ def run(pw, url, label, w, hgt):
     })()""")
     ck(label + ' walking into the ball shoves it',
        foot is not None and (abs(foot.get('vx') or 0) > 0.4 or abs(foot.get('vy') or 0) > 0.4), foot)
+    pg.screenshot(path='/tmp/shot-walk-' + label.replace(' ', '-') + '.png')
     pg.evaluate("window.__ISLAND.setWalk(false)")
     pg.wait_for_timeout(200)
 
