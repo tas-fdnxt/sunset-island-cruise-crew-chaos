@@ -101,8 +101,8 @@ def run(pw, w, hgt, label):
 
     play = pg.locator('#btn-play').bounding_box()
     dream = pg.locator('#btn-dream').bounding_box()
-    ck(label + ' PLAY is a huge kid target', play and play['width'] >= 80 and play['height'] >= 80, play)
-    ck(label + ' DREAM is the second hero', dream and dream['width'] >= 76 and dream['height'] >= 76, dream)
+    ck(label + ' PLAY is a huge kid target', play and play['width'] >= 112 and play['height'] >= 112, play)
+    ck(label + ' DREAM is the second hero', dream and dream['width'] >= 104 and dream['height'] >= 104, dream)
     ck(label + ' PLAY is bigger than DREAM', play and dream and play['width'] >= dream['width'] - 0.5, (play, dream))
 
     # first and last visible dock buttons stay off the glass

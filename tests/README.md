@@ -32,6 +32,8 @@ From the repo root:
     node tests/test-overnight.js
     node tests/test-replay.js
     node tests/test-pretty.js
+    node tests/test-synth.js
+    node tests/test-dock.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -59,9 +61,20 @@ Ollie quotes. Pretty modes, day/night mood, and soft corners MAY be claimed beca
 shipped in the same PR. Overnight, build replay, a bigger dock, and a synth suite still
 may not.
 
+`robot-carousel8.py` drives `ollie-update-8.html`: nine cards, four real photos, no invented
+Ollie quotes. The synth suite and the bigger dock MAY be claimed because they shipped in
+the same PR. Pretty modes, overnight, and build replay may be mentioned as already live.
+
 `robot-pretty.py` drives the live LOOK chip on both editions: tap cycles soft / warm / crisp,
 hold peeks day or night on the living sky, long-press opens the sheet. PLAY and DREAM stay
 the dock heroes. Nothing new rides in the share link.
+
+`robot-synth.py` drives the seven-voice synth suite on both editions: place, erase, dream,
+sleep, look, goal, toast. Mute silences every one. SOUND lives on the look sheet. No audio
+files. Nothing new rides in the share link.
+
+`robot-dock.py` drives the bigger kid dock on a phone and a tablet. Tools stay about 2cm.
+PLAY and DREAM stay the heroes. LOOK stays sand-side. The bar still scrolls. No second dock.
 
 `robot-overnight.py` drives the live moon on both editions: tap opens tonight's chapter,
 hold opens the morning card with a remembered islander, the share link carries `&m=`,
@@ -159,6 +172,11 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   cycles soft / warm / crisp, peeks the living sky, and opens the sheet. Colour mixes
   only. Quest `pretty1` appended. Nothing new in `#i=`. PLAY and DREAM stay the dock
   heroes. No lock. No sell.
+- **test-synth.js** Seven kid-safe synth voices (place, erase, dream, sleep, look, goal,
+  toast). Mute silences every one. No files. Nothing new in `#i=`. PLAY and DREAM stay
+  the dock heroes. No lock. No sell.
+- **test-dock.js** Bigger kid dock. Tools stay about 2cm on a phone. PLAY and DREAM stay
+  the heroes. LOOK stays sand-side. The bar must scroll. Nothing new in `#i=`.
 
 `robot-chrome.py` drives the real island on a phone and a tablet and checks the
 picture: dock, chips, drawer, dream, games, toast, and the walk HUD all clear

@@ -17,7 +17,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 
 | File | sha256 (first 8) | What it is |
 |---|---|---|
-| `island.html` | `6eef2e15` | Pretty modes + day/night + soft corners. Tested on this branch. Not live until merge. |
+| `island.html` | `e3281faf` | Synth suite + bigger kid dock. Tested on this branch. Not live until merge. |
 | `arcade.html` | `bc0420d9` | OLLIE'S. Do not edit without Fabian asking. |
 | `storybook.html` | `bef56030` | OLLIE'S. Do not edit without Fabian asking. |
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
@@ -27,6 +27,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 | `ollie-update-5.html` | live | Carousel five, overnight + NPC memory only. Shipped. |
 | `ollie-update-6.html` | `86572075` | Carousel six, build replay only. |
 | `ollie-update-7.html` | `afe7c68b` | Carousel seven, pretty modes + day/night + soft corners only. |
+| `ollie-update-8.html` | `46626217` | Carousel eight, synth suite + bigger dock only. |
 
 ```bash
 B=https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos
@@ -58,13 +59,13 @@ python3 -m playwright install chromium --only-shell
 Nothing ships that has not been through all six rungs, in order:
 
 1. `node --check` on both script blocks of `island.html`
-2. All 33 headless suites green
+2. All 35 headless suites green
 3. Robots in real Chromium driving the actual UI, on BOTH editions
 4. Screenshots taken and actually looked at
 5. Hygiene: zero console errors, zero external requests
 6. Live curl sha match after deploy, plus proof Ollie's files are unchanged
 
-**Current state: 33 suites, including `test-pretty` (116), `test-replay` (104) and `test-overnight` (110), all green.**
+**Current state: 35 suites, including `test-synth` (72), `test-dock` (47), `test-pretty` (116), all green.**
 
 | Suite | Checks | Suite | Checks |
 |---|---|---|---|
@@ -82,9 +83,11 @@ Nothing ships that has not been through all six rungs, in order:
 | test-sync | 18 | test-drive | 12 |
 | test-houses | 8 | test-overnight | 110 |
 | test-replay | 104 | test-pretty | 116 |
+| test-synth | 72 | test-dock | 47 |
 
-Robots: `robot-pretty` (58, LOOK tap / hold / long-press), `robot-chrome` (76), `robot-replay` (44),
-`robot-overnight` (46), `robot-soccer` (74), `robot-carousel7` (51, pretty + day/night + corners only),
+Robots: `robot-synth` (64), `robot-dock` (46), `robot-pretty` (58), `robot-chrome` (76), `robot-replay` (44),
+`robot-overnight` (46), `robot-soccer` (74), `robot-carousel8` (synth + bigger dock only),
+`robot-carousel7` (51, pretty + day/night + corners only),
 `robot-carousel6` (51, build replay only), `robot-carousel5` (overnight + NPC memory),
 `robot-carousel4`, `robot-carousel3`, plus `robot-carousel2`, `robot-carousel`, `robot-poster`, `robot-challenge`,
 `robot-blueprints`, `robot-voyage`, `robot-cast`, `robot-sync`, `robot-trips`.
@@ -181,6 +184,16 @@ the PLAY button, and the GAMES sheet.
 the remembered line, and the shelf. Claims only overnight + NPC memory.
 **Carousel seven**, `ollie-update-7.html`, nine cards, four real photos: LOOK, night sky,
 the picker sheet, and the tablet. Claims only pretty modes + day/night + soft corners.
+**Carousel eight**, `ollie-update-8.html`, nine cards, four real photos: PLAY and DREAM
+on a phone, the dock crop, SOUND on the look sheet, and the tablet. Claims only the
+synth suite and the bigger dock. Pretty, overnight, and replay are named as already live.
+
+**Synth suite + bigger kid dock.** Seven WebAudio voices: place, erase, dream, sleep,
+look, goal, toast. Mute lives on the look sheet and silences every one. Tools stay
+about 2cm. PLAY is 120 and DREAM is 112 on a phone, so a hard refresh shows the jump
+against live main (PLAY 84, DREAM 80). LOOK stays sand-side. Nothing new in `#i=`.
+Worst-case link stayed 1262. No lock. No sell. PR #11 is merge-ready. Do not merge
+from a sandbox. Do not expand this brick into a LOOK punch.
 
 ---
 
@@ -211,9 +224,11 @@ the picker sheet, and the tablet. Claims only pretty modes + day/night + soft co
   `&m=` memory. Carousel five may claim it. Carousels one to four do not.
 - **Build replay is live.** Hold UNDO. Blocks go down again, then you keep playing.
   Carousel six may claim it. Carousels one to five do not.
-- **Pretty modes + day/night + soft corners are live on this branch.** Tap LOOK.
+- **Pretty modes + day/night + soft corners are live.** Tap LOOK.
   Soft, warm, or crisp. Hold for day or night. Soft corners. Carousel seven may claim
-  it. Carousels one to six do not.
+  it. Carousels one to six do not. Carousel eight names it as already live.
+- **Synth suite + bigger dock are live on this branch.** Seven voices. PLAY and DREAM
+  scream. Carousel eight may claim it. Carousels one to seven do not.
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **Real device test with Ollie on an actual iPad.** Still never done. This is not code, it is watching him.
