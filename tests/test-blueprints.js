@@ -5,8 +5,8 @@ let P = 0, F = 0;
 function ok(name, cond) { P += cond ? 1 : 0; F += cond ? 0 : 1; console.log((cond ? 'PASS  ' : 'FAIL  ') + name); }
 
 // The table
-ok('five blueprints', BLUEPRINTS.length === 5);
-ok('ids are unique', new Set(BLUEPRINTS.map(b => b.id)).size === 5);
+ok('six blueprints', BLUEPRINTS.length === 6);
+ok('ids are unique', new Set(BLUEPRINTS.map(b => b.id)).size === 6);
 ok('every name is loud', BLUEPRINTS.every(b => b.name === b.name.toUpperCase() && b.name.length >= 4));
 ok('every block id is a real placeable block', BLUEPRINTS.every(b => b.cols.every(c => c.ids.every(id => id >= 1 && id <= 11 || id === 2 || id === 9))));
 ok('no blueprint uses seeds or grown plants', BLUEPRINTS.every(b => b.cols.every(c => c.ids.every(id => id !== 12 && id !== 13 && id !== 14))));
