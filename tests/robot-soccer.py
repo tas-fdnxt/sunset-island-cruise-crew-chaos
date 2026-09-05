@@ -96,6 +96,50 @@ def run(pw, url, label, w, hgt):
       return j.goalCoinsToday||0;})()""")
     ck(label + ' goal coins are capped for the day', cap <= 5, cap)
 
+    # walk / 3D: the same ball, drawn and kickable in first person
+    pg.evaluate("""(()=>{
+      const I=window.__ISLAND;
+      I.resetBall();
+      const b=I.ballAt();
+      I.setWalk(true);
+      const w=I.walker();
+      if(w && b){ w.x=b.x-1.6; w.y=b.y; w.z=0; w.yaw=0; w.pitch=-0.12; w.onGround=true; }
+    })()""")
+    pg.wait_for_timeout(500)
+    ck(label + ' walk mode is on', pg.evaluate("window.__ISLAND.walking()===true"))
+    ck(label + ' WebGL booted for the walk view', pg.evaluate("window.__ISLAND.glOk()===true"))
+    seen = pg.evaluate("(()=>{const p=window.__ISLAND.walkProj()||[];return p.some(q=>q.ball)})()")
+    ck(label + ' the ball is projected in 3D', seen)
+    pg.evaluate("window.__ISLAND.resetBall()")
+    pg.wait_for_timeout(80)
+    kicked = pg.evaluate("""(()=>{
+      const I=window.__ISLAND;
+      const hit=(I.walkProj()||[]).find(q=>q.ball);
+      if(!hit) return {ok:false, why:'no ball on screen'};
+      I.walkTap(hit.sx, hit.sy);
+      const b=I.ballAt();
+      return {ok:!!b && Math.hypot(b.vx||0,b.vy||0)>1, vx:b&&b.vx, hit:!!hit};
+    })()""")
+    ck(label + ' a walk tap kicks the same ball', kicked.get('ok') is True, kicked)
+    pg.evaluate("""(()=>{
+      const I=window.__ISLAND;
+      I.resetBall();
+      const b=I.ballAt(), w=I.walker();
+      if(w && b){ w.x=b.x-1.15; w.y=b.y; w.z=0; w.yaw=0; w.pitch=-0.1; }
+      I.walkInput.fwd=1; I.walkInput.side=0;
+    })()""")
+    pg.wait_for_timeout(700)
+    foot = pg.evaluate("""(()=>{
+      const I=window.__ISLAND;
+      I.walkInput.fwd=0;
+      const b=I.ballAt();
+      return b?{x:b.x,vx:b.vx,vy:b.vy}:null;
+    })()""")
+    ck(label + ' walking into the ball shoves it',
+       foot is not None and (abs(foot.get('vx') or 0) > 0.4 or abs(foot.get('vy') or 0) > 0.4), foot)
+    pg.evaluate("window.__ISLAND.setWalk(false)")
+    pg.wait_for_timeout(200)
+
     ck(label + ' zero console errors', len(errs) == 0, errs[:3])
     ck(label + ' zero external requests', len(ext) == 0, ext[:3])
     pg.screenshot(path='/tmp/shot-' + label.replace(' ', '-') + '.png')

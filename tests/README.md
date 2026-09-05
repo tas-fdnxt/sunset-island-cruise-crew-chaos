@@ -104,3 +104,6 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
 - **test-dream-dock.js** the Dream multi-button. Tap / hold / long-press are three doors into
   the same mapper: tap and picker use dreamScript, hold uses hearDream. No second recipe list,
   no types 13/14, PROFILE.VER stays 1, LINK_MAX stays 1900.
+- **test-soccer.js** the pitch blueprint, a derived ball, rolling, goals, and the walk/3D kick:
+  `kickTowardGoal` aims at the far mouth, `walkKick` shoves only when the walker is moving and close.
+  Same `stepBall` / `goalScored`. No second pitch.
