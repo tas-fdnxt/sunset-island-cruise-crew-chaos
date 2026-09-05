@@ -23,7 +23,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
 | `ollie-update-2.html` | `304535ad` | Carousel two, 11 cards. Shipped. |
 | `ollie-update-3.html` | live | Carousel three, Dream button. Shipped. |
-| `ollie-update-4.html` | this wave | Carousel four, walk soccer + PLAY. |
+| `ollie-update-4.html` | live | Carousel four, walk soccer + PLAY. Shipped. |
 
 ```bash
 B=https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos
@@ -139,6 +139,12 @@ still is not a kick. Carousel four may claim this. Carousel three does not.
 (280ms / 900ms). Tap continues the current game (kick via `kickTowardGoal`, or keep a cabinet going).
 Hold cycles Soccer → Whale → Bonk → Stack. Long-press opens the existing `#gamemenu` sheet.
 Nothing locked, nothing for sale, nothing in the share link.
+
+**Chrome polish.** Side chrome uses `--pad-l` / `--pad-r` (12px or the safe-area, whichever is larger).
+PHONE_CAP says a 390-point phone cannot hold the dock once PLAY and DREAM are kid-sized, so the bar
+scrolls and the old "never scrolls" comment is gone. Toasts, the walk hint, drawer, dream and games
+sit inside that edge. WARM on the walk HUD is a peach mix on fog and sky, not a Three rewrite.
+Place and kick get a tiny synth click. Carousel four is unchanged and still does not claim pretty modes.
 
 **Carousel two**, `ollie-update-2.html`, 11 cards, five real screenshots of the live build baked in as a
 webp sprite sheet, same design language as carousel one.
