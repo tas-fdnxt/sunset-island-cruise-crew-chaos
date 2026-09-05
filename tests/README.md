@@ -34,7 +34,11 @@ so the suites always test the real shipped code rather than a copy that can drif
 
 `robot-carousel3.py` drives `ollie-update-3.html`: ten cards, four real photos, no invented
 Ollie quotes, and no claim of a thing that is not live (no Play multi-button, no pretty modes,
-no 3D walk soccer).
+no 3D walk soccer). That carousel stays the Dream-only story.
+
+`robot-carousel4.py` drives `ollie-update-4.html`: nine cards, four real photos, no invented
+Ollie quotes. Walk soccer and the Play multi-button MAY be claimed because both are live
+in the same ship. Pretty modes still may not.
 
 `tests/isle-core.js` is generated. Do not edit it and do not commit it.
 
