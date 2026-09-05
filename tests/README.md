@@ -25,6 +25,7 @@ From the repo root:
     node tests/test-coins.js
     node tests/test-arcade.js
     node tests/test-dream-place.js
+    node tests/test-dream-voice.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -92,3 +93,6 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
 - **test-dream-place.js** the dream → place script. Every PROFILE.DREAM index becomes a tiny recipe of existing blocks,
   applyDream stops cleanly on cargo/water/grow, the encode stays under LINK_MAX, decode roundtrips, and free-text "castle"
   matches CASTLE. Unknown words become a hideout, never an empty island.
+- **test-dream-voice.js** voice and paste are only an input door. A trimmed transcript goes through the same
+  dreamScript mapper and applyDream. Wispr/Plaud-style pasted lines still match. No second recipe list, no types 13/14,
+  cargo still stops, LINK_MAX stays 1900.
