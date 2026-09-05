@@ -2583,6 +2583,7 @@ if (typeof module !== 'undefined' && module.exports) {
     b.innerHTML = '<span class="ic">' + icon + '</span>' + label;
     b.addEventListener('click', onClick); return b;
   }
+  let dreamDockGen = 0;
   function dreamDockBtn() {
     const b = document.createElement('button');
     b.className = 'dock'; b.id = 'btn-dream'; b.type = 'button';
@@ -4295,7 +4296,6 @@ if (typeof module !== 'undefined' && module.exports) {
   function placeHeardDream(text) {
     return applyDreamAct(dreamPressAct('hold', { heard: text }));
   }
-  let dreamDockGen = 0;
   function wireDreamDock(b) {
     const gen = ++dreamDockGen;
     let downAt = 0, holdOn = false, longOn = false, holdT = 0, longT = 0;
