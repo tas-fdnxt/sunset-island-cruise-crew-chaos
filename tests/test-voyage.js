@@ -17,7 +17,7 @@ if (HAS) {
   ck('day number climbs', C.voyageFor('2026-09-05').no === v.no + 1, C.voyageFor('2026-09-05').no);
 
   /* every goal must be a stat the engine really detects */
-  const REAL = ['blocks','houses','palms','flags','tallest','arcades','factories','plants',
+  const REAL = ['blocks','houses','palms','flags','tallest','arcades','factories','plants','goalsToday',
                 'bpFinishedToday','tripsToday','laps','delivered','symmetry','gain'];
   let allReal = true, allWorded = true;
   for (let d = 0; d < 60; d++) {
