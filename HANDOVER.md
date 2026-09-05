@@ -140,7 +140,7 @@ still is not a kick. Carousel four may claim this. Carousel three does not.
 Hold cycles Soccer → Whale → Bonk → Stack. Long-press opens the existing `#gamemenu` sheet.
 Nothing locked, nothing for sale, nothing in the share link.
 
-**Chrome polish.** Side chrome uses `--pad-l` / `--pad-r` (12px or the safe-area, whichever is larger).
+**Chrome polish.** Side chrome uses `--pad-l` / `--pad-r` (16px or the safe-area, whichever is larger).
 PHONE_CAP says a 390-point phone cannot hold the dock once PLAY and DREAM are kid-sized, so the bar
 scrolls and the old "never scrolls" comment is gone. Toasts, the walk hint, drawer, dream and games
 sit inside that edge. WARM on the walk HUD is a peach mix on fog and sky, not a Three rewrite.

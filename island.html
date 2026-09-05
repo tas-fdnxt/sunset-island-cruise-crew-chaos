@@ -27,9 +27,9 @@
 <style>
   :root { --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067;
     --yellow:#FFD447; --green:#3FA96B; --dusk:#5C3A6E;
-    --edge:12px;
-    --pad-l:max(12px, env(safe-area-inset-left, 0px));
-    --pad-r:max(12px, env(safe-area-inset-right, 0px));
+    --edge:16px;
+    --pad-l:max(16px, env(safe-area-inset-left, 0px));
+    --pad-r:max(16px, env(safe-area-inset-right, 0px));
     --toast-max:calc(100vw - var(--pad-l) - var(--pad-r) - 8px); }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; overflow:hidden; background:var(--ink);
@@ -38,6 +38,7 @@
   canvas#gl { position:fixed; inset:0; width:100vw; height:100dvh; display:none; touch-action:none; z-index:4; }
   body.walking canvas#gl { display:block; }
   body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #bpbar, body.walking #bpmenu, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail, body.walking #dreampanel, body.walking #gamemenu { display:none !important; }
+  body.walking #toast { bottom:calc(env(safe-area-inset-bottom,0px) + 220px); }
   #walkui { display:none; }
   body.walking #walkui { display:block; }
   body.walking #topbar, body.walking #lineage { z-index:6; }
@@ -366,6 +367,7 @@
     #w-exit { height:82px; font-size:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
     #w-hint { font-size:18px; padding:14px 22px; }
     #w-pretty { min-width:96px; height:60px; font-size:15px; }
+    body.walking #toast { bottom:calc(env(safe-area-inset-bottom,0px) + 280px); }
     .wincard { max-width:560px; }
     #boardcard { max-width:600px; }
   }
@@ -382,7 +384,7 @@
  body.driving #chalbar, body.walking #chalbar, body.driving #dreampanel { display:none; }
 </style>
 <style>
- #voybtn { position:fixed; right:calc(env(safe-area-inset-right,0px) + 12px); top:calc(env(safe-area-inset-top,0px) + 108px); z-index:6;
+ #voybtn { position:fixed; right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 108px); z-index:6; }
    width:46px; height:46px; border-radius:50%; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; font:900 20px system-ui; cursor:pointer; }
  #voybtn.done { background:#7BD389; }
  body.walking #voybtn, body.driving #voybtn { display:none; }
@@ -1746,7 +1748,7 @@ function cellSizeAt(zoom) { return { w: 44 * zoom, h: 22 * zoom }; }
    are kid-sized. The bar MUST scroll. Remix stays hidden until a foreign
    island is open. These numbers are the honest fit test. */
 const PHONE_CAP = {
-  W: 390, EDGE: 12, DOCK_PAD: 12, DOCK_GAP: 6,
+  W: 390, EDGE: 16, DOCK_PAD: 16, DOCK_GAP: 6,
   TOOL_W: 52, CUR_W: 76, PLAY_W: 84, DREAM_W: 80,
   SLOTS_VISIBLE: 10, SLOTS_ALL: 11
 };

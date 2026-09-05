@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8099'
 URL = BASE.rstrip('/') + '/island.html?crew=OLLIE'
-EDGE = 12
+EDGE = 16
 SHOT = os.environ.get('CHROME_SHOT', '/tmp/polish-after')
 os.makedirs(SHOT, exist_ok=True)
 os.makedirs('/opt/cursor/artifacts/screenshots', exist_ok=True)
@@ -45,7 +45,10 @@ def dismiss(pg):
 def shot(pg, name):
     path = '%s/%s.png' % (SHOT, name)
     pg.screenshot(path=path)
-    pg.screenshot(path='/opt/cursor/artifacts/screenshots/%s.png' % name)
+    try:
+        pg.screenshot(path='/opt/cursor/artifacts/screenshots/%s.png' % name)
+    except OSError:
+        pass
 
 def measure(pg, sel):
     return pg.evaluate("""(sel)=>{
@@ -127,10 +130,11 @@ def run(pw, w, hgt, label):
         box = measure(pg, sel)
         ck(label + ' ' + name + ' clears the sides', inset_ok(box, vw, vh), box)
 
-    # toast: morning boat may still be up; if not, fire one
+    # one toast only. If the morning boat already spoke, leave it.
     if not measure(pg, '#toast'):
-        pg.evaluate("window.__ISLAND && (window.__ISLAND.toast?window.__ISLAND.toast('CARGO HOLD FULL, CAPTAIN! Undo something first.'):document.getElementById('toast').textContent='CARGO HOLD FULL, CAPTAIN! Undo something first.')")
-        pg.evaluate("document.getElementById('toast').classList.add('on')")
+        pg.evaluate("""(()=>{const el=document.getElementById('toast');
+          el.textContent='THE MORNING BOAT IS IN! It brought a seed for the island.';
+          el.classList.add('on');})()""")
         pg.wait_for_timeout(80)
     toast = measure(pg, '#toast')
     ck(label + ' toast is on and clears the sides', toast and inset_ok(toast, vw, vh), toast)
@@ -162,7 +166,8 @@ def run(pw, w, hgt, label):
     shot(pg, '%s-games' % label)
     pg.evaluate("document.getElementById('gamemenu').classList.remove('on')")
 
-    # walk HUD
+    # walk HUD. Kill leftover toasts so the picture is clean.
+    pg.evaluate("document.getElementById('toast').classList.remove('on')")
     pg.evaluate("window.__ISLAND.setWalk(true)")
     pg.wait_for_timeout(500)
     ck(label + ' walk mode is on', pg.evaluate("window.__ISLAND.walking()===true"))
@@ -172,12 +177,12 @@ def run(pw, w, hgt, label):
     pretty = measure(pg, '#w-pretty')
     stick = measure(pg, '#stick')
     ck(label + ' walk hint wraps inside the edges', hint and inset_ok(hint, vw, vh), hint)
-    ck(label + ' JUMP is a huge kid target', jump and jump['width'] >= 96 and jump['height'] >= 96, jump)
+    ck(label + ' JUMP is a huge kid target', jump and jump['w'] >= 96 and jump['h'] >= 96, jump)
     ck(label + ' JUMP clears the sides', inset_ok(jump, vw, vh), jump)
     ck(label + ' STOP WALKING clears the sides', inset_ok(exitb, vw, vh), exitb)
     ck(label + ' stick clears the sides', inset_ok(stick, vw, vh), stick)
     ck(label + ' WARM is on the walk HUD', pretty is not None, pretty)
-    ck(label + ' WARM is a kid target', pretty and pretty['width'] >= 72 and pretty['height'] >= 44, pretty)
+    ck(label + ' WARM is a kid target', pretty and pretty['w'] >= 72 and pretty['h'] >= 44, pretty)
     ck(label + ' WARM clears the sides', inset_ok(pretty, vw, vh), pretty)
     shot(pg, '%s-walk' % label)
     pg.evaluate("window.__ISLAND.setWalkPretty(true)")

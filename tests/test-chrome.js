@@ -7,7 +7,7 @@ let pass = 0, fail = 0;
 function ok(name, cond, info) { if (cond) { pass++; } else { fail++; console.log('FAIL', name, info || ''); } }
 
 ok('PHONE_CAP is the honest phone width', PHONE_CAP.W === 390);
-ok('chrome never sits closer than 12 points to a side', PHONE_CAP.EDGE === 12 && chromeEdge() === 12);
+ok('chrome never sits closer than 16 points to a side', PHONE_CAP.EDGE === 16 && chromeEdge() === 16);
 ok('dock side pad matches the edge', PHONE_CAP.DOCK_PAD === PHONE_CAP.EDGE);
 ok('tool buttons are at least a kid thumb', PHONE_CAP.TOOL_W >= 52);
 ok('PLAY is the hero and bigger than a tool', PHONE_CAP.PLAY_W >= 80 && PHONE_CAP.PLAY_W > PHONE_CAP.TOOL_W);
@@ -27,7 +27,7 @@ ok('the same phone-sized buttons do fit an 820 tablet width', dockFitsPhone(820,
 ok('a 2000 point desk can hold it', dockFitsPhone(2000, false) === true);
 ok('missing width uses the phone width', dockFitsPhone() === false);
 
-ok('chromeEdge is always the same number', chromeEdge(390) === 12 && chromeEdge(820) === 12);
+ok('chromeEdge is always the same number', chromeEdge(390) === 16 && chromeEdge(820) === 16);
 ok('LINK_MAX stays 1900', ISLE.LINK_MAX === 1900);
 ok('MAX_BLOCKS stays 1000', ISLE.MAX_BLOCKS === 1000);
 ok('PROFILE.VER stays 1', PROFILE.VER === 1);
