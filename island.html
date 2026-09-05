@@ -1869,8 +1869,35 @@ function stepBall(w, b, dt) {
   if (nb.y < 0.5) nb.y = 0.5; if (nb.y > ISLE.N - 0.5) nb.y = ISLE.N - 0.5;
   return nb;
 }
+/* Same pitch, same ball. A tap aims at the far mouth. A shove (car or foot) pushes the ball away.
+   Walk reach is bigger than the car so a six year old cannot miss. Standing still is not a kick. */
+const BALL_CAR_REACH = 1.1, BALL_WALK_REACH = 1.4, BALL_TAP_SPEED = 7.5, BALL_WALK_HIT = 96;
+function kickTowardGoal(p, b) {
+  if (!p || !b) return null;
+  const gs = pitchGoals(p.bp);
+  const rel = b.x - p.x;
+  const far = rel < PITCH_W / 2 ? gs[1] : gs[0];
+  const tx = p.x + far.dx + 0.5, ty = p.y + far.dy + 1;
+  const dx = tx - b.x, dy = ty - b.y, L = Math.hypot(dx, dy) || 1;
+  return { vx: dx / L * BALL_TAP_SPEED, vy: dy / L * BALL_TAP_SPEED };
+}
+function ballNudge(from, b, reach, power) {
+  if (!from || !b) return null;
+  const d = Math.hypot(from.x - b.x, from.y - b.y);
+  if (d >= reach) return null;
+  const L = d || 1;
+  return { vx: (b.x - from.x) / L * power, vy: (b.y - from.y) / L * power };
+}
+function walkKick(walker, b, inp) {
+  if (!walker || !b) return null;
+  const moving = Math.abs((inp && inp.fwd) || 0) > 0.12 || Math.abs((inp && inp.side) || 0) > 0.12;
+  if (!moving) return null;
+  const sp = Math.abs((inp && inp.fwd) || 0) + Math.abs((inp && inp.side) || 0);
+  const power = 3.2 + sp * 2.2 * ((inp && inp.run) ? 1.35 : 1);
+  return ballNudge(walker, b, BALL_WALK_REACH, power);
+}
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
+  module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, kickTowardGoal, ballNudge, walkKick, BALL_CAR_REACH, BALL_WALK_REACH, BALL_TAP_SPEED, BALL_WALK_HIT, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
@@ -2219,7 +2246,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function frame(now) {
     const t = (now - t0) / 1000;
     const dt = Math.min(0.05, t - tPrev); tPrev = t;
-    if (walking) { stepIslanders(dt, t); stepCleo(dt, t); walkFrame(dt, t); requestAnimationFrame(frame); return; }
+    if (walking) { stepIslanders(dt, t); stepCleo(dt, t); ballTick(dt); walkFrame(dt, t); requestAnimationFrame(frame); return; }
     ctx.clearRect(0, 0, W, H);
     stepCamera(dt);
     const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
@@ -3331,6 +3358,34 @@ if (typeof module !== 'undefined' && module.exports) {
     gl.bindTexture(gl.TEXTURE_2D, tex); gl.drawArrays(gl.TRIANGLES, 0, 6); shadowsDrawn++;
   }
   function discTex(key, col) { return spriteTex(key, function (g) { g.fillStyle = col; g.beginPath(); g.arc(32, 48, 28, 0, 6.29); g.fill(); }); }
+  /* Sixteen triangles, cream and ink. Same colours as the island ball. Not a smooth sphere. */
+  function drawWalkBall3D(x, y, z0) {
+    const r = 0.38, mid = z0 + 0.38, n = 8;
+    const cream = hexRGB('#FFF3E2'), ink = hexRGB('#2A1B3D');
+    const T = [x, y, z0 + 0.76], B = [x, y, z0 + 0.02], E = [];
+    for (let i = 0; i < n; i++) {
+      const a = i * Math.PI * 2 / n;
+      E.push([x + Math.cos(a) * r, y + Math.sin(a) * r, mid]);
+    }
+    const P = [];
+    function tri(a, b, c, col, s) {
+      P.push(a[0], a[1], a[2], col[0] * s, col[1] * s, col[2] * s);
+      P.push(b[0], b[1], b[2], col[0] * s, col[1] * s, col[2] * s);
+      P.push(c[0], c[1], c[2], col[0] * s, col[1] * s, col[2] * s);
+    }
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, col = i % 2 ? ink : cream;
+      tri(T, E[i], E[j], col, 1);
+      tri(B, E[j], E[i], col, 0.78);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, seaBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(P), gl.DYNAMIC_DRAW);
+    const aP = gl.getAttribLocation(progW, 'aP'), aC = gl.getAttribLocation(progW, 'aC');
+    gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 24, 0);
+    gl.enableVertexAttribArray(aC); gl.vertexAttribPointer(aC, 3, gl.FLOAT, false, 24, 12);
+    gl.disable(gl.CULL_FACE);
+    gl.drawArrays(gl.TRIANGLES, 0, n * 6);
+    gl.enable(gl.CULL_FACE);
+  }
   function whaleTex() { return spriteTex('whale', function (g) { g.fillStyle = '#5C3A6E'; g.beginPath(); g.ellipse(30, 70, 30, 12, 0, 0, 6.29); g.fill(); g.beginPath(); g.moveTo(56, 66); g.lineTo(64, 56); g.lineTo(64, 78); g.fill(); g.fillStyle = 'rgba(255,243,226,0.85)'; g.beginPath(); g.arc(22, 46, 4, 0, 6.29); g.arc(18, 36, 5, 0, 6.29); g.arc(26, 30, 6, 0, 6.29); g.fill(); }); }
   function drawBillboard(vp, eye, tex, x, y, z, wdt, hgt, flip) {
     const dx = x - eye[0], dy = y - eye[1], L = Math.hypot(dx, dy) || 1;
@@ -3351,7 +3406,12 @@ if (typeof module !== 'undefined' && module.exports) {
       walker = walkSpawn(world.ref); walkDist0 = 0;
       glResize(); if (meshDirty || !meshCount) uploadMesh();
       walking = true; document.body.classList.add('walking');
-      const hint = document.getElementById('w-hint'); hint.textContent = (matchMedia && matchMedia('(pointer: coarse)').matches) ? 'Left thumb walks. Right thumb looks. Tap an islander to talk.' : 'W A S D walk, drag to look, space jumps, Esc to stop. Click an islander to talk.'; hint.classList.add('on'); clearTimeout(hintT); hintT = setTimeout(function () { hint.classList.remove('on'); }, 5000);
+      const hint = document.getElementById('w-hint');
+      const hasPitch = !!pitchOf(world.ref);
+      hint.textContent = (matchMedia && matchMedia('(pointer: coarse)').matches)
+        ? ('Left thumb walks. Right thumb looks. Tap an islander to talk.' + (hasPitch ? ' Walk into the ball or tap it to kick.' : ''))
+        : ('W A S D walk, drag to look, space jumps, Esc to stop. Click an islander to talk.' + (hasPitch ? ' Walk into the ball or tap it to kick.' : ''));
+      hint.classList.add('on'); clearTimeout(hintT); hintT = setTimeout(function () { hint.classList.remove('on'); }, 5000);
       journal.walkedToday = journal.walkedToday || 0; journal.jumpedToday = journal.jumpedToday || 0;
       if (!journal.walkSaid) { journal.walkSaid = true; noteLearned('The island looks different from the ground. A door is taller than you are, and eight blocks is a long way up.', 'walk', 'geometry'); }
       blip(520); setTimeout(function () { blip(780); }, 100);
@@ -3394,10 +3454,17 @@ if (typeof module !== 'undefined' && module.exports) {
   addEventListener('keyup', function (e) { wkeys[e.key.toLowerCase()] = false; if (e.key === 'Shift') winp.run = false; });
   let lastProj = [];
   function walkTap(sx, sy) {
+    const ballHit = lastProj.find(function (q) { return q.ball; });
+    if (ballHit && Math.hypot(ballHit.sx - sx, ballHit.sy - sy) < BALL_WALK_HIT) {
+      const k = kickTowardGoal(ballPitch, ball);
+      if (k) kickBall(k.vx, k.vy);
+      return true;
+    }
     let best = null, bd = 70;
-    lastProj.forEach(function (q) { const d = Math.hypot(q.sx - sx, q.sy - sy); if (d < bd) { bd = d; best = q; } });
-    if (!best) return;
+    lastProj.forEach(function (q) { if (q.ball) return; const d = Math.hypot(q.sx - sx, q.sy - sy); if (d < bd) { bd = d; best = q; } });
+    if (!best) return false;
     if (best.cleo) talkToKeeper({ px: best.sx, py: best.sy }); else if (best.trophy) { const t = trophyById(best.trophy); toast(t.name + '. ' + t.line); blip(880); } else chat({ p: best.p, px: best.sx, py: best.sy });
+    return true;
   }
   function walkFrame(dt, t) {
     if (!wStick) {
@@ -3433,6 +3500,10 @@ if (typeof module !== 'undefined' && module.exports) {
     gl.bindBuffer(gl.ARRAY_BUFFER, meshBuf);
     gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(aC, 3, gl.FLOAT, false, 24, 12);
     gl.drawArrays(gl.TRIANGLES, 0, meshCount);
+    if (ball) {
+      const fz = floorAt(world.ref, ball.x, ball.y);
+      if (fz !== null) drawWalkBall3D(ball.x, ball.y, fz);
+    }
     gl.disable(gl.CULL_FACE);
     // sprites: islanders, the visitor, Cleo, the whale, the sun and the moon
     gl.useProgram(progB); gl.uniformMatrix4fv(gl.getUniformLocation(progB, 'uM'), false, VP.m); gl.uniform1f(gl.getUniformLocation(progB, 'uLight'), light);
@@ -3444,6 +3515,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const wf = footprintFloor(world.ref, walker.x, walker.y); if (wf !== null) { const lift = Math.max(0, walker.z - wf); drawFlat(shTex, walker.x, walker.y, wf + 0.012, 0.34 * Math.max(0.35, 1 - lift * 0.25)); }
     allFolk().forEach(function (p) { const fz = floorAt(world.ref, p.x, p.y); if (fz !== null) drawFlat(shTex, p.x, p.y, fz + 0.012, 0.3); });
     if (!KEEP) { const fz = floorAt(world.ref, cleo.x, cleo.y); if (fz !== null) drawFlat(shTex, cleo.x, cleo.y, fz + 0.012, 0.28); }
+    if (ball) { const fz = floorAt(world.ref, ball.x, ball.y); if (fz !== null) drawFlat(shTex, ball.x, ball.y, fz + 0.014, 0.28); }
     gl.depthMask(true); gl.uniform1f(uCut, 0.5);
     lastProj = [];
     const proj = function (x, y, z) { const m = VP.m; const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15]; if (cw <= 0.05) return null; return { sx: (cx / cw * 0.5 + 0.5) * innerWidth, sy: (0.5 - cy / cw * 0.5) * innerHeight }; };
@@ -3467,6 +3539,12 @@ if (typeof module !== 'undefined' && module.exports) {
         const bob = cleo.moving ? Math.abs(Math.sin(t * 14 + cleo.seed)) * 0.06 : 0;
         drawBillboard(VP, eye, cleoTex(cleoPose), cleo.x, cleo.y, fz + bob, 0.78, 1.17, cleoFlip);
         const s = proj(cleo.x, cleo.y, fz + 0.5); if (s) lastProj.push({ cleo: true, sx: s.sx, sy: s.sy });
+      }
+    }
+    if (ball) {
+      const fz = floorAt(world.ref, ball.x, ball.y);
+      if (fz !== null) {
+        const s = proj(ball.x, ball.y, fz + 0.38); if (s) lastProj.push({ ball: true, sx: s.sx, sy: s.sy });
       }
     }
     const wh = (t % 18) / 18; if (wh > 0.35 && wh < 0.7) { const wx = ISLE.N / 2 + 78 * Math.cos(t * 0.05), wy = ISLE.N / 2 + 78 * Math.sin(t * 0.05); drawBillboard(VP, eye, whaleTex(), wx, wy, -0.4 + Math.sin((wh - 0.35) / 0.35 * Math.PI) * 0.8, 6, 5); }
@@ -4182,9 +4260,9 @@ if (typeof module !== 'undefined' && module.exports) {
       list.appendChild(b);
     }
     const pp = pitchOf(world.ref);
-    mk('\u26BD SOCCER', pp ? 'Your pitch is ready. Tap the ball to kick it, or drive into it.' : 'Get the pitch plan and build it. Hands are free.',
+    mk('\u26BD SOCCER', pp ? 'Your pitch is ready. Tap the ball, drive into it, or walk up and kick it.' : 'Get the pitch plan and build it. Hands are free.',
       function () {
-        if (pp) { centreOn(pp.x + PITCH_W / 2, pp.y + PITCH_H / 2); toast('KICK IT INTO A GOAL! Tap the ball, or drive at it.'); }
+        if (pp) { centreOn(pp.x + PITCH_W / 2, pp.y + PITCH_H / 2); toast('KICK IT INTO A GOAL! Tap the ball, drive at it, or walk into it.'); }
         else layPitch();
       });
     CABINETS.forEach(function (nm, i) {
@@ -4368,20 +4446,24 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!ball || !ballPitch || walking) return false;
     const bx = isoX(ball.x, ball.y) * cam.zoom + cam.x, by = (isoY(ball.x, ball.y, 0) + ZH) * cam.zoom + cam.y;
     if (Math.abs(sx - bx) > 30 || Math.abs(sy - by) > 30) return false;
-    const gs = pitchGoals(ballPitch.bp);
-    const rel = ball.x - ballPitch.x;
-    const far = rel < PITCH_W / 2 ? gs[1] : gs[0];
-    const tx = ballPitch.x + far.dx + 0.5, ty = ballPitch.y + far.dy + 1;
-    const dx = tx - ball.x, dy = ty - ball.y, L = Math.hypot(dx, dy) || 1;
-    kickBall(dx / L * 7.5, dy / L * 7.5);
+    const k = kickTowardGoal(ballPitch, ball);
+    if (k) kickBall(k.vx, k.vy);
     return true;
   }
   function ballTick(dt) {
     ballSync();
     if (!ball || !ballPitch) return;
     if (driving && car) {
-      const d = Math.hypot(car.x - ball.x, car.y - ball.y);
-      if (d < 1.1) { const L = d || 1; kickBall((ball.x - car.x) / L * (3 + car.sp * 1.3), (ball.y - car.y) / L * (3 + car.sp * 1.3)); }
+      const n = ballNudge(car, ball, BALL_CAR_REACH, 3 + car.sp * 1.3);
+      if (n) kickBall(n.vx, n.vy);
+    }
+    if (walking && walker) {
+      const n = walkKick(walker, ball, winp);
+      if (n) {
+        const wasStill = Math.abs(ball.vx) < 0.3 && Math.abs(ball.vy) < 0.3;
+        ball.vx = n.vx; ball.vy = n.vy;
+        if (wasStill) { blip(880); setTimeout(function () { blip(620); }, 70); }
+      }
     }
     ball = stepBall(world.ref, ball, dt);
     if (goalScored(ballPitch, ball)) {
@@ -4393,6 +4475,11 @@ if (typeof module !== 'undefined' && module.exports) {
       saveJournal(journal);
       islanders.forEach(function (p) { p.wait = 3; });
       ball = ballStart(ballPitch);
+      if (walking) {
+        const hint = document.getElementById('w-hint');
+        hint.textContent = 'GOAL!'; hint.classList.add('on');
+        clearTimeout(hintT); hintT = setTimeout(function () { hint.classList.remove('on'); }, 1400);
+      }
     }
   }
   function drawBall() {
@@ -5252,6 +5339,8 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('sprev').addEventListener('click', function () { if (storyIdx > 0) { storyIdx--; renderStory(); blip(560); } });
 
   window.__ISLAND = { pitch: () => pitchOf(world.ref), ballAt: () => ball, kick: (vx, vy) => kickBall(vx, vy),
+    resetBall: () => { if (ballPitch) ball = ballStart(ballPitch); return ball; },
+    kickTowardGoal, walkKick, BALL_WALK_REACH, BALL_WALK_HIT,
     layPitch, openGames, tapKick, PITCH_W, PITCH_H, pitchGoals, goalScored,
     openDream, closeDream, placeHeardDream, hearDream: (t) => placeHeardDream(t),
     dreamOpen: () => document.getElementById('dreampanel').classList.contains('on'),
