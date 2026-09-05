@@ -4,6 +4,8 @@
 # PLAY and DREAM stay the heroes. No lock. No sell. Nothing new in the share link.
 import os, sys
 from playwright.sync_api import sync_playwright
+from PIL import Image
+import io
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8099/island.html'
 SHOT = os.environ.get('PRETTY_SHOT', '/tmp/pretty')
@@ -78,13 +80,22 @@ def run(pw, url, label, w, hgt):
     ck(label + ' LOOK names the live look', 'WARM' in chip_txt, chip_txt)
 
     def sky_rgb():
-        return pg.evaluate("""()=>{
-          const c=document.getElementById('world');
-          const x=Math.max(2, Math.floor(c.width*0.5));
-          const y=Math.max(2, Math.floor(c.height*0.10));
-          const d=c.getContext('2d').getImageData(x,y,1,1).data;
-          return [d[0],d[1],d[2]];
-        }""")
+        png = pg.screenshot()
+        im = Image.open(io.BytesIO(png)).convert('RGB')
+        w, h = im.size
+        return list(im.getpixel((int(w * 0.50), int(h * 0.38))))
+
+    def star_hits():
+        png = pg.screenshot()
+        im = Image.open(io.BytesIO(png)).convert('RGB')
+        w, h = im.size
+        hits = 0
+        for y in range(int(h * 0.04), int(h * 0.28), 6):
+            for x in range(int(w * 0.08), int(w * 0.92), 8):
+                r, g, b = im.getpixel((x, y))
+                if r > 200 and g > 190 and b > 170 and (r + g + b) > 600:
+                    hits += 1
+        return hits
 
     def rgb_dist(a, b):
         return abs(a[0]-b[0]) + abs(a[1]-b[1]) + abs(a[2]-b[2])
@@ -129,6 +140,8 @@ def run(pw, url, label, w, hgt):
     night_rgb = sky_rgb()
     night_lum = night_rgb[0] * 0.3 + night_rgb[1] * 0.5 + night_rgb[2] * 0.2
     ck(label + ' night sky is dark at a glance', night_lum < 90, (night_rgb, night_lum))
+    stars = star_hits()
+    ck(label + ' night sky shows stars', stars >= 6, stars)
     ck(label + ' chip names NIGHT after the hold', 'NIGHT' in pg.locator('#lookchip').inner_text().upper())
     shot(pg, '%s-night' % label.replace(' ', '-'))
     pg.evaluate("window.__ISLAND.holdPretty()")
