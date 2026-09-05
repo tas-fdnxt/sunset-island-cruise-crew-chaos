@@ -31,6 +31,7 @@ From the repo root:
     node tests/test-chrome.js
     node tests/test-overnight.js
     node tests/test-replay.js
+    node tests/test-pretty.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -52,6 +53,15 @@ still may not.
 Ollie quotes. Build replay MAY be claimed because it shipped in the same PR. Overnight and
 NPC memory may be mentioned as already live. Pretty modes, a bigger dock, day/night sky,
 and a synth suite still may not.
+
+`robot-carousel7.py` drives `ollie-update-7.html`: nine cards, four real photos, no invented
+Ollie quotes. Pretty modes, day/night mood, and soft corners MAY be claimed because they
+shipped in the same PR. Overnight, build replay, a bigger dock, and a synth suite still
+may not.
+
+`robot-pretty.py` drives the live LOOK chip on both editions: tap cycles soft / warm / crisp,
+hold peeks day or night on the living sky, long-press opens the sheet. PLAY and DREAM stay
+the dock heroes. Nothing new rides in the share link.
 
 `robot-overnight.py` drives the live moon on both editions: tap opens tonight's chapter,
 hold opens the morning card with a remembered islander, the share link carries `&m=`,
@@ -145,6 +155,10 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   Tap stays undo. Hold peels the trailing place ops and places them back. Encode
   matches. Quest `replay1` appended. Nothing new in `#i=`. PLAY and DREAM stay
   the dock heroes. No lock. No sell.
+- **test-pretty.js** Pretty modes + day/night + soft corners. LOOK tap / hold / long-press
+  cycles soft / warm / crisp, peeks the living sky, and opens the sheet. Colour mixes
+  only. Quest `pretty1` appended. Nothing new in `#i=`. PLAY and DREAM stay the dock
+  heroes. No lock. No sell.
 
 `robot-chrome.py` drives the real island on a phone and a tablet and checks the
 picture: dock, chips, drawer, dream, games, toast, and the walk HUD all clear

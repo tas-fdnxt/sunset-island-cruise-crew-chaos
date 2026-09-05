@@ -27,7 +27,7 @@
 <style>
   :root { --ink:#2A1B3D; --cream:#FFF3E2; --coral:#FF6E6C; --peach:#FFB067;
     --yellow:#FFD447; --green:#3FA96B; --dusk:#5C3A6E;
-    --edge:16px;
+    --edge:16px; --radius:20px;
     --pad-l:max(16px, env(safe-area-inset-left, 0px));
     --pad-r:max(16px, env(safe-area-inset-right, 0px));
     --toast-max:calc(100vw - var(--pad-l) - var(--pad-r) - 8px); }
@@ -37,7 +37,7 @@
   canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
   canvas#gl { position:fixed; inset:0; width:100vw; height:100dvh; display:none; touch-action:none; z-index:4; }
   body.walking canvas#gl { display:block; }
-  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #bpbar, body.walking #bpmenu, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail, body.walking #dreampanel, body.walking #gamemenu { display:none !important; }
+  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #bpbar, body.walking #bpmenu, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail, body.walking #dreampanel, body.walking #gamemenu, body.walking #lookchip, body.walking #lookmenu { display:none !important; }
   body.walking #toast { bottom:calc(env(safe-area-inset-bottom,0px) + 220px); }
   #walkui { display:none; }
   body.walking #walkui { display:block; }
@@ -48,16 +48,38 @@
   #w-jump { bottom:calc(env(safe-area-inset-bottom,0px) + 28px); width:104px; height:104px; border-radius:50%; font-size:16px; padding:0; }
   #w-exit { bottom:calc(env(safe-area-inset-bottom,0px) + 148px); min-width:108px; background:var(--coral); color:var(--cream); }
   #w-pretty { position:fixed; left:var(--pad-l); top:calc(env(safe-area-inset-top,0px) + 58px); z-index:7;
-    min-width:76px; height:48px; border-radius:16px; border:3px solid var(--ink); background:rgba(255,243,226,0.92);
+    min-width:80px; height:52px; border-radius:var(--radius); border:3px solid var(--ink); background:rgba(255,243,226,0.92);
     color:var(--ink); font:900 12px system-ui; box-shadow:0 4px 0 var(--ink); padding:0 12px; letter-spacing:0.06em; }
   #w-pretty.on { background:var(--peach); }
+  #lookchip { position:fixed; left:var(--pad-l); bottom:calc(env(safe-area-inset-bottom,0px) + 118px); z-index:6;
+    width:80px; height:80px; border-radius:22px; border:3px solid var(--ink); background:rgba(255,243,226,0.94);
+    color:var(--ink); font:900 13px/1.1 system-ui; box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.06em;
+    padding:6px; cursor:pointer; touch-action:manipulation; }
+  #lookchip.on { background:var(--peach); }
+  #lookchip:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #lookmenu { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 108px); z-index:9; display:none;
+    background:rgba(255,243,226,0.98); border:4px solid var(--ink); border-radius:22px; padding:16px; box-shadow:0 8px 0 rgba(20,8,30,0.5); max-height:66dvh; overflow-y:auto; }
+  #lookmenu.on { display:block; }
+  #lookmenu .gm-hd { font:900 13px system-ui; letter-spacing:0.14em; margin-bottom:10px; color:var(--ink); }
+  #lookmenu button.lk { display:block; width:100%; margin-bottom:8px; min-height:56px; border-radius:var(--radius); border:3px solid var(--ink); background:#fff;
+    color:var(--ink); font:900 16px system-ui; cursor:pointer; }
+  #lookmenu button.lk.on { background:var(--peach); }
+  #lk-close { width:100%; min-height:48px; border-radius:var(--radius); border:3px solid var(--ink); background:var(--dusk); color:var(--cream); font-weight:900; font-size:12px; cursor:pointer; }
+  #lookveil { position:fixed; inset:0; z-index:3; pointer-events:none; display:none; }
+  body.look-soft #lookveil { display:block; background:rgba(255,243,226,0.10); }
+  body.look-warm #lookveil { display:block; background:rgba(255,176,103,0.10); }
+  body.look-crisp #lookveil { display:block; background:rgba(160,210,255,0.08); }
+  body.look-night #lookveil { display:block; background:rgba(20,26,60,0.20); }
+  body.look-soft canvas#world { filter:saturate(1.06) contrast(0.94); }
+  body.look-warm canvas#world { filter:saturate(1.12) sepia(0.10); }
+  body.look-crisp canvas#world { filter:saturate(0.96) contrast(1.10); }
   #w-hint { position:fixed; left:var(--pad-l); right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 118px); z-index:7; background:rgba(42,27,61,0.75); color:var(--cream); font:800 13px/1.35 system-ui; padding:10px 16px; border-radius:16px; opacity:0; transition:opacity .4s; pointer-events:none; text-align:center; overflow-wrap:anywhere; }
   #w-hint.on { opacity:1; }
   #topbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 10px); left:var(--pad-l); right:var(--pad-r);
     display:flex; justify-content:space-between; align-items:center; gap:8px; pointer-events:none; }
   #pop, #cargo { flex:0 0 auto; }
   .badge { background:rgba(42,27,61,0.92); color:var(--cream); border:2px solid rgba(255,243,226,0.55);
-    border-radius:12px; padding:7px 10px; font-weight:900; font-size:clamp(9px,2.6vw,12px); letter-spacing:0.03em;
+    border-radius:var(--radius); padding:7px 10px; font-weight:900; font-size:clamp(9px,2.6vw,12px); letter-spacing:0.03em;
     box-shadow:0 3px 0 rgba(20,8,30,0.45); white-space:nowrap; }
   #cargo { color:var(--yellow); font-variant-numeric:tabular-nums; }
   #cargo.full { color:var(--coral); }
@@ -70,7 +92,7 @@
   #bottombar::-webkit-scrollbar { display:none; }
   #bottombar::before, #bottombar::after { content:''; flex:0 0 0px; margin:auto; }
   #bottombar .dock { scroll-snap-align:center; }
-  .dock { flex:0 0 auto; width:52px; height:64px; border-radius:16px; border:3px solid rgba(255,243,226,0.5); background:rgba(42,27,61,0.92);
+  .dock { flex:0 0 auto; width:52px; height:64px; border-radius:var(--radius); border:3px solid rgba(255,243,226,0.5); background:rgba(42,27,61,0.92);
     color:var(--cream); font-weight:900; font-size:10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
     box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.02em; padding:3px 2px 4px; touch-action:manipulation; line-height:1.05; text-align:center; }
   .dock .ic { font-size:22px; line-height:1; }
@@ -131,7 +153,7 @@
   .tool:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.35); }
   .tool.sel { background:var(--yellow); }
   #tip { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 124px); z-index:6; display:none;
-    background:var(--ink); color:var(--cream); border:3px solid var(--cream); border-radius:16px; padding:10px 16px; font-weight:800; font-size:13px; max-width:var(--toast-max); text-align:center; overflow-wrap:anywhere; box-sizing:border-box; }
+    background:var(--ink); color:var(--cream); border:3px solid var(--cream); border-radius:var(--radius); padding:10px 16px; font-weight:800; font-size:13px; max-width:var(--toast-max); text-align:center; overflow-wrap:anywhere; box-sizing:border-box; }
   #tip.on { display:block; }
   #tip b { color:var(--yellow); }
   #btn-drive { background:linear-gradient(180deg,#FF8A70,var(--coral)); color:var(--cream); }
@@ -247,7 +269,7 @@
   #dial .knob { position:absolute; left:50%; width:22px; height:22px; margin-left:-11px; border-radius:50%; background:var(--yellow); border:3px solid var(--ink); box-shadow:0 2px 0 rgba(20,8,30,0.5); pointer-events:none; }
   #dial .snap { position:absolute; left:2px; width:6px; height:2px; background:rgba(255,243,226,0.6); }
   #dial #home { font-size:18px; }
-  #mini { position:fixed; left:var(--pad-l); top:calc(env(safe-area-inset-top,0px) + 54px); z-index:6; width:96px; height:96px; border:3px solid var(--ink); border-radius:14px;
+  #mini { position:fixed; left:var(--pad-l); top:calc(env(safe-area-inset-top,0px) + 54px); z-index:6; width:96px; height:96px; border:3px solid var(--ink); border-radius:var(--radius);
     background:rgba(42,27,61,0.55); box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
   #btn-story { position:fixed; right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 104px); z-index:6;
     width:56px; height:56px; border-radius:50%; border:3px solid var(--ink); background:var(--dusk);
@@ -369,7 +391,11 @@
     #w-jump { width:128px; height:128px; font-size:20px; }
     #w-exit { height:82px; font-size:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
     #w-hint { font-size:18px; padding:14px 22px; }
-    #w-pretty { min-width:96px; height:60px; font-size:15px; }
+    #w-pretty { min-width:96px; height:64px; font-size:15px; border-radius:22px; }
+    #lookchip { width:96px; height:96px; font-size:16px; border-radius:26px; bottom:calc(env(safe-area-inset-bottom,0px) + 148px); }
+    #lookmenu { left:8vw; right:8vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px; }
+    #lookmenu button.lk { min-height:72px; font-size:22px; border-radius:20px; }
+    #lk-close { min-height:60px; font-size:16px; }
     body.walking #toast { bottom:calc(env(safe-area-inset-bottom,0px) + 280px); }
     .wincard { max-width:560px; }
     #boardcard { max-width:600px; }
@@ -413,7 +439,8 @@
 <body>
 <canvas id="world"></canvas>
 <canvas id="gl"></canvas>
-<div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-pretty" type="button">WARM</button><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
+<div id="lookveil"></div>
+<div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-pretty" type="button">SOFT</button><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
 <div id="topbar">
   <div class="badge" id="title-badge" style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis">OLLIE'S ISLAND</div>
   <div class="badge" id="pop" style="color:#8FD8E8" aria-label="Islanders 0"><span class="folk"></span>0</div>
@@ -430,6 +457,12 @@
 <div id="agame"><div id="ag-top"><span id="ag-name"></span><span id="ag-score">0</span><button id="ag-exit" aria-label="Back to the island">&#10005;</button></div><canvas id="agc"></canvas></div>
 <div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="knob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
 <canvas id="mini" width="192" height="192" aria-label="Map of the island"></canvas>
+<button id="lookchip" type="button" aria-label="LOOK SOFT">SOFT</button>
+<div id="lookmenu">
+  <div class="gm-hd">PICK A LOOK</div>
+  <div id="lk-list"></div>
+  <button id="lk-close" type="button">BACK TO THE ISLAND</button>
+</div>
 <div id="quest"></div>
 <div id="bpbar"></div>
 <div id="bpmenu"></div>
@@ -1246,7 +1279,9 @@ function questTable(dream) {
     { id: 'sleep1', need: 'sleptToday', n: 1, tell: 'sleep on the island and see who remembers you in the morning',
       done: 'The island slept, and somebody remembered.' },
     { id: 'replay1', need: 'replayedToday', n: 1, tell: 'watch your blocks go down again, then keep building',
-      done: 'The blocks went down again, and then you kept building.' }]);
+      done: 'The blocks went down again, and then you kept building.' },
+    { id: 'pretty1', need: 'prettyToday', n: 1, tell: 'tap LOOK and pick a soft, warm or crisp island',
+      done: 'The island put on a new look, and the sky followed along.' }]);
   return d ? [d].concat(base) : base;
 }
 function questTableBase() {
@@ -1433,6 +1468,7 @@ function chapter(o) {
   else page1.push('Today was a looking day, and looking days count too.');
   if (o.overnight) page1.push(overnightLine(o));
   if (o.replayed) page1.push(replayLine(o));
+  if (o.prettyed) page1.push(prettyLine(o));
   if (o.newIslanders && o.newIslanders.length) {
     page1.push(o.newIslanders.join(' and ') + ' moved in, and knocked on the door to say hello.');
   }
@@ -1559,6 +1595,7 @@ function bedtimeQuestion(o) {
   else if (keys.indexOf('tall') !== -1) q = { ask: 'How tall can a tower go on the island?', right: 'Eight blocks', wrong: 'Twenty blocks' };
   else if (keys.indexOf('sleep') !== -1) q = { ask: 'Who remembers you after the island sleeps?', right: 'The islanders', wrong: 'Nobody' };
   else if (keys.indexOf('replay') !== -1) q = { ask: 'What happens when you watch your blocks again?', right: 'They go down again', wrong: 'They get locked away' };
+  else if (keys.indexOf('pretty') !== -1) q = { ask: 'What does LOOK change on the island?', right: 'The look and the sky', wrong: 'A locked shop' };
   else if (keys.indexOf('house') !== -1 || keys.indexOf('count') !== -1) q = { ask: 'What makes an islander move in?', right: 'Walls with a door', wrong: 'A palm tree' };
   else if (st.houses > 0) q = { ask: 'How many houses are on your island right now?', right: String(st.houses), wrong: String(st.houses + 2) };
   else q = { ask: 'What does a house need before somebody moves in?', right: 'A door', wrong: 'A window' };
@@ -1619,6 +1656,7 @@ function nextThing(st) {
     { key: 'walk', line: 'Tap WALK and stand on your island. Go and knock on a door.' },
     { key: 'chase', line: 'Tap DRIVE. A gull will pinch a crate off the dock. Catch it when it flies low and win a trophy.' },
     { key: 'replay', line: 'Hold UNDO and watch your blocks go down again, then keep building.' },
+    { key: 'pretty', line: 'Tap LOOK to pick a soft, warm or crisp island.' },
   ];
   return spare[(st.tick || 0) % spare.length];
 }
@@ -1953,9 +1991,11 @@ function cellSizeAt(zoom) { return { w: 44 * zoom, h: 22 * zoom }; }
 const PHONE_CAP = {
   W: 390, EDGE: 16, DOCK_PAD: 16, DOCK_GAP: 6,
   TOOL_W: 52, CUR_W: 76, PLAY_W: 84, DREAM_W: 80,
+  LOOK_W: 80, LOOK_H: 80, CORNER: 20,
   SLOTS_VISIBLE: 10, SLOTS_ALL: 11
 };
 function chromeEdge() { return PHONE_CAP.EDGE; }
+function chromeCorner() { return PHONE_CAP.CORNER; }
 function dockSpan(remixOn) {
   const tools = remixOn ? 8 : 7;
   const gaps = remixOn ? 10 : 9;
@@ -1970,6 +2010,99 @@ function warmRgb(rgb, on) {
   if (!on || !rgb) return rgb;
   const p = [1, 176 / 255, 103 / 255];
   return [rgb[0] * 0.82 + p[0] * 0.18, rgb[1] * 0.82 + p[1] * 0.18, rgb[2] * 0.82 + p[2] * 0.18];
+}
+/* PRETTY MODES + DAY/NIGHT. LOOK is a kid-clear control, not a dock hero.
+   Tap cycles soft / warm / crisp. Hold peeks day or night on the living
+   skyAt clock. Long-press opens the sheet. Sleep overnight still wakes
+   into morning. Colour mixes only. Nothing rides in the share hash. */
+const PRETTY_HOLD_MS = DREAM_HOLD_MS;
+const PRETTY_LONG_MS = DREAM_LONG_MS;
+const PRETTY_IDS = ['soft', 'warm', 'crisp'];
+const PRETTY_NAMES = { soft: 'SOFT', warm: 'WARM', crisp: 'CRISP' };
+function prettyPressKind(ms) { return dreamPressKind(ms); }
+function prettyOf(id) {
+  return (id === 'warm' || id === 'crisp') ? id : 'soft';
+}
+function prettyNextOf(id) {
+  const i = PRETTY_IDS.indexOf(prettyOf(id));
+  return PRETTY_IDS[(i + 1) % PRETTY_IDS.length];
+}
+function prettyTimeOf(t) {
+  return (t === 'day' || t === 'night') ? t : 'auto';
+}
+function prettyAfterSleep(slept) { return slept ? 'day' : 'auto'; }
+function prettyClockHour(day, hour, time) {
+  const t = prettyTimeOf(time);
+  if (t === 'day') return 14;
+  if (t === 'night') return 2;
+  const h = ((hour % 24) + 24) % 24;
+  const blush = ((dayHash(String(day || '') + ':look') % 5) - 2) * 0.08;
+  return h + blush;
+}
+function prettyPeekTime(time, hour) {
+  return skyAt(prettyClockHour('', hour, time)).night > 0.45 ? 'day' : 'night';
+}
+function prettyPressAct(kind, opts) {
+  opts = opts || {};
+  if (kind === 'long') return { door: 'sheet', kind: 'long' };
+  if (kind === 'hold') return { door: 'peek', kind: 'hold', time: prettyPeekTime(opts.time, opts.hour) };
+  return { door: 'cycle', kind: 'tap', mode: prettyNextOf(opts.mode) };
+}
+function runPrettyAct(act, opts) {
+  opts = opts || {};
+  if (!act) return { ok: false, why: 'none', door: 'none' };
+  if (act.door === 'sheet' || act.kind === 'long') {
+    return { ok: true, door: 'sheet', kind: 'long', mode: prettyOf(opts.mode), time: prettyTimeOf(opts.time) };
+  }
+  if (act.door === 'peek') {
+    return { ok: true, door: 'peek', kind: 'hold', time: prettyTimeOf(act.time || prettyPeekTime(opts.time, opts.hour)), mode: prettyOf(opts.mode) };
+  }
+  return { ok: true, door: 'cycle', kind: 'tap', mode: prettyOf(act.mode || prettyNextOf(opts.mode)), time: prettyTimeOf(opts.time) };
+}
+function prettyParse(c) {
+  if (!c) return null;
+  if (c[0] === '#') return hexRGB(c);
+  const m = /(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(String(c));
+  return m ? [m[1] / 255, m[2] / 255, m[3] / 255] : null;
+}
+function prettyCss(rgb) {
+  return 'rgb(' + Math.round(rgb[0] * 255) + ',' + Math.round(rgb[1] * 255) + ',' + Math.round(rgb[2] * 255) + ')';
+}
+function prettyMixRgb(rgb, mode) {
+  if (!rgb) return rgb;
+  const m = prettyOf(mode);
+  if (m === 'warm') return warmRgb(rgb, true);
+  if (m === 'crisp') {
+    return [
+      Math.max(0, Math.min(1, rgb[0] * 1.06 + 0.02)),
+      Math.max(0, Math.min(1, rgb[1] * 1.04 + 0.04)),
+      Math.max(0, Math.min(1, rgb[2] * 1.14 + 0.06))
+    ];
+  }
+  const s = [1, 243 / 255, 226 / 255];
+  return [rgb[0] * 0.78 + s[0] * 0.22, rgb[1] * 0.80 + s[1] * 0.20, rgb[2] * 0.84 + s[2] * 0.16];
+}
+function prettySky(sky, mode) {
+  if (!sky) return sky;
+  function tint(c) {
+    const rgb = prettyParse(c);
+    if (!rgb) return c;
+    return prettyCss(prettyMixRgb(rgb, mode));
+  }
+  return {
+    top: tint(sky.top), mid: tint(sky.mid), low: tint(sky.low), sea: tint(sky.sea),
+    night: sky.night, sun: sky.sun, moon: sky.moon
+  };
+}
+function prettyLine(o) {
+  o = o || {};
+  const mode = prettyOf(o.mode || o.prettyMode);
+  const time = prettyTimeOf(o.time || o.prettyTime);
+  let line = 'The island put on a ' + mode + ' look';
+  if (time === 'night') line += ', and night sat over the sea.';
+  else if (time === 'day') line += ', and day sat over the sea.';
+  else line += ', and the sky followed along.';
+  return line;
 }
 /* ============================================================================
    THE WHEEL. Steering used to snap to full lock and the speed never changed, so the car
@@ -2205,7 +2338,9 @@ if (typeof module !== 'undefined' && module.exports) {
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, PLAY_HOLD_MS, PLAY_LONG_MS, PLAY_IDS, PLAY_NAMES, PLAY_ICONS, playPressKind, playPressAct, playLastOf, playNextOf, playCabinetOf, rememberPlay, runPlayAct, playKickVel, NPC_NAMES, NPC_KINDS, NPC_MEM_VER, NPC_MEM_MAX, SLEEP_HOLD_MS, SLEEP_LONG_MS, sleepPressKind, sleepPressAct, runSleepAct, encodeNpcMem, decodeNpcMem, npcRemember, npcRememberedNames, npcTalkLine, overnightLine, emptyNpcMem, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
-    PHONE_CAP, chromeEdge, dockSpan, dockFitsPhone, warmRgb,
+    PHONE_CAP, chromeEdge, chromeCorner, dockSpan, dockFitsPhone, warmRgb,
+    PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES, prettyPressKind, prettyPressAct, runPrettyAct,
+    prettyOf, prettyNextOf, prettyTimeOf, prettyPeekTime, prettyClockHour, prettyMixRgb, prettySky, prettyLine, prettyAfterSleep,
     REPLAY_HOLD_MS, REPLAY_LONG_MS, REPLAY_LAST, REPLAY_ALL, replayPressKind, replayPressAct, runReplayAct, replayTape, peelReplay, replayStep, replayLine,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
 }
@@ -2232,6 +2367,7 @@ if (typeof module !== 'undefined' && module.exports) {
      book in everyone's edition the way Coco always has in Ollie's. Her code stays behind the switch, never drawn. */
   const DOG = false;
   const KEEP = OWNER || !DOG;
+  let prettyMode = 'soft', prettyTime = 'auto', prettyDockGen = 0;
   /* Sibella comes and goes on the morning boat in Ollie's edition, and Ollie visits hers. Every second visitor day. */
   function familyVisitor(name) { if (!OWNER) return name; return (new Date().getDate() % 2 === 0) ? (CREW === 'OLLIE' ? 'SIBELLA' : 'OLLIE') : name; }
   /* S2B. The boot boundary. ANON is the whole game with zero network. SIGNED needs two things at once:
@@ -2555,7 +2691,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (walking) { stepIslanders(dt, t); stepCleo(dt, t); ballTick(dt); walkFrame(dt, t); requestAnimationFrame(frame); return; }
     ctx.clearRect(0, 0, W, H);
     stepCamera(dt);
-    const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
+    const hour = hourNow(), SKY = prettySky(skyAt(prettyClockHour(today(), hour, prettyTime)), prettyMode), WX = weatherAt(today(), hour);
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, SKY.top); sky.addColorStop(0.4, SKY.mid); sky.addColorStop(0.75, SKY.low); sky.addColorStop(1, SKY.low);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
@@ -3863,13 +3999,139 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   document.getElementById('w-exit').addEventListener('click', function () { setWalk(false); });
   document.getElementById('w-jump').addEventListener('pointerdown', function (e) { winp.jump = true; e.preventDefault(); });
-  let walkPretty = false;
-  document.getElementById('w-pretty').addEventListener('click', function () {
-    walkPretty = !walkPretty;
-    this.classList.toggle('on', walkPretty);
-    this.textContent = walkPretty ? 'WARM ON' : 'WARM';
-    blip(walkPretty ? 720 : 480);
-  });
+  function walkPretty() { return prettyMode === 'warm'; }
+  function paintLook() {
+    document.body.classList.toggle('look-soft', prettyMode === 'soft');
+    document.body.classList.toggle('look-warm', prettyMode === 'warm');
+    document.body.classList.toggle('look-crisp', prettyMode === 'crisp');
+    const h = prettyClockHour(today(), hourNow(), prettyTime);
+    const sky = prettySky(skyAt(h), prettyMode);
+    document.body.classList.toggle('look-night', !!(sky && sky.night > 0.45));
+    document.body.classList.toggle('look-day', !(sky && sky.night > 0.45));
+    const chip = document.getElementById('lookchip');
+    if (chip) {
+      chip.textContent = PRETTY_NAMES[prettyMode];
+      chip.classList.toggle('on', prettyMode === 'warm' || prettyTime !== 'auto');
+      chip.setAttribute('aria-label', 'LOOK ' + PRETTY_NAMES[prettyMode]);
+    }
+    const wp = document.getElementById('w-pretty');
+    if (wp) {
+      wp.textContent = prettyMode === 'warm' ? 'WARM ON' : PRETTY_NAMES[prettyMode];
+      wp.classList.toggle('on', prettyMode === 'warm');
+    }
+  }
+  function markPrettyUsed() {
+    journal.prettyToday = (journal.prettyToday || 0) + 1;
+    journal.prettyMode = prettyMode;
+    journal.prettyTime = prettyTime;
+    journal.keys = journal.keys || [];
+    if (journal.keys.indexOf('pretty') === -1) journal.keys.push('pretty');
+    saveJournal(journal);
+    try { refreshQuest(); } catch (e) {}
+  }
+  function applyPrettyAct(act) {
+    const r = runPrettyAct(act, { mode: prettyMode, time: prettyTime, hour: hourNow() });
+    if (r.door === 'sheet') {
+      openLook();
+      toast('PICK A LOOK');
+      blip(520);
+      return r;
+    }
+    if (r.door === 'peek') {
+      prettyTime = prettyTimeOf(r.time);
+      journal.prettyTime = prettyTime;
+      markPrettyUsed();
+      paintLook();
+      toast(prettyTime === 'night' ? 'NIGHT SKY' : 'DAY SKY');
+      blip(700);
+      return r;
+    }
+    prettyMode = prettyOf(r.mode);
+    journal.prettyMode = prettyMode;
+    markPrettyUsed();
+    paintLook();
+    toast(PRETTY_NAMES[prettyMode] + ' LOOK');
+    blip(prettyMode === 'warm' ? 720 : 560);
+    return r;
+  }
+  function openLook() {
+    const list = document.getElementById('lk-list');
+    if (!list) return;
+    list.innerHTML = '';
+    PRETTY_IDS.forEach(function (id) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lk' + (prettyMode === id ? ' on' : '');
+      b.textContent = PRETTY_NAMES[id];
+      b.addEventListener('click', function () {
+        prettyMode = id;
+        journal.prettyMode = prettyMode;
+        markPrettyUsed();
+        paintLook();
+        openLook();
+        toast(PRETTY_NAMES[id] + ' LOOK');
+        blip(640);
+      });
+      list.appendChild(b);
+    });
+    [['day', 'DAY'], ['night', 'NIGHT'], ['auto', 'SKY']].forEach(function (row) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lk' + (prettyTime === row[0] ? ' on' : '');
+      b.textContent = row[1];
+      b.addEventListener('click', function () {
+        prettyTime = prettyTimeOf(row[0]);
+        journal.prettyTime = prettyTime;
+        markPrettyUsed();
+        paintLook();
+        openLook();
+        toast(row[1] === 'SKY' ? 'THE SKY FOLLOWS ALONG' : (row[1] + ' SKY'));
+        blip(640);
+      });
+      list.appendChild(b);
+    });
+    document.getElementById('lookmenu').classList.add('on');
+  }
+  function closeLook() {
+    const el = document.getElementById('lookmenu');
+    if (el) el.classList.remove('on');
+  }
+  function wireLook(b) {
+    const gen = ++prettyDockGen;
+    let downAt = 0, holdOn = false, longOn = false, holdT = 0, longT = 0;
+    function clearT() { clearTimeout(holdT); clearTimeout(longT); }
+    function up() {
+      if (gen !== prettyDockGen) return;
+      const held = Date.now() - downAt;
+      clearT();
+      b.classList.remove('held');
+      if (longOn) { longOn = false; holdOn = false; return; }
+      if (holdOn) { holdOn = false; applyPrettyAct(prettyPressAct('hold', { time: prettyTime, hour: hourNow() })); return; }
+      if (prettyPressKind(held) === 'tap') applyPrettyAct(prettyPressAct('tap', { mode: prettyMode }));
+    }
+    function down(e) {
+      e.preventDefault();
+      try { b.setPointerCapture(e.pointerId); } catch (x) {}
+      downAt = Date.now(); holdOn = false; longOn = false; clearT();
+      holdT = setTimeout(function () {
+        if (gen !== prettyDockGen) return;
+        holdOn = true;
+        b.classList.add('held');
+        toast('DAY OR NIGHT');
+        blip(700);
+      }, PRETTY_HOLD_MS);
+      longT = setTimeout(function () {
+        if (gen !== prettyDockGen) return;
+        longOn = true; holdOn = false;
+        b.classList.remove('held');
+        applyPrettyAct(prettyPressAct('long'));
+      }, PRETTY_LONG_MS);
+    }
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
   addEventListener('resize', function () { if (gl && walking) glResize(); });
   glc.addEventListener('pointerdown', function (e) {
     walkPtrs++;
@@ -3918,16 +4180,16 @@ if (typeof module !== 'undefined' && module.exports) {
     }
     walkStep(world.ref, walker, winp, dt); winp.jump = false;
     if (meshDirty) uploadMesh();
-    const hour = hourNow(), SKY = skyAt(hour), WX = weatherAt(today(), hour);
+    const hour = hourNow(), SKY = prettySky(skyAt(prettyClockHour(today(), hour, prettyTime)), prettyMode), WX = weatherAt(today(), hour);
     const light0 = 1 - 0.55 * SKY.night, fog0 = colRGB(SKY.low).map(function (c) { return c * (1 - 0.35 * SKY.night); });
-    const fog = warmRgb(fog0, walkPretty);
-    const light = walkPretty ? Math.min(1, light0 * 1.06) : light0;
+    const fog = prettyMixRgb(fog0, prettyMode);
+    const light = prettyMode === 'warm' ? Math.min(1, light0 * 1.06) : (prettyMode === 'crisp' ? Math.min(1, light0 * 1.04) : light0);
     const eye = [walker.x, walker.y, walker.z + WALK.EYE];
     const cp = Math.cos(walker.pitch), f = [Math.cos(walker.yaw) * cp, Math.sin(walker.yaw) * cp, Math.sin(walker.pitch)];
     const aspect = glc.width / glc.height, VP = viewProj(eye, f, aspect);
     gl.disable(gl.CULL_FACE);
     // sky: two colours across the screen, then the world in front of it
-    const mid = warmRgb(colRGB(SKY.mid), walkPretty);
+    const mid = prettyMixRgb(colRGB(SKY.mid), prettyMode);
     gl.clearColor(mid[0] * light, mid[1] * light, mid[2] * light, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(progW);
     const uM = gl.getUniformLocation(progW, 'uM');
@@ -5572,8 +5834,14 @@ if (typeof module !== 'undefined' && module.exports) {
   let journal = loadJournal();
   let npcMem = emptyNpcMem();
   if (journal.npcMem && journal.npcMem.length) npcMem = journal.npcMem;
+  prettyMode = prettyOf(journal.prettyMode);
+  prettyTime = prettyTimeOf(journal.prettyTime);
   journalReady = true;
   paintPlayBtn();
+  paintLook();
+  wireLook(document.getElementById('lookchip'));
+  wireLook(document.getElementById('w-pretty'));
+  document.getElementById('lk-close').addEventListener('click', function () { closeLook(); blip(400); });
   function noteIslander(nm) {
     if (journal.newIslanders.indexOf(nm) === -1) { journal.newIslanders.push(nm); saveJournal(journal); }
   }
@@ -5721,6 +5989,7 @@ if (typeof module !== 'undefined' && module.exports) {
     st.tripsToday = journal.tripsToday || 0;
     st.sleptToday = journal.sleptToday || 0;
     st.replayedToday = journal.replayedToday || 0;
+    st.prettyToday = journal.prettyToday || 0;
     st.gain = journal.lapGainToday || 0;
     const cs = compassStats(world.ref); st.north = cs.north; st.east = cs.east; st.south = cs.south; st.west = cs.west;
     return st;
@@ -5778,6 +6047,7 @@ if (typeof module !== 'undefined' && module.exports) {
       bpToday: journal.bpToday || null, tripsToday: journal.tripsToday || 0, goalsToday: journal.goalsToday || 0,
       overnight: !!(journal.overnight || journal.sleptToday), remembered: npcRememberedNames(npcMem),
       replayed: !!(journal.replayedToday), replayedN: journal.replayedN || journal.replayedToday || 0,
+      prettyed: !!(journal.prettyToday), prettyMode: journal.prettyMode || prettyMode, prettyTime: journal.prettyTime || prettyTime,
       voyage: (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, complete: pr.complete }; })(),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
@@ -5791,7 +6061,7 @@ if (typeof module !== 'undefined' && module.exports) {
     journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; journal.cabinetToday = {}; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
-    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0; journal.goalsToday = 0; journal.goalCoinsToday = 0; journal.sleptToday = 0; journal.overnight = false; journal.replayedToday = 0; journal.replayedN = 0; journal.npcMem = npcMem;
+    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0; journal.goalsToday = 0; journal.goalCoinsToday = 0; journal.sleptToday = 0; journal.overnight = false; journal.replayedToday = 0; journal.replayedN = 0; journal.prettyToday = 0; journal.npcMem = npcMem;
     journal.chapters = journal.book.length;
     saveJournal(journal);
     return entry;
@@ -5904,7 +6174,10 @@ if (typeof module !== 'undefined' && module.exports) {
     for (let i = 0; i < islanders.length && i < NPC_MEM_MAX; i++) npcMem = npcRemember(npcMem, i, 'sleep');
     journal.sleptToday = 1;
     journal.overnight = true;
+    prettyTime = prettyAfterSleep(true);
+    journal.prettyTime = prettyTime;
     journal.npcMem = npcMem;
+    paintLook();
     if (!journal.keys) journal.keys = [];
     if (journal.keys.indexOf('sleep') === -1) journal.keys.push('sleep');
     noteLearned('The islanders remember you after the island sleeps.', 'sleep', 'time');
@@ -6047,11 +6320,21 @@ if (typeof module !== 'undefined' && module.exports) {
     undo: () => { const r = undo(world.ref); if (r.ok) { redrawWorld(); syncCargo(); popCheck(); saveSoon(); } return r; },
     encode: () => encode(world.ref), shareUrl, cellAt, isoX, isoY, cam, ISLE,
     setWalk, walking: () => walking, walker: () => walker, walkInput: winp, walkKeys: wkeys, glOk: () => !!gl, meshCount: () => meshCount, walkProj: () => lastProj, walkTap,
-    walkPretty: () => walkPretty, setWalkPretty: function (on) {
-      walkPretty = !!on;
-      const el = document.getElementById('w-pretty');
-      if (el) { el.classList.toggle('on', walkPretty); el.textContent = walkPretty ? 'WARM ON' : 'WARM'; }
+    walkPretty: () => walkPretty(), setWalkPretty: function (on) {
+      prettyMode = on ? 'warm' : 'soft';
+      journal.prettyMode = prettyMode;
+      paintLook();
     },
+    prettyPressKind, prettyPressAct, runPrettyAct, prettySky, prettyMixRgb, prettyLine,
+    prettyMode: () => prettyMode, prettyTime: () => prettyTime,
+    tapPretty: () => applyPrettyAct(prettyPressAct('tap', { mode: prettyMode })),
+    holdPretty: () => applyPrettyAct(prettyPressAct('hold', { time: prettyTime, hour: hourNow() })),
+    longPretty: () => applyPrettyAct(prettyPressAct('long')),
+    setPrettyMode: function (id) { prettyMode = prettyOf(id); journal.prettyMode = prettyMode; paintLook(); return prettyMode; },
+    setPrettyTime: function (t) { prettyTime = prettyTimeOf(t); journal.prettyTime = prettyTime; paintLook(); return prettyTime; },
+    lookOpen: () => document.getElementById('lookmenu').classList.contains('on'),
+    openLook, closeLook,
+    lookSky: () => prettySky(skyAt(prettyClockHour(today(), hourNow(), prettyTime)), prettyMode),
     meshDirty: () => meshDirty, meshBuilds: () => meshBuilds, walkShadows: () => shadowsDrawn, cleoPose: () => cleoPose, cleoFlip: () => cleoFlip,
     purse, award, trophyCheck, chase: () => chase, startChase, endChase, chaseWin, showWin, openBoard, trophySpots, linkRec: () => linkRec, boardRowsHere,
     openCabinet, closeCabinet, agInput, tapAt, cellScreen: (x, y) => ({ sx: isoX(x + 0.5, y + 0.5) * cam.zoom + cam.x, sy: (isoY(x + 0.5, y + 0.5, 0) + ZH / 2) * cam.zoom + cam.y }),
