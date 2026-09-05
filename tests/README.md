@@ -25,6 +25,7 @@ From the repo root:
     node tests/test-coins.js
     node tests/test-arcade.js
     node tests/test-dream-place.js
+    node tests/test-play-dock.js
     node tests/test-dream-voice.js
     node tests/test-dream-dock.js
 
@@ -107,3 +108,7 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
 - **test-soccer.js** the pitch blueprint, a derived ball, rolling, goals, and the walk/3D kick:
   `kickTowardGoal` aims at the far mouth, `walkKick` shoves only when the walker is moving and close.
   Same `stepBall` / `goalScored`. No second pitch.
+- **test-play-dock.js** the Play multi-button. Tap / hold / long-press are three doors into
+  games that already exist: tap continues (kick or cabinet), hold cycles Soccer → Whale →
+  Bonk → Stack, long-press opens the GAMES sheet. Same clock as Dream. No fourth engine,
+  no lock or sell, nothing rides in the share link.
