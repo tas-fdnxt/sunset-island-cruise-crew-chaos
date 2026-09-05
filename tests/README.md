@@ -26,6 +26,7 @@ From the repo root:
     node tests/test-arcade.js
     node tests/test-dream-place.js
     node tests/test-dream-voice.js
+    node tests/test-dream-dock.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -96,3 +97,6 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
 - **test-dream-voice.js** voice and paste are only an input door. A trimmed transcript goes through the same
   dreamScript mapper and applyDream. Wispr/Plaud-style pasted lines still match. No second recipe list, no types 13/14,
   cargo still stops, LINK_MAX stays 1900.
+- **test-dream-dock.js** the Dream multi-button. Tap / hold / long-press are three doors into
+  the same mapper: tap and picker use dreamScript, hold uses hearDream. No second recipe list,
+  no types 13/14, PROFILE.VER stays 1, LINK_MAX stays 1900.

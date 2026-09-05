@@ -99,7 +99,16 @@
   #dream-go { display:block; width:100%; min-height:56px; margin-bottom:8px; border-radius:16px; border:3px solid var(--ink);
     background:var(--yellow); color:var(--ink); font:900 16px system-ui; box-shadow:0 4px 0 rgba(20,8,30,0.45); cursor:pointer; }
   #dream-close { width:100%; min-height:48px; border-radius:16px; border:3px solid var(--ink); background:var(--dusk); color:var(--cream); font-weight:900; font-size:12px; cursor:pointer; }
-  #btn-dream { background:linear-gradient(180deg,#B784E0,#5C3A6E); color:var(--cream); }
+  #btn-dream { background:linear-gradient(180deg,#B784E0,#5C3A6E); color:var(--cream);
+    width:76px; height:76px; font-size:11px; border-color:#E4C6FF; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #btn-dream .ic { font-size:28px; }
+  #btn-dream.on { background:linear-gradient(180deg,#FF8A70,var(--yellow)); color:var(--ink); }
+  #dream-picks { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 12px; }
+  #dream-picks .dream-pick { min-height:76px; border-radius:16px; border:3px solid var(--ink);
+    background:#fff; color:var(--ink); font:900 13px/1.1 system-ui; cursor:pointer;
+    box-shadow:0 4px 0 rgba(20,8,30,0.35); padding:8px 6px; }
+  #dream-picks .dream-pick:last-child { grid-column:1 / -1; }
+  #dream-picks .dream-pick:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.35); }
   #drawer .grp { font-size:10px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:6px 4px 4px; }
   #drawer .tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px; margin-bottom:6px; }
   .tool { height:70px; border-radius:14px; border:3px solid var(--ink); background:#fff; color:var(--ink); font-weight:900; font-size:9px; cursor:pointer;
@@ -306,6 +315,10 @@
     #dream-text { min-height:120px; font-size:22px; padding:16px 18px; border-radius:20px; }
     #dream-go { min-height:72px; font-size:22px; border-radius:20px; }
     #dream-close { min-height:60px; font-size:16px; }
+    #btn-dream { width:96px; height:96px; font-size:14px; }
+    #btn-dream .ic { font-size:40px; }
+    #dream-picks { gap:12px; }
+    #dream-picks .dream-pick { min-height:88px; font-size:18px; border-radius:20px; }
     #drawer .grp { font-size:14px; letter-spacing:0.2em; margin:12px 6px 8px; }
     #drawer .tiles { grid-template-columns:repeat(auto-fill, minmax(116px, 1fr)); gap:16px; margin-bottom:10px; }
     .tool { height:120px; border-radius:20px; font-size:13px; border-width:4px; }
@@ -433,8 +446,9 @@
 <div id="drawer"></div>
 <div id="gamemenu"><div class="gm-hd">PICK A GAME</div><div id="gm-list"></div><button id="gm-close">BACK TO THE ISLAND</button></div>
 <div id="dreampanel">
-  <div class="gm-hd">SAY A DREAM</div>
-  <p id="dream-help">Hold the big button and talk. Or type or paste a dream in the box. The island already knows how to build it.</p>
+  <div class="gm-hd">PICK A DREAM</div>
+  <p id="dream-help">Tap DREAM to build the last one. Hold DREAM and talk. Press longer to pick CASTLE to GARDEN, or type a dream in the box.</p>
+  <div id="dream-picks"></div>
   <button id="dream-mic" type="button">HOLD TO TALK</button>
   <textarea id="dream-text" rows="3" placeholder="Or paste a dream here" autocomplete="off" autocorrect="on" spellcheck="false"></textarea>
   <button id="dream-go" type="button">BUILD IT</button>
@@ -911,6 +925,47 @@ function hearDream(w, text) {
   const script = dreamScript(heard);
   const r = applyDream(w, script);
   return { ok: r.ok, placed: r.placed, skipped: r.skipped, why: r.why, encodeLen: r.encodeLen, heard: heard, script: script };
+}
+/* DREAM MULTI-BUTTON. Three gestures, one mapper. Tap and the picker call
+   dreamScript. Hold calls hearDream. Nothing here invents a fourth engine. */
+const DREAM_HOLD_MS = 280;
+const DREAM_LONG_MS = 900;
+function dreamPressKind(ms) {
+  const n = +ms;
+  if (!(n >= DREAM_HOLD_MS)) return 'tap';
+  if (n < DREAM_LONG_MS) return 'hold';
+  return 'long';
+}
+function dreamLastOf(last, profileDream) {
+  if (last != null && last !== '') return last;
+  if (typeof profileDream === 'number' && profileDream >= 0 && profileDream < PROFILE.DREAMS.length) return profileDream;
+  return '';
+}
+function rememberDream(last, heardOrIndex) {
+  if (typeof heardOrIndex === 'number' && heardOrIndex >= 0 && heardOrIndex < PROFILE.DREAMS.length) return heardOrIndex;
+  return String(heardOrIndex == null ? '' : heardOrIndex).trim();
+}
+function dreamPressAct(kind, opts) {
+  opts = opts || {};
+  if (kind === 'hold') return { door: 'hearDream', text: String(opts.heard == null ? '' : opts.heard).trim(), kind: 'hold' };
+  if (kind === 'long') return { door: 'picker', kind: 'long' };
+  const last = dreamLastOf(opts.last, opts.profileDream);
+  if (last !== '' && last != null) return { door: 'dreamScript', dream: last, kind: 'tap' };
+  return { door: 'picker', kind: 'tap' };
+}
+function dreamPickAct(choice) {
+  return { door: 'dreamScript', dream: choice, kind: 'pick' };
+}
+function runDreamAct(w, act) {
+  if (!act || act.door === 'picker') return { ok: false, placed: 0, skipped: 0, why: 'picker', encodeLen: encode(w).length, door: 'picker' };
+  if (act.door === 'hearDream') {
+    const r = hearDream(w, act.text);
+    r.door = 'hearDream';
+    return r;
+  }
+  const script = dreamScript(act.dream);
+  const r = applyDream(w, script);
+  return { ok: r.ok, placed: r.placed, skipped: r.skipped, why: r.why, encodeLen: r.encodeLen, script: script, door: 'dreamScript', dream: act.dream };
 }
 function questTable(dream) {
   const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
@@ -1816,7 +1871,7 @@ function stepBall(w, b, dt) {
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
-  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
@@ -2528,6 +2583,13 @@ if (typeof module !== 'undefined' && module.exports) {
     b.innerHTML = '<span class="ic">' + icon + '</span>' + label;
     b.addEventListener('click', onClick); return b;
   }
+  function dreamDockBtn() {
+    const b = document.createElement('button');
+    b.className = 'dock'; b.id = 'btn-dream'; b.type = 'button';
+    b.innerHTML = '<span class="ic">\uD83C\uDFA4</span>DREAM';
+    wireDreamDock(b);
+    return b;
+  }
   function renderDock() {
     bar.innerHTML = '';
     bar.appendChild(dockBtn('btn-undo', 'UNDO', '\u21B6', function () {
@@ -2549,7 +2611,7 @@ if (typeof module !== 'undefined' && module.exports) {
     bar.appendChild(dockBtn('btn-walk', 'WALK', '\uD83D\uDEB6', function () { setWalk(true); }));
     bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
     bar.appendChild(dockBtn('btn-games', 'GAMES', '\uD83C\uDFAE', function () { openGames(); }));
-    bar.appendChild(dockBtn('btn-dream', 'DREAM', '\uD83C\uDFA4', function () { openDream(); }));
+    bar.appendChild(dreamDockBtn());
     bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
   function renderDrawer() {
@@ -2792,7 +2854,11 @@ if (typeof module !== 'undefined' && module.exports) {
       try { dreamQ = new URLSearchParams(location.search).get('dream') || ''; } catch (e) {}
       if (dreamQ) {
         const laid = applyDream(world.ref, dreamScript(dreamQ));
-        if (laid.placed) toast('A DREAM TOOK SHAPE ON THE SAND.');
+        if (laid.placed) {
+          toast('A DREAM TOOK SHAPE ON THE SAND.');
+          journal.lastDream = rememberDream(journal.lastDream, dreamQ);
+          saveJournal(journal);
+        }
       }
     }
     updateLineage();
@@ -4128,20 +4194,35 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('gm-close').addEventListener('click', function () {
     document.getElementById('gamemenu').classList.remove('on'); blip(420);
   });
-  /* DREAM DOOR. Voice or paste is only an input. The mapper is still dreamScript. */
+  /* DREAM DOOR. Tap / hold / long-press on the dock. Voice or paste is only an input.
+     The mapper is still dreamScript. Hold reuses the same Web Speech path. */
   let dreamRec = null, dreamListening = false, dreamHeard = '';
   function speechCtor() { return window.SpeechRecognition || window.webkitSpeechRecognition || null; }
+  function dreamProfile() { return PRO && typeof PRO.dream === 'number' ? PRO.dream : null; }
+  function fillDreamPicks() {
+    const box = document.getElementById('dream-picks');
+    if (!box || box.getAttribute('data-ready')) return;
+    PROFILE.DREAMS.forEach(function (d, i) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'dream-pick'; b.textContent = d.name;
+      b.addEventListener('click', function () { applyDreamAct(dreamPickAct(i)); });
+      box.appendChild(b);
+    });
+    box.setAttribute('data-ready', '1');
+  }
   function stopHear(apply) {
     if (dreamRec) { try { dreamRec.stop(); } catch (e) {} dreamRec = null; }
     dreamListening = false;
     const mic = document.getElementById('dream-mic');
     if (mic) mic.classList.remove('on');
+    const hero = document.getElementById('btn-dream');
+    if (hero) hero.classList.remove('on');
     if (apply && String(dreamHeard || '').trim()) placeHeardDream(dreamHeard);
   }
   function startHear() {
     const C = speechCtor();
     const box = document.getElementById('dream-text');
-    if (!C) { toast('PASTE A DREAM IN THE BOX.'); if (box) box.focus(); return; }
+    if (!C) { toast('PASTE A DREAM IN THE BOX.'); openDream(); if (box) box.focus(); return; }
     stopHear(false);
     dreamHeard = '';
     const rec = new C();
@@ -4156,7 +4237,10 @@ if (typeof module !== 'undefined' && module.exports) {
       if (box) box.value = t;
     };
     rec.onerror = function (ev) {
-      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') toast('THE MIC SAID NO. PASTE A DREAM INSTEAD.');
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+        toast('THE MIC SAID NO. PASTE A DREAM INSTEAD.');
+        openDream();
+      }
     };
     rec.onend = function () {
       dreamListening = false;
@@ -4164,8 +4248,12 @@ if (typeof module !== 'undefined' && module.exports) {
       if (mic) mic.classList.remove('on');
     };
     dreamRec = rec;
-    try { rec.start(); dreamListening = true; document.getElementById('dream-mic').classList.add('on'); }
-    catch (e) { toast('PASTE A DREAM IN THE BOX.'); if (box) box.focus(); }
+    try {
+      rec.start();
+      dreamListening = true;
+      const mic = document.getElementById('dream-mic');
+      if (mic) mic.classList.add('on');
+    } catch (e) { toast('PASTE A DREAM IN THE BOX.'); openDream(); if (box) box.focus(); }
   }
   function closeDream() {
     stopHear(false);
@@ -4173,18 +4261,29 @@ if (typeof module !== 'undefined' && module.exports) {
     if (p) p.classList.remove('on');
   }
   function openDream() {
+    fillDreamPicks();
     drawer.classList.remove('on');
     document.getElementById('gamemenu').classList.remove('on');
     document.getElementById('dreampanel').classList.add('on');
     blip(700);
   }
-  function placeHeardDream(text) {
-    const r = hearDream(world.ref, text);
+  function applyDreamAct(act) {
+    if (!act || act.door === 'picker') {
+      openDream();
+      toast('PICK A DREAM.');
+      return { ok: false, placed: 0, why: 'picker', door: 'picker' };
+    }
+    const src = act.door === 'hearDream' ? act.text : act.dream;
+    const r = runDreamAct(world.ref, act);
     if (r.placed) {
       redrawWorld(); syncCargo(); popCheck(); saveSoon();
       toast('A DREAM TOOK SHAPE ON THE SAND.');
       blip(660); setTimeout(function () { blip(880); }, 100);
       closeDream();
+      if (src !== '' && src != null) {
+        journal.lastDream = rememberDream(journal.lastDream, src);
+        saveJournal(journal);
+      }
       if (r.script && r.script[0]) centreOn(r.script[0].x, r.script[0].y);
     } else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
     else if (r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.');
@@ -4192,6 +4291,50 @@ if (typeof module !== 'undefined' && module.exports) {
     else if (r.why === 'grow') toast('Something is growing there! Build next to it, not on it.');
     else toast('THE DREAM COULD NOT FIND LAND.');
     return r;
+  }
+  function placeHeardDream(text) {
+    return applyDreamAct(dreamPressAct('hold', { heard: text }));
+  }
+  let dreamDockGen = 0;
+  function wireDreamDock(b) {
+    const gen = ++dreamDockGen;
+    let downAt = 0, holdOn = false, longOn = false, holdT = 0, longT = 0;
+    function clearT() { clearTimeout(holdT); clearTimeout(longT); }
+    function up() {
+      if (gen !== dreamDockGen) return;
+      const held = Date.now() - downAt;
+      clearT();
+      b.classList.remove('on');
+      if (longOn) { longOn = false; holdOn = false; return; }
+      if (holdOn) { holdOn = false; stopHear(true); return; }
+      if (dreamPressKind(held) === 'tap') {
+        applyDreamAct(dreamPressAct('tap', { last: journal.lastDream, profileDream: dreamProfile() }));
+      }
+    }
+    function down(e) {
+      e.preventDefault();
+      try { b.setPointerCapture(e.pointerId); } catch (x) {}
+      downAt = Date.now(); holdOn = false; longOn = false; clearT();
+      holdT = setTimeout(function () {
+        if (gen !== dreamDockGen) return;
+        holdOn = true;
+        b.classList.add('on');
+        toast('SAY A DREAM!');
+        blip(700);
+        startHear();
+      }, DREAM_HOLD_MS);
+      longT = setTimeout(function () {
+        if (gen !== dreamDockGen) return;
+        longOn = true; holdOn = false;
+        b.classList.remove('on');
+        stopHear(false);
+        applyDreamAct(dreamPressAct('long'));
+      }, DREAM_LONG_MS);
+    }
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   }
   (function wireDream() {
     const mic = document.getElementById('dream-mic'), box = document.getElementById('dream-text');
@@ -5112,6 +5255,12 @@ if (typeof module !== 'undefined' && module.exports) {
     layPitch, openGames, tapKick, PITCH_W, PITCH_H, pitchGoals, goalScored,
     openDream, closeDream, placeHeardDream, hearDream: (t) => placeHeardDream(t),
     dreamOpen: () => document.getElementById('dreampanel').classList.contains('on'),
+    dreamPressKind, dreamPressAct, dreamPickAct, runDreamAct,
+    lastDream: () => journal.lastDream,
+    tapDream: () => applyDreamAct(dreamPressAct('tap', { last: journal.lastDream, profileDream: dreamProfile() })),
+    holdDream: (t) => applyDreamAct(dreamPressAct('hold', { heard: t })),
+    longDream: () => applyDreamAct(dreamPressAct('long')),
+    pickDream: (c) => applyDreamAct(dreamPickAct(c)),
     world, islandersRef: () => islanders, familyVisitor, giveOrder, keep: KEEP, dog: DOG, keeperName, houses: () => houses(world.ref), popCheck,
     car, flags: () => flags(world.ref), fmtLap, setDrive: (b) => setDrive(b),
     isDriving: () => driving, steer: (v) => { car.steer = v; },
