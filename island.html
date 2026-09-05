@@ -33,7 +33,7 @@
   canvas#world { position:fixed; inset:0; width:100vw; height:100dvh; display:block; touch-action:none; }
   canvas#gl { position:fixed; inset:0; width:100vw; height:100dvh; display:none; touch-action:none; z-index:4; }
   body.walking canvas#gl { display:block; }
-  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #bpbar, body.walking #bpmenu, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail { display:none !important; }
+  body.walking canvas#world, body.walking #bottombar, body.walking #next, body.walking #quest, body.walking #bpbar, body.walking #bpmenu, body.walking #dial, body.walking #mini, body.walking #keeper, body.walking #btn-book, body.walking #btn-story, body.walking #btn-board, body.walking #chasebar, body.walking #drawer, body.walking #rail, body.walking #dreampanel { display:none !important; }
   #walkui { display:none; }
   body.walking #walkui { display:block; }
   body.walking #topbar, body.walking #lineage { z-index:6; }
@@ -84,6 +84,22 @@
     color:var(--ink); font-weight:900; font-size:14px; cursor:pointer; text-align:left; padding:8px 14px; }
   #gamemenu button.gm small { display:block; font-size:10px; font-weight:700; opacity:0.7; letter-spacing:0.04em; margin-top:3px; }
   #gm-close { width:100%; min-height:48px; border-radius:16px; border:3px solid var(--ink); background:var(--dusk); color:var(--cream); font-weight:900; font-size:12px; cursor:pointer; }
+  #dreampanel { position:fixed; left:10px; right:10px; bottom:calc(env(safe-area-inset-bottom,0px) + 84px); z-index:9; display:none;
+    background:rgba(255,243,226,0.98); border:4px solid var(--ink); border-radius:22px; padding:12px; box-shadow:0 8px 0 rgba(20,8,30,0.5); max-height:72dvh; overflow-y:auto; }
+  #dreampanel.on { display:block; }
+  #dreampanel .gm-hd { font-size:11px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:2px 4px 8px; }
+  #dream-help { color:var(--ink); font-weight:700; font-size:13px; line-height:1.35; margin:0 4px 12px; }
+  #dream-mic { display:block; width:100%; min-height:132px; margin-bottom:10px; border-radius:28px; border:4px solid var(--ink);
+    background:linear-gradient(180deg,var(--coral),#C74744); color:var(--cream); font:900 22px/1.1 system-ui; letter-spacing:0.04em;
+    box-shadow:0 6px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #dream-mic.on { background:linear-gradient(180deg,#FF8A70,var(--yellow)); color:var(--ink); }
+  #dream-mic:active { transform:translateY(4px); box-shadow:0 2px 0 rgba(20,8,30,0.5); }
+  #dream-text { display:block; width:100%; min-height:88px; margin-bottom:10px; padding:12px 14px; border:3px solid var(--ink);
+    border-radius:16px; background:#fff; color:var(--ink); font:800 16px/1.35 system-ui; resize:vertical; }
+  #dream-go { display:block; width:100%; min-height:56px; margin-bottom:8px; border-radius:16px; border:3px solid var(--ink);
+    background:var(--yellow); color:var(--ink); font:900 16px system-ui; box-shadow:0 4px 0 rgba(20,8,30,0.45); cursor:pointer; }
+  #dream-close { width:100%; min-height:48px; border-radius:16px; border:3px solid var(--ink); background:var(--dusk); color:var(--cream); font-weight:900; font-size:12px; cursor:pointer; }
+  #btn-dream { background:linear-gradient(180deg,#B784E0,#5C3A6E); color:var(--cream); }
   #drawer .grp { font-size:10px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:6px 4px 4px; }
   #drawer .tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px; margin-bottom:6px; }
   .tool { height:70px; border-radius:14px; border:3px solid var(--ink); background:#fff; color:var(--ink); font-weight:900; font-size:9px; cursor:pointer;
@@ -284,6 +300,12 @@
     #bottombar { gap:12px; padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
     #rail { display:flex; }
     #drawer { left:6vw; right:6vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px 20px 14px; }
+    #dreampanel { left:8vw; right:8vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px; }
+    #dream-help { font-size:18px; }
+    #dream-mic { min-height:180px; font-size:32px; border-radius:36px; border-width:5px; }
+    #dream-text { min-height:120px; font-size:22px; padding:16px 18px; border-radius:20px; }
+    #dream-go { min-height:72px; font-size:22px; border-radius:20px; }
+    #dream-close { min-height:60px; font-size:16px; }
     #drawer .grp { font-size:14px; letter-spacing:0.2em; margin:12px 6px 8px; }
     #drawer .tiles { grid-template-columns:repeat(auto-fill, minmax(116px, 1fr)); gap:16px; margin-bottom:10px; }
     .tool { height:120px; border-radius:20px; font-size:13px; border-width:4px; }
@@ -327,7 +349,7 @@
    background:#FFD447; color:#2A1B3D; border:3px solid #2A1B3D; border-radius:18px; padding:10px 16px;
    font:900 12px system-ui; letter-spacing:0.02em; max-width:88vw; text-align:center; line-height:1.35; cursor:pointer; }
  #chalbar.on { display:block; }
- body.driving #chalbar, body.walking #chalbar { display:none; }
+ body.driving #chalbar, body.walking #chalbar, body.driving #dreampanel { display:none; }
 </style>
 <style>
  #voybtn { position:fixed; right:calc(env(safe-area-inset-right,0px) + 12px); top:calc(env(safe-area-inset-top,0px) + 108px); z-index:6;
@@ -410,6 +432,14 @@
 <div id="bottombar"></div>
 <div id="drawer"></div>
 <div id="gamemenu"><div class="gm-hd">PICK A GAME</div><div id="gm-list"></div><button id="gm-close">BACK TO THE ISLAND</button></div>
+<div id="dreampanel">
+  <div class="gm-hd">SAY A DREAM</div>
+  <p id="dream-help">Hold the big button and talk. Or type or paste a dream in the box. The island already knows how to build it.</p>
+  <button id="dream-mic" type="button">HOLD TO TALK</button>
+  <textarea id="dream-text" rows="3" placeholder="Or paste a dream here" autocomplete="off" autocorrect="on" spellcheck="false"></textarea>
+  <button id="dream-go" type="button">BUILD IT</button>
+  <button id="dream-close" type="button">BACK TO THE ISLAND</button>
+</div>
 <div id="tip"></div>
 <button id="keeper" aria-label="Ask the keeper"></button>
 <div id="toast"></div>
@@ -873,6 +903,14 @@ function applyDream(w, script) {
     placed++;
   }
   return { ok: true, placed: placed, skipped: 0, why: '', encodeLen: encode(w).length };
+}
+/* VOICE / PASTE → DREAM. One door. Trim the heard words, then the same dreamScript
+   mapper, then applyDream. Nothing here invents a second recipe list. */
+function hearDream(w, text) {
+  const heard = String(text == null ? '' : text).trim();
+  const script = dreamScript(heard);
+  const r = applyDream(w, script);
+  return { ok: r.ok, placed: r.placed, skipped: r.skipped, why: r.why, encodeLen: r.encodeLen, heard: heard, script: script };
 }
 function questTable(dream) {
   const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
@@ -1778,7 +1816,7 @@ function stepBall(w, b, dt) {
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
-  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
@@ -2511,6 +2549,7 @@ if (typeof module !== 'undefined' && module.exports) {
     bar.appendChild(dockBtn('btn-walk', 'WALK', '\uD83D\uDEB6', function () { setWalk(true); }));
     bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
     bar.appendChild(dockBtn('btn-games', 'GAMES', '\uD83C\uDFAE', function () { openGames(); }));
+    bar.appendChild(dockBtn('btn-dream', 'DREAM', '\uD83C\uDFA4', function () { openDream(); }));
     bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
   function renderDrawer() {
@@ -2560,7 +2599,7 @@ if (typeof module !== 'undefined' && module.exports) {
     else if (k === '0') setTool(10); else if (k === 'f') setTool(11); else if (k === 'p') setTool(12);
     else if (k === 'e') setTool(-1); else if (k === 'u') document.getElementById('btn-undo').click();
     else if (k === 'd') document.getElementById('btn-drive').click(); else if (k === 'w' && !walking) setWalk(true); else if (k === 's') share();
-    else if (k === 'escape') drawer.classList.remove('on');
+    else if (k === 'escape') { drawer.classList.remove('on'); closeDream(); }
     else return;
     e.preventDefault();
   });
@@ -3240,6 +3279,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (on) {
       if (!glInit()) { toast('This screen cannot show the island in 3D. Try another device.'); return; }
       drawer.classList.remove('on'); tipEl.classList.remove('on');
+      closeDream();
       if (driving) setDrive(false);
       walker = walkSpawn(world.ref); walkDist0 = 0;
       glResize(); if (meshDirty || !meshCount) uploadMesh();
@@ -4083,11 +4123,92 @@ if (typeof module !== 'undefined' && module.exports) {
     CABINETS.forEach(function (nm, i) {
       mk('\uD83D\uDD79\uFE0F ' + nm, 'Play it right now. Points turn into coins.', function () { openCabinet(i, 0); });
     });
-    menu.classList.add('on'); blip(700);
+    menu.classList.add('on'); closeDream(); blip(700);
   }
   document.getElementById('gm-close').addEventListener('click', function () {
     document.getElementById('gamemenu').classList.remove('on'); blip(420);
   });
+  /* DREAM DOOR. Voice or paste is only an input. The mapper is still dreamScript. */
+  let dreamRec = null, dreamListening = false, dreamHeard = '';
+  function speechCtor() { return window.SpeechRecognition || window.webkitSpeechRecognition || null; }
+  function stopHear(apply) {
+    if (dreamRec) { try { dreamRec.stop(); } catch (e) {} dreamRec = null; }
+    dreamListening = false;
+    const mic = document.getElementById('dream-mic');
+    if (mic) mic.classList.remove('on');
+    if (apply && String(dreamHeard || '').trim()) placeHeardDream(dreamHeard);
+  }
+  function startHear() {
+    const C = speechCtor();
+    const box = document.getElementById('dream-text');
+    if (!C) { toast('PASTE A DREAM IN THE BOX.'); if (box) box.focus(); return; }
+    stopHear(false);
+    dreamHeard = '';
+    const rec = new C();
+    rec.lang = 'en-AU';
+    rec.interimResults = true;
+    rec.continuous = true;
+    rec.maxAlternatives = 1;
+    rec.onresult = function (ev) {
+      let t = '';
+      for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript;
+      dreamHeard = t;
+      if (box) box.value = t;
+    };
+    rec.onerror = function (ev) {
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') toast('THE MIC SAID NO. PASTE A DREAM INSTEAD.');
+    };
+    rec.onend = function () {
+      dreamListening = false;
+      const mic = document.getElementById('dream-mic');
+      if (mic) mic.classList.remove('on');
+    };
+    dreamRec = rec;
+    try { rec.start(); dreamListening = true; document.getElementById('dream-mic').classList.add('on'); }
+    catch (e) { toast('PASTE A DREAM IN THE BOX.'); if (box) box.focus(); }
+  }
+  function closeDream() {
+    stopHear(false);
+    const p = document.getElementById('dreampanel');
+    if (p) p.classList.remove('on');
+  }
+  function openDream() {
+    drawer.classList.remove('on');
+    document.getElementById('gamemenu').classList.remove('on');
+    document.getElementById('dreampanel').classList.add('on');
+    blip(700);
+  }
+  function placeHeardDream(text) {
+    const r = hearDream(world.ref, text);
+    if (r.placed) {
+      redrawWorld(); syncCargo(); popCheck(); saveSoon();
+      toast('A DREAM TOOK SHAPE ON THE SAND.');
+      blip(660); setTimeout(function () { blip(880); }, 100);
+      closeDream();
+      if (r.script && r.script[0]) centreOn(r.script[0].x, r.script[0].y);
+    } else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
+    else if (r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.');
+    else if (r.why === 'water') toast('That is the sea! Build on the sand.');
+    else if (r.why === 'grow') toast('Something is growing there! Build next to it, not on it.');
+    else toast('THE DREAM COULD NOT FIND LAND.');
+    return r;
+  }
+  (function wireDream() {
+    const mic = document.getElementById('dream-mic'), box = document.getElementById('dream-text');
+    const go = document.getElementById('dream-go'), back = document.getElementById('dream-close');
+    function holdDown(e) {
+      e.preventDefault();
+      try { mic.setPointerCapture(e.pointerId); } catch (x) {}
+      startHear();
+    }
+    function holdUp() { stopHear(true); }
+    mic.addEventListener('pointerdown', holdDown);
+    mic.addEventListener('pointerup', holdUp);
+    mic.addEventListener('pointercancel', holdUp);
+    mic.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    go.addEventListener('click', function () { placeHeardDream(box.value); });
+    back.addEventListener('click', function () { closeDream(); blip(420); });
+  })();
   /* THE BALL. Derived from the pitch, so it costs the link nothing. */
   let ball = null, ballPitch = null, goalT = 0;
   function ballSync() {
@@ -4442,6 +4563,7 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
     railEl.style.display = on ? 'none' : (BIG ? 'flex' : 'none');
     drawer.classList.remove('on'); tipEl.classList.remove('on');
+    closeDream();
     document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
     document.getElementById('next').style.display = on ? 'none' : '';
     document.getElementById('quest').style.display = on ? 'none' : '';
@@ -4988,6 +5110,8 @@ if (typeof module !== 'undefined' && module.exports) {
 
   window.__ISLAND = { pitch: () => pitchOf(world.ref), ballAt: () => ball, kick: (vx, vy) => kickBall(vx, vy),
     layPitch, openGames, tapKick, PITCH_W, PITCH_H, pitchGoals, goalScored,
+    openDream, closeDream, placeHeardDream, hearDream: (t) => placeHeardDream(t),
+    dreamOpen: () => document.getElementById('dreampanel').classList.contains('on'),
     world, islandersRef: () => islanders, familyVisitor, giveOrder, keep: KEEP, dog: DOG, keeperName, houses: () => houses(world.ref), popCheck,
     car, flags: () => flags(world.ref), fmtLap, setDrive: (b) => setDrive(b),
     isDriving: () => driving, steer: (v) => { car.steer = v; },
