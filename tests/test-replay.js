@@ -205,7 +205,8 @@ const replayQ = t.filter(function (q) { return q.id === 'replay1'; });
 ok('replay1 is appended once', replayQ.length === 1);
 ok('replay1 maps to replayedToday', replayQ[0] && replayQ[0].need === 'replayedToday' && replayQ[0].n === 1);
 ok('replay1 is kid-clear', /watch your blocks/.test(replayQ[0].tell) && /went down again/.test(replayQ[0].done));
-ok('replay1 is last, never inserted', t[t.length - 1].id === 'replay1');
+ok('replay1 stays after sleep1, never inserted', t.map(function (q) { return q.id; }).indexOf('replay1') > t.map(function (q) { return q.id; }).indexOf('sleep1')
+  && t[0].id !== 'replay1');
 ok('sleep1 is still there', t.filter(function (q) { return q.id === 'sleep1'; }).length === 1);
 ok('replay1 is met by one watch', questMet(replayQ[0], { replayedToday: 1 }) && !questMet(replayQ[0], { replayedToday: 0 }));
 ok('houses3 is still first without a dream', t[0].id === 'houses3');
@@ -223,7 +224,7 @@ for (let k = 0; k < 24; k++) {
   if (k && key === 'tall') break;
   ideaKeys.push(key);
 }
-ok('replay hint is appended to the rotating ideas', ideaKeys.indexOf('replay') === ideaKeys.length - 1, ideaKeys.join());
+ok('replay hint stays after chase, never inserted', ideaKeys.indexOf('replay') === ideaKeys.indexOf('chase') + 1, ideaKeys.join());
 ok('replay hint did not steal an older slot', ideaKeys.indexOf('compass') === 5 && ideaKeys.indexOf('seed') === 6);
 ok('replay hint is one short sentence', nextThing(Object.assign({ tick: ideaKeys.indexOf('replay') }, day)).line.length < 90
   && nextThing(Object.assign({ tick: ideaKeys.indexOf('replay') }, day)).line.indexOf('\n') === -1);
