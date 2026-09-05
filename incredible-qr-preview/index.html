@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#1B2A4A">
+<meta name="robots" content="noindex,nofollow">
+<title>PREVIEW · PORTABOOM QR boom-reveal</title>
+<meta name="description" content="PREVIEW only. Incredible PORTABOOM PB4000 QR boom-reveal. Tap the boom to flatten the navy module grid into a scan plane. Not a live send.">
+<style>
+  :root {
+    --soft: #F4F6F9;
+    --paper: #FFFFFF;
+    --navy: #1B2A4A;
+    --orange: #EE7202;
+    --ink: #202020;
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: var(--soft); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden; overscroll-behavior: none;
+  }
+  canvas#stage {
+    position: fixed; inset: 0; width: 100%; height: 100dvh;
+    display: block; touch-action: none; background: var(--soft);
+  }
+  #chrome {
+    position: fixed; inset: 0; pointer-events: none;
+    padding: calc(var(--sat) + 12px) calc(var(--sar) + 12px) calc(var(--sab) + 14px) calc(var(--sal) + 12px);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  #preview-badge {
+    pointer-events: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--orange); color: var(--paper);
+    border-radius: 999px; padding: 8px 14px;
+    font-weight: 800; font-size: 12px; letter-spacing: 0.14em;
+    text-transform: uppercase; box-shadow: 0 6px 18px rgba(27,42,74,0.18);
+  }
+  #preview-badge i {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--paper);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.28);
+  }
+  #product-pill {
+    pointer-events: auto;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--paper); color: var(--navy);
+    border: 1px solid rgba(27,42,74,0.12);
+    border-radius: 999px; padding: 8px 12px 8px 8px;
+    text-decoration: none; font-weight: 700; font-size: 12px;
+    box-shadow: 0 8px 22px rgba(27,42,74,0.10);
+    max-width: min(58vw, 240px);
+  }
+  #product-pill span.mark {
+    background: var(--navy); color: var(--paper);
+    border-radius: 999px; padding: 5px 8px; font-size: 10px; letter-spacing: 0.08em;
+  }
+  #product-pill span.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #copy { pointer-events: none; text-align: left; max-width: 18rem; }
+  #copy h1 {
+    margin: 0 0 6px; font-size: clamp(22px, 6vw, 30px); letter-spacing: -0.03em;
+    color: var(--navy); line-height: 1.05;
+  }
+  #hint {
+    margin: 0; color: var(--ink); font-size: 14px; line-height: 1.4; opacity: 0.78;
+  }
+  #status {
+    margin: 8px 0 0; font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--orange);
+  }
+  #fail {
+    display: none; position: fixed; inset: 0; place-items: center;
+    background: var(--soft); color: var(--navy); padding: 28px; text-align: center;
+  }
+  #fail.show { display: grid; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="stage" aria-label="PORTABOOM QR boom-reveal preview"></canvas>
+<div id="chrome">
+  <div class="row">
+    <div id="preview-badge"><i></i> Preview</div>
+    <a id="product-pill" href="https://www.trafficaccess.com.au/portaboom-product/portaboom-pb4000-series/" rel="noopener noreferrer">
+      <span class="mark">PB4000</span>
+      <span class="name">PORTABOOM series</span>
+    </a>
+  </div>
+  <div id="copy">
+    <h1>QR boom-reveal</h1>
+    <p id="hint">Tap the boom. Navy modules flatten to a scan plane.</p>
+    <p id="status">Preview only. Not a send.</p>
+  </div>
+</div>
+<div id="fail">
+  <div>
+    <strong>WebGL is needed for this preview.</strong>
+    <p>Open this page on an iPhone Safari or Chrome tab that allows WebGL.</p>
+  </div>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
