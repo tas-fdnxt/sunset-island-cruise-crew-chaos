@@ -126,9 +126,13 @@ def run(pw, w, hgt, label):
     for sel, name in [('#topbar', 'topbar'), ('#title-badge', 'title chip'),
                       ('#cargo', 'cargo chip'), ('#mini', 'mini map'),
                       ('#btn-book', 'book'), ('#btn-story', 'story'),
-                      ('#voybtn', 'voyage')]:
+                      ('#voybtn', 'voyage'), ('#lookchip', 'LOOK chip')]:
         box = measure(pg, sel)
         ck(label + ' ' + name + ' clears the sides', inset_ok(box, vw, vh), box)
+    look = measure(pg, '#lookchip')
+    ck(label + ' LOOK is a kid target', look and look['w'] >= 76 and look['h'] >= 76, look)
+    rad = pg.evaluate("parseFloat(getComputedStyle(document.getElementById('lookchip')).borderRadius)")
+    ck(label + ' LOOK has a soft corner', rad >= 18, rad)
 
     # one toast only. If the morning boat already spoke, leave it.
     if not measure(pg, '#toast'):
