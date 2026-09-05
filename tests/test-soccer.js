@@ -19,6 +19,9 @@ if (bp) {
 
 const HAS = typeof C.pitchOf === 'function' && typeof C.ballStart === 'function' && typeof C.goalScored === 'function' && typeof C.stepBall === 'function';
 ck('pitch functions exported', HAS, Object.keys(C).length);
+ck('walk kick uses the same pitch, not a second one', typeof C.kickTowardGoal === 'function' && typeof C.ballNudge === 'function' && typeof C.walkKick === 'function', 0);
+ck('walk reach is huge for a child', C.BALL_WALK_REACH >= 1.3 && C.BALL_WALK_REACH <= 1.8, C.BALL_WALK_REACH);
+ck('car reach is unchanged', C.BALL_CAR_REACH === 1.1, C.BALL_CAR_REACH);
 
 if (HAS && bp) {
   const w = C.makeWorld();
@@ -56,6 +59,29 @@ if (HAS && bp) {
   ck('a ball in the mouth scores', C.goalScored(p, inGoal) !== null, 0);
   ck('a ball in the middle does not', C.goalScored(p, { x: b0.x, y: b0.y }) === null, 0);
   ck('a goal names which end', ['north','south','east','west'].indexOf(String(C.goalScored(p, inGoal))) >= 0 || C.goalScored(p, inGoal) === 1 || C.goalScored(p, inGoal) === 0, C.goalScored(p, inGoal));
+
+  /* walk / 3D: same ball, same goals. A tap aims at the far mouth. A foot shove is the car nudge. */
+  const aim = C.kickTowardGoal(p, b0);
+  ck('a tap from the spot aims at a goal', !!aim && typeof aim.vx === 'number' && typeof aim.vy === 'number', aim);
+  ck('the tap kick is hard enough to score', aim && Math.hypot(aim.vx, aim.vy) >= 6, aim);
+  let aimed = { x: b0.x, y: b0.y, vx: aim.vx, vy: aim.vy };
+  let scored = null;
+  for (let i = 0; i < 240 && !scored; i++) { aimed = C.stepBall(w, aimed, 1/60); scored = C.goalScored(p, aimed); }
+  ck('that same kick still scores', scored === 'west' || scored === 'east', scored);
+  ck('west-half aims east', C.kickTowardGoal(p, { x: p.x + 1.5, y: b0.y }).vx > 0, 0);
+  ck('east-half aims west', C.kickTowardGoal(p, { x: p.x + C.PITCH_W - 1.5, y: b0.y }).vx < 0, 0);
+  ck('no pitch, no aim', C.kickTowardGoal(null, b0) === null, 0);
+
+  const still = C.walkKick({ x: b0.x - 0.8, y: b0.y, z: 0 }, b0, { fwd: 0, side: 0 });
+  ck('standing still does not kick', still === null, still);
+  const far = C.walkKick({ x: b0.x - 3, y: b0.y, z: 0 }, b0, { fwd: 1, side: 0 });
+  ck('too far does not kick', far === null, far);
+  const foot = C.walkKick({ x: b0.x - 0.8, y: b0.y, z: 0 }, b0, { fwd: 1, side: 0 });
+  ck('walking into the ball shoves it away', foot && foot.vx > 2, foot);
+  ck('the shove is along the same pitch plane', foot && Math.abs(foot.vy) < 1, foot);
+  const carN = C.ballNudge({ x: b0.x - 0.6, y: b0.y }, b0, C.BALL_CAR_REACH, 4);
+  ck('the car nudge is the same helper', carN && carN.vx > 0, carN);
+  ck('a miss is not a second pitch', C.ballNudge({ x: b0.x - 3, y: b0.y }, b0, C.BALL_CAR_REACH, 4) === null, 0);
 }
 
 /* it reaches the rest of the game through one real stat */
