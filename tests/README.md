@@ -61,6 +61,10 @@ Ollie quotes. Pretty modes, day/night mood, and soft corners MAY be claimed beca
 shipped in the same PR. Overnight, build replay, a bigger dock, and a synth suite still
 may not.
 
+`robot-carousel8.py` drives `ollie-update-8.html`: nine cards, four real photos, no invented
+Ollie quotes. The synth suite and the bigger dock MAY be claimed because they shipped in
+the same PR. Pretty modes, overnight, and build replay may be mentioned as already live.
+
 `robot-pretty.py` drives the live LOOK chip on both editions: tap cycles soft / warm / crisp,
 hold peeks day or night on the living sky, long-press opens the sheet. PLAY and DREAM stay
 the dock heroes. Nothing new rides in the share link.
