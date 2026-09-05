@@ -1,8 +1,8 @@
-// PRETTY MODES + DAY/NIGHT + SOFT CORNERS.
-// LOOK is a kid-clear control, not a dock hero. Tap cycles soft / warm / crisp.
-// Hold peeks day or night on the existing skyAt clock. Long-press opens the sheet.
-// Sleep overnight still brings morning. Nothing new rides in #i=.
-// Warmth stays a colour mix. No Three rewrite. No lock. No sell.
+// PRETTY PUNCH. Soft must not equal the default island. Default look is WARM.
+// Warm / Crisp / Night are unmistakable at a glance. LOOK is a labeled
+// sand chip, not a third dock hero. Hold flips day or night in one peek.
+// Colour mixes and a CSS tint only. Nothing new rides in #i=.
+// No Three rewrite. No lock. No sell.
 const { ISLE, PROFILE, makeWorld, place, encode, decode, buildHash, parseHash,
   chapter, questTable, pickQuest, questMet, bedtimeQuestion, nextThing,
   DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind,
@@ -10,10 +10,10 @@ const { ISLE, PROFILE, makeWorld, place, encode, decode, buildHash, parseHash,
   SLEEP_HOLD_MS, SLEEP_LONG_MS, runSleepAct, sleepPressAct,
   PHONE_CAP, dockSpan, dockFitsPhone, chromeEdge, warmRgb,
   skyAt, dayHash, dayKey, mixHex, hexRGB,
-  PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES,
+  PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES, PRETTY_DEFAULT,
   prettyPressKind, prettyPressAct, runPrettyAct,
   prettyOf, prettyNextOf, prettyTimeOf, prettyPeekTime, prettyClockHour,
-  prettyMixRgb, prettySky, prettyLine, prettyAfterSleep, chromeCorner
+  prettyMixRgb, prettySky, prettyLine, prettyAfterSleep, prettyDist, prettyNightMix, chromeCorner
 } = require('./isle-core.js');
 let pass = 0, fail = 0;
 function ok(name, cond, info) { if (cond) { pass++; } else { fail++; console.log('FAIL', name, info || ''); } }
@@ -52,9 +52,11 @@ ok('only three kinds exist', ['tap', 'hold', 'long'].indexOf(prettyPressKind(0))
   && ['tap', 'hold', 'long'].indexOf(prettyPressKind(400)) !== -1
   && ['tap', 'hold', 'long'].indexOf(prettyPressKind(1200)) !== -1);
 
-ok('empty mode falls to soft', prettyOf('') === 'soft' && prettyOf(null) === 'soft');
-ok('unknown mode falls to soft', prettyOf('locked') === 'soft' && prettyOf(99) === 'soft');
+ok('the default look is warm', PRETTY_DEFAULT === 'warm');
+ok('empty mode falls to warm', prettyOf('') === 'warm' && prettyOf(null) === 'warm');
+ok('unknown mode falls to warm', prettyOf('locked') === 'warm' && prettyOf(99) === 'warm');
 ok('live modes stay themselves', prettyOf('warm') === 'warm' && prettyOf('crisp') === 'crisp' && prettyOf('soft') === 'soft');
+ok('a missing journal look opens on warm', prettyOf(undefined) === 'warm');
 ok('soft cycles to warm', prettyNextOf('soft') === 'warm');
 ok('warm cycles to crisp', prettyNextOf('warm') === 'crisp');
 ok('crisp cycles back to soft', prettyNextOf('crisp') === 'soft');
@@ -125,7 +127,8 @@ ok('a missing act is a none door', runPrettyAct(null).ok === false && runPrettyA
 // LOOK never steals PLAY or DREAM on the dock
 ok('PLAY stays the dock hero', PHONE_CAP.PLAY_W >= 80);
 ok('DREAM stays the second hero', PHONE_CAP.DREAM_W >= 76);
-ok('LOOK is a kid target, not a dock hero width', PHONE_CAP.LOOK_W >= 76 && PHONE_CAP.LOOK_H >= 76 && PHONE_CAP.LOOK_W < PHONE_CAP.PLAY_W + 8);
+ok('LOOK is a kid-can-not-miss sand chip', PHONE_CAP.LOOK_W >= 92 && PHONE_CAP.LOOK_H >= 92);
+ok('LOOK stays smaller than the PLAY hero', PHONE_CAP.LOOK_W < PHONE_CAP.PLAY_W && PHONE_CAP.LOOK_W <= PHONE_CAP.PLAY_W - 16);
 ok('LOOK is not a third dock hero slot', PHONE_CAP.LOOK_DOCK == null);
 ok('dock span is unchanged by LOOK', dockSpan(false) ===
   PHONE_CAP.DOCK_PAD * 2 + 7 * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
@@ -183,6 +186,32 @@ ok('the three looks are visibly different', (function () {
   const c = prettyMixRgb(a, 'crisp').join();
   return s !== w && w !== c && s !== c;
 })());
+ok('prettyDist measures a colour gap', prettyDist([0, 0, 0], [1, 0, 0]) === 1);
+ok('prettyDist leaves a missing colour at zero', prettyDist(null, [1, 1, 1]) === 0);
+ok('soft is not the raw island', (function () {
+  const raw = [0.42, 0.48, 0.55];
+  return prettyDist(prettyMixRgb(raw, 'soft'), raw) >= 0.28;
+})());
+ok('warm is not soft', (function () {
+  const raw = [0.42, 0.48, 0.55];
+  return prettyDist(prettyMixRgb(raw, 'warm'), prettyMixRgb(raw, 'soft')) >= 0.22;
+})());
+ok('crisp is not warm', (function () {
+  const raw = [0.42, 0.48, 0.55];
+  return prettyDist(prettyMixRgb(raw, 'crisp'), prettyMixRgb(raw, 'warm')) >= 0.22;
+})());
+ok('crisp is not soft', (function () {
+  const raw = [0.42, 0.48, 0.55];
+  return prettyDist(prettyMixRgb(raw, 'crisp'), prettyMixRgb(raw, 'soft')) >= 0.18;
+})());
+ok('warm leans peach, not grey', (function () {
+  const w = prettyMixRgb([0.45, 0.45, 0.45], 'warm');
+  return w[0] > w[2] + 0.12 && w[0] > w[1];
+})());
+ok('crisp leans cool, not peach', (function () {
+  const c = prettyMixRgb([0.45, 0.45, 0.45], 'crisp');
+  return c[2] > c[0] + 0.06;
+})());
 ok('pretty mixes stay in 0..1', ['soft', 'warm', 'crisp'].every(function (m) {
   return prettyMixRgb([1, 0, 0], m).every(function (n) { return n >= 0 && n <= 1; });
 }));
@@ -199,6 +228,42 @@ ok('prettySky tints the top colour', (function () {
   return warm.top !== raw.top && /rgb\(/.test(warm.top);
 })());
 ok('prettySky leaves a missing sky alone', prettySky(null, 'soft') === null);
+ok('prettyNightMix leaves day alone', prettyNightMix([0.5, 0.5, 0.5], 0.1).join() === '0.5,0.5,0.5');
+ok('prettyNightMix crushes a night colour', (function () {
+  const a = [0.7, 0.6, 0.5];
+  const n = prettyNightMix(a, 1);
+  return n[0] < a[0] - 0.12 && n[2] > n[0];
+})());
+function skyRgb(c) {
+  const m = /(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(String(c));
+  return m ? [m[1] / 255, m[2] / 255, m[3] / 255] : null;
+}
+ok('soft day sky is not the raw sky', (function () {
+  const raw = skyAt(14);
+  const soft = prettySky(raw, 'soft');
+  return prettyDist(skyRgb(soft.top), skyRgb(raw.top)) >= 0.18;
+})());
+ok('warm day sky is not the soft day sky', (function () {
+  const raw = skyAt(14);
+  return prettyDist(skyRgb(prettySky(raw, 'warm').top), skyRgb(prettySky(raw, 'soft').top)) >= 0.16;
+})());
+ok('crisp day sky is not the warm day sky', (function () {
+  const raw = skyAt(14);
+  return prettyDist(skyRgb(prettySky(raw, 'crisp').top), skyRgb(prettySky(raw, 'warm').top)) >= 0.16;
+})());
+ok('night sky is unmistakably dark', (function () {
+  const night = prettySky(skyAt(2), 'warm');
+  const rgb = skyRgb(night.top);
+  const lum = rgb[0] * 0.3 + rgb[1] * 0.5 + rgb[2] * 0.2;
+  return night.night > 0.8 && !!night.moon && !night.sun && lum < 0.28 && rgb[2] > rgb[0];
+})());
+ok('day sky stays bright next to night', (function () {
+  const day = prettySky(skyAt(14), 'warm');
+  const night = prettySky(skyAt(2), 'warm');
+  const dl = skyRgb(day.top)[0] * 0.3 + skyRgb(day.top)[1] * 0.5 + skyRgb(day.top)[2] * 0.2;
+  const nl = skyRgb(night.top)[0] * 0.3 + skyRgb(night.top)[1] * 0.5 + skyRgb(night.top)[2] * 0.2;
+  return day.sun && !day.moon && dl > nl + 0.22;
+})());
 ok('mixHex still works', mixHex('#000000', '#FFFFFF', 0.5) === 'rgb(128,128,128)');
 ok('hexRGB still works', hexRGB('#FFFFFF')[0] === 1);
 

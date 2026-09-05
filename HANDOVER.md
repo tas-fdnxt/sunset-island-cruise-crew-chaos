@@ -17,7 +17,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 
 | File | sha256 (first 8) | What it is |
 |---|---|---|
-| `island.html` | `e3281faf` | Synth suite + bigger kid dock. Tested on this branch. Not live until merge. |
+| `island.html` | `ff4cb285` | Punch LOOK. Tested on this branch. Not live until merge. |
 | `arcade.html` | `bc0420d9` | OLLIE'S. Do not edit without Fabian asking. |
 | `storybook.html` | `bef56030` | OLLIE'S. Do not edit without Fabian asking. |
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
@@ -28,6 +28,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 | `ollie-update-6.html` | `86572075` | Carousel six, build replay only. |
 | `ollie-update-7.html` | `afe7c68b` | Carousel seven, pretty modes + day/night + soft corners only. |
 | `ollie-update-8.html` | `46626217` | Carousel eight, synth suite + bigger dock only. |
+| `ollie-update-9.html` | `285109ac` | Carousel nine, punch LOOK only. Tested on this branch. |
 
 ```bash
 B=https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos
@@ -65,7 +66,7 @@ Nothing ships that has not been through all six rungs, in order:
 5. Hygiene: zero console errors, zero external requests
 6. Live curl sha match after deploy, plus proof Ollie's files are unchanged
 
-**Current state: 35 suites, including `test-synth` (72), `test-dock` (47), `test-pretty` (116), all green.**
+**Current state: 35 suites, including `test-pretty` (134), `test-synth` (72), `test-dock` (47), all green.**
 
 | Suite | Checks | Suite | Checks |
 |---|---|---|---|
@@ -82,11 +83,12 @@ Nothing ships that has not been through all six rungs, in order:
 | test-compass | 20 | test-poster | 18 |
 | test-sync | 18 | test-drive | 12 |
 | test-houses | 8 | test-overnight | 110 |
-| test-replay | 104 | test-pretty | 116 |
+| test-replay | 104 | test-pretty | 134 |
 | test-synth | 72 | test-dock | 47 |
 
-Robots: `robot-synth` (64), `robot-dock` (46), `robot-pretty` (58), `robot-chrome` (76), `robot-replay` (44),
-`robot-overnight` (46), `robot-soccer` (74), `robot-carousel8` (synth + bigger dock only),
+Robots: `robot-pretty` (78, punch LOOK), `robot-synth` (64), `robot-dock` (48), `robot-chrome` (78),
+`robot-replay` (44), `robot-overnight` (46), `robot-soccer` (74),
+`robot-carousel9` (53, punch LOOK only), `robot-carousel8` (synth + bigger dock only),
 `robot-carousel7` (51, pretty + day/night + corners only),
 `robot-carousel6` (51, build replay only), `robot-carousel5` (overnight + NPC memory),
 `robot-carousel4`, `robot-carousel3`, plus `robot-carousel2`, `robot-carousel`, `robot-poster`, `robot-challenge`,
@@ -176,6 +178,14 @@ the living `skyAt` clock. Long-press opens the picker. Sleep overnight still wak
 morning. Colour mixes and a CSS tint, not a Three rewrite. Soft corners on LOOK, dock,
 and chips. Nothing new in `#i=`. Quest `pretty1` is appended. No lock. No sell.
 
+**Punch LOOK.** Soft was the default and too quiet, so a hard refresh still looked like
+the old island. Default open is now WARM. Soft, Warm and Crisp use stronger tints.
+Night is a deep sky with stars, not a scavenger hunt. LOOK is a labeled high-contrast
+sand chip with instant tap feedback. PLAY and DREAM stay the oversized heroes from
+PR #11. Hold LOOK still flips day or night in one peek. Nothing new in `#i=`.
+Worst-case link stayed 1262. No lock. No sell. Carousel nine may claim this punch.
+Carousels one to eight do not.
+
 **Carousel two**, `ollie-update-2.html`, 11 cards, five real screenshots of the live build baked in as a
 webp sprite sheet, same design language as carousel one.
 **Carousel four**, `ollie-update-4.html`, nine cards, four real photos: the walk ball, walk mode,
@@ -187,13 +197,16 @@ the picker sheet, and the tablet. Claims only pretty modes + day/night + soft co
 **Carousel eight**, `ollie-update-8.html`, nine cards, four real photos: PLAY and DREAM
 on a phone, the dock crop, SOUND on the look sheet, and the tablet. Claims only the
 synth suite and the bigger dock. Pretty, overnight, and replay are named as already live.
+**Carousel nine**, `ollie-update-9.html`, nine cards, four real photos: WARM on a hard
+refresh, SOFT after a cycle, NIGHT with stars, and LOOK on a tablet. Claims only the
+punch. Synth and the bigger dock are named as already live.
 
 **Synth suite + bigger kid dock.** Seven WebAudio voices: place, erase, dream, sleep,
 look, goal, toast. Mute lives on the look sheet and silences every one. Tools stay
 about 2cm. PLAY is 120 and DREAM is 112 on a phone, so a hard refresh shows the jump
 against live main (PLAY 84, DREAM 80). LOOK stays sand-side. Nothing new in `#i=`.
-Worst-case link stayed 1262. No lock. No sell. PR #11 is merge-ready. Do not merge
-from a sandbox. Do not expand this brick into a LOOK punch.
+Worst-case link stayed 1262. No lock. No sell. PR #11 merged. The LOOK punch is
+this brick. Do not merge from a sandbox.
 
 ---
 
@@ -226,9 +239,13 @@ from a sandbox. Do not expand this brick into a LOOK punch.
   Carousel six may claim it. Carousels one to five do not.
 - **Pretty modes + day/night + soft corners are live.** Tap LOOK.
   Soft, warm, or crisp. Hold for day or night. Soft corners. Carousel seven may claim
-  it. Carousels one to six do not. Carousel eight names it as already live.
-- **Synth suite + bigger dock are live on this branch.** Seven voices. PLAY and DREAM
+  the first pretty brick. Carousels one to six do not. Carousel eight names it as
+  already live. Carousel nine claims the punch only.
+- **Synth suite + bigger dock are live.** Seven voices. PLAY and DREAM
   scream. Carousel eight may claim it. Carousels one to seven do not.
+- **Punch LOOK is live on this branch.** Default WARM. Soft is not the old island.
+  Night has stars. LOOK is labeled. Carousel nine may claim it. Carousels one to
+  eight do not.
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **Real device test with Ollie on an actual iPad.** Still never done. This is not code, it is watching him.

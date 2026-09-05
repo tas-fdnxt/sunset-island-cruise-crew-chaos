@@ -1,10 +1,11 @@
-# PRETTY MODES + DAY/NIGHT + SOFT CORNERS. Real Chromium.
-# LOOK is a kid-clear control, not a dock hero. Tap cycles soft / warm / crisp.
-# Hold peeks day or night on the living sky. Long-press opens the sheet.
-# Sleep overnight still wakes into morning. PLAY and DREAM stay the heroes.
-# No lock. No sell. Nothing new in the share link.
+# PRETTY PUNCH. Real Chromium. Default look is WARM. Soft is not the
+# default island. Warm / Crisp / Night are unmistakable at a glance.
+# LOOK is a labeled sand chip, not a third dock hero. Hold flips the sky.
+# PLAY and DREAM stay the heroes. No lock. No sell. Nothing new in the share link.
 import os, sys
 from playwright.sync_api import sync_playwright
+from PIL import Image
+import io
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8099/island.html'
 SHOT = os.environ.get('PRETTY_SHOT', '/tmp/pretty')
@@ -68,29 +69,62 @@ def run(pw, url, label, w, hgt):
     ck(label + ' DREAM stays on the dock', pg.locator('#btn-dream').count() == 1)
     ck(label + ' LOOK is not a third dock hero', pg.locator('#btn-look').count() == 0)
     chip = pg.locator('#lookchip').bounding_box()
-    ck(label + ' LOOK is a kid target', chip and chip['width'] >= 76 and chip['height'] >= 76, chip)
+    ck(label + ' LOOK is a kid-can-not-miss chip', chip and chip['width'] >= 90 and chip['height'] >= 90, chip)
     ck(label + ' LOOK sits on the island, not the dock', pg.evaluate("document.getElementById('lookchip').parentElement.id!=='bottombar'"))
     rad = pg.evaluate("parseFloat(getComputedStyle(document.getElementById('lookchip')).borderRadius)")
     ck(label + ' LOOK has a soft corner', rad >= 18, rad)
     dock_rad = pg.evaluate("parseFloat(getComputedStyle(document.querySelector('#bottombar .dock')).borderRadius)")
     ck(label + ' dock corners are soft', dock_rad >= 16, dock_rad)
+    chip_txt = pg.locator('#lookchip').inner_text().upper()
+    ck(label + ' LOOK is labeled LOOK', 'LOOK' in chip_txt, chip_txt)
+    ck(label + ' LOOK names the live look', 'WARM' in chip_txt, chip_txt)
+
+    def sky_rgb():
+        png = pg.screenshot()
+        im = Image.open(io.BytesIO(png)).convert('RGB')
+        w, h = im.size
+        return list(im.getpixel((int(w * 0.50), int(h * 0.38))))
+
+    def star_hits():
+        png = pg.screenshot()
+        im = Image.open(io.BytesIO(png)).convert('RGB')
+        w, h = im.size
+        hits = 0
+        for y in range(int(h * 0.04), int(h * 0.28), 6):
+            for x in range(int(w * 0.08), int(w * 0.92), 8):
+                r, g, b = im.getpixel((x, y))
+                if r > 200 and g > 190 and b > 170 and (r + g + b) > 600:
+                    hits += 1
+        return hits
+
+    def rgb_dist(a, b):
+        return abs(a[0]-b[0]) + abs(a[1]-b[1]) + abs(a[2]-b[2])
 
     start = pg.evaluate("window.__ISLAND.prettyMode()")
-    ck(label + ' the first look is soft', start == 'soft', start)
-    pg.evaluate("window.__ISLAND.tapPretty()")
-    pg.wait_for_timeout(350)
-    mid = pg.evaluate("window.__ISLAND.prettyMode()")
-    ck(label + ' tap cycles to warm', mid == 'warm', mid)
+    ck(label + ' the first look is warm', start == 'warm', start)
     ck(label + ' warm still lights the old WARM flag', pg.evaluate("window.__ISLAND.walkPretty()===true"))
+    pg.wait_for_timeout(220)
+    warm_sky = sky_rgb()
+    ck(label + ' default warm sky leans peach', warm_sky[0] > warm_sky[2] + 12, warm_sky)
     shot(pg, '%s-warm' % label.replace(' ', '-'))
     pg.evaluate("window.__ISLAND.tapPretty()")
-    pg.wait_for_timeout(280)
+    pg.wait_for_timeout(350)
     crisp = pg.evaluate("window.__ISLAND.prettyMode()")
     ck(label + ' tap cycles to crisp', crisp == 'crisp', crisp)
+    crisp_sky = sky_rgb()
+    ck(label + ' crisp sky is not warm', rgb_dist(crisp_sky, warm_sky) >= 40, (warm_sky, crisp_sky))
+    shot(pg, '%s-crisp' % label.replace(' ', '-'))
     pg.evaluate("window.__ISLAND.tapPretty()")
     pg.wait_for_timeout(280)
-    ck(label + ' tap cycles back to soft', pg.evaluate("window.__ISLAND.prettyMode()") == 'soft')
+    ck(label + ' tap cycles to soft', pg.evaluate("window.__ISLAND.prettyMode()") == 'soft')
+    soft_sky = sky_rgb()
+    ck(label + ' soft sky is not warm', rgb_dist(soft_sky, warm_sky) >= 40, (warm_sky, soft_sky))
+    ck(label + ' soft sky is not crisp', rgb_dist(soft_sky, crisp_sky) >= 28, (soft_sky, crisp_sky))
     shot(pg, '%s-soft' % label.replace(' ', '-'))
+    pg.evaluate("window.__ISLAND.tapPretty()")
+    pg.wait_for_timeout(280)
+    ck(label + ' tap cycles back to warm', pg.evaluate("window.__ISLAND.prettyMode()") == 'warm')
+    ck(label + ' chip flashes the new look', 'WARM' in pg.locator('#lookchip').inner_text().upper())
 
     pg.evaluate("window.__ISLAND.setHour(14)")
     pg.evaluate("window.__ISLAND.setPrettyTime('auto')")
@@ -103,6 +137,12 @@ def run(pw, url, label, w, hgt):
     night_sky = pg.evaluate("(()=>{const s=window.__ISLAND.lookSky(); return s && s.night > 0.8 && !!s.moon;})()")
     ck(label + ' hold from day peeks night', night == 'night', night)
     ck(label + ' the painted sky is night', night_sky is True, night_sky)
+    night_rgb = sky_rgb()
+    night_lum = night_rgb[0] * 0.3 + night_rgb[1] * 0.5 + night_rgb[2] * 0.2
+    ck(label + ' night sky is dark at a glance', night_lum < 90, (night_rgb, night_lum))
+    stars = star_hits()
+    ck(label + ' night sky shows stars', stars >= 6, stars)
+    ck(label + ' chip names NIGHT after the hold', 'NIGHT' in pg.locator('#lookchip').inner_text().upper())
     shot(pg, '%s-night' % label.replace(' ', '-'))
     pg.evaluate("window.__ISLAND.holdPretty()")
     pg.wait_for_timeout(300)

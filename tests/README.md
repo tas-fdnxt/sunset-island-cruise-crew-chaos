@@ -65,9 +65,14 @@ may not.
 Ollie quotes. The synth suite and the bigger dock MAY be claimed because they shipped in
 the same PR. Pretty modes, overnight, and build replay may be mentioned as already live.
 
-`robot-pretty.py` drives the live LOOK chip on both editions: tap cycles soft / warm / crisp,
-hold peeks day or night on the living sky, long-press opens the sheet. PLAY and DREAM stay
-the dock heroes. Nothing new rides in the share link.
+`robot-carousel9.py` drives `ollie-update-9.html`: nine cards, four real photos, no invented
+Ollie quotes. Punch LOOK MAY be claimed: WARM is the default, Soft is not the old island,
+Night has stars, LOOK is labeled. Synth suite and bigger dock may be named as already live.
+
+`robot-pretty.py` drives the live LOOK chip on both editions. Default look is WARM.
+Tap cycles warm / crisp / soft. Hold peeks a dark night sky with stars. Long-press
+opens the sheet. LOOK is a labeled sand chip. PLAY and DREAM stay the dock heroes.
+Nothing new rides in the share link.
 
 `robot-synth.py` drives the seven-voice synth suite on both editions: place, erase, dream,
 sleep, look, goal, toast. Mute silences every one. SOUND lives on the look sheet. No audio
@@ -168,9 +173,10 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   Tap stays undo. Hold peels the trailing place ops and places them back. Encode
   matches. Quest `replay1` appended. Nothing new in `#i=`. PLAY and DREAM stay
   the dock heroes. No lock. No sell.
-- **test-pretty.js** Pretty modes + day/night + soft corners. LOOK tap / hold / long-press
-  cycles soft / warm / crisp, peeks the living sky, and opens the sheet. Colour mixes
-  only. Quest `pretty1` appended. Nothing new in `#i=`. PLAY and DREAM stay the dock
+- **test-pretty.js** Punch LOOK. Default look is WARM. Soft is not the raw island.
+  Warm / Crisp / Night have a colour gap you can measure. LOOK tap / hold / long-press
+  cycles the looks, peeks the living sky, and opens the sheet. Colour mixes only.
+  Quest `pretty1` appended. Nothing new in `#i=`. PLAY and DREAM stay the dock
   heroes. No lock. No sell.
 - **test-synth.js** Seven kid-safe synth voices (place, erase, dream, sleep, look, goal,
   toast). Mute silences every one. No files. Nothing new in `#i=`. PLAY and DREAM stay
