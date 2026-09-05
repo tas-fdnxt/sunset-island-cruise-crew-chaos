@@ -2674,7 +2674,7 @@ if (typeof module !== 'undefined' && module.exports) {
     b.innerHTML = '<span class="ic">' + icon + '</span>' + label;
     b.addEventListener('click', onClick); return b;
   }
-  let dreamDockGen = 0, playDockGen = 0;
+  let dreamDockGen = 0, playDockGen = 0, journalReady = false;
   function dreamDockBtn() {
     const b = document.createElement('button');
     b.className = 'dock'; b.id = 'btn-dream'; b.type = 'button';
@@ -2686,7 +2686,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function paintPlayBtn(b) {
     const el = b || document.getElementById('btn-play');
     if (!el) return;
-    const id = playLastOf(journal && journal.lastPlay);
+    const id = playLastOf(journalReady ? journal.lastPlay : 'soccer');
     el.innerHTML = '<span class="ic">' + playIconOf(id) + '</span>PLAY';
     el.setAttribute('aria-label', 'PLAY ' + PLAY_NAMES[id]);
   }
@@ -5203,6 +5203,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function hourNow() { if (HOUR_OVERRIDE != null) return HOUR_OVERRIDE; const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
   function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); SYNC.push('journal'); } catch (e) {} }
   let journal = loadJournal();
+  journalReady = true;
   paintPlayBtn();
   function noteIslander(nm) {
     if (journal.newIslanders.indexOf(nm) === -1) { journal.newIslanders.push(nm); saveJournal(journal); }
