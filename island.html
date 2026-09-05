@@ -237,7 +237,7 @@
   #bdots { display:flex; gap:5px; }
   #bdots i { width:8px; height:8px; border-radius:50%; background:rgba(42,27,61,0.25); display:block; }
   #bdots i.on { background:var(--coral); }
-  #dial { position:fixed; right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 164px); z-index:6; width:44px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  #dial { position:fixed; right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 172px); z-index:6; width:44px; display:flex; flex-direction:column; align-items:center; gap:4px; }
   #dial button { width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--cream); color:var(--ink); font-weight:900; font-size:22px;
     box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; padding:0; line-height:1; }
   #dial button:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
@@ -248,9 +248,10 @@
   #mini { position:fixed; left:var(--pad-l); top:calc(env(safe-area-inset-top,0px) + 54px); z-index:6; width:96px; height:96px; border:3px solid var(--ink); border-radius:14px;
     background:rgba(42,27,61,0.55); box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
   #btn-story { position:fixed; right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 104px); z-index:6;
-    width:44px; height:44px; border-radius:50%; border:3px solid var(--ink); background:var(--dusk);
-    color:var(--cream); font-size:22px; font-weight:900; box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; }
+    width:56px; height:56px; border-radius:50%; border:3px solid var(--ink); background:var(--dusk);
+    color:var(--cream); font-size:26px; font-weight:900; box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
   #btn-story:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
+  #btn-story.on { border-color:var(--yellow); background:var(--peach); color:var(--ink); }
   #quest { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 118px);
     z-index:5; display:none; background:rgba(42,27,61,0.92); color:var(--yellow); border:2px solid rgba(255,243,226,0.5);
     border-radius:18px; padding:8px 16px; font-weight:900; font-size:12px; max-width:var(--toast-max); text-align:center; overflow-wrap:anywhere; box-sizing:border-box; }
@@ -419,7 +420,7 @@
 </div>
 <div id="lineage"></div>
 <button id="btn-book" aria-label="How to play">?</button>
-<button id="btn-story" aria-label="Story time">&#9789;</button>
+<button id="btn-story" aria-label="Sleep and story">&#9789;</button>
 <button id="btn-board" aria-label="The board">&#127942;</button>
 <div id="chasebar">CATCH THAT GULL!</div>
 <div id="win"><div class="wincard"><canvas id="wincv" width="360" height="240"></canvas><h3 id="wintitle"></h3><div class="sub" id="winsub"></div><div class="tro" id="wintro"></div><button class="bigbtn" id="wclose">HOORAY!</button></div></div>
@@ -751,7 +752,7 @@ function sanitizeName(s) {
 function parseHash(hash) {
   if (!hash || hash.indexOf('#i=') !== 0) return null;
   const segs = hash.slice(3).split('&');
-  const out = { enc: segs[0], t: 0, b: '', c: [], r: null, v: null };
+  const out = { enc: segs[0], t: 0, b: '', c: [], r: null, v: null, m: null };
   for (let i = 1; i < segs.length; i++) {
     const s = segs[i];
     try {
@@ -763,11 +764,15 @@ function parseHash(hash) {
         if (q.length === 3 && q.every(function (x) { return Number.isFinite(x) && x >= 0; }) && q[0] < 100000 && q[2] > 0 && q[2] <= 3 && q[1] <= q[2]) out.v = { no: q[0], done: q[1], all: q[2] };
       }
       else if (s.indexOf('r=') === 0) { const p = s.slice(2).split('.').map(function (x) { return parseInt(x, 10); }); if (p.length === 3 && p.every(function (v) { return v >= 0 && v < 1000000; })) out.r = { coins: p[0], mask: p[1] & 1023, houses: Math.min(p[2], 99) }; }
+      else if (s.indexOf('m=') === 0) {
+        const mem = decodeNpcMem(s.slice(2));
+        if (mem && mem.length && encodeNpcMem(mem)) out.m = mem;
+      }
     } catch (e) {}
   }
   return out;
 }
-function buildHash(enc, t, b, chain, rec, voy) {
+function buildHash(enc, t, b, chain, rec, voy, mem) {
   let s = '#i=' + enc;
   if (t > 0) s += '&t=' + Math.round(t);
   const bn = sanitizeName(b);
@@ -776,6 +781,8 @@ function buildHash(enc, t, b, chain, rec, voy) {
   if (c.length) s += '&c=' + c.map(encodeURIComponent).join(',');
   if (rec && (rec.coins > 0 || rec.mask > 0 || rec.houses > 0)) s += '&r=' + [rec.coins | 0, rec.mask | 0, rec.houses | 0].join('.');
   if (voy && voy.all > 0) s += '&v=' + [voy.no | 0, voy.done | 0, voy.all | 0].join('.');
+  const encM = encodeNpcMem(mem);
+  if (encM) s += '&m=' + encM;
   return s;
 }
 /* CAPTAIN PROFILE: who the game is for, carried in ?p= so no build is ever needed per child.
@@ -1044,11 +1051,125 @@ function runPlayAct(act, ctx) {
   }
   return { ok: false, why: 'unknown', door: 'none' };
 }
+/* NPC MEMORY. Eight curated islanders, one byte a slot. Header is version
+   plus how many slots follow. Empty memory adds nothing to the share link.
+   Worst add: 9 raw bytes → 12 base64url chars, plus &m= is 15. Measured
+   against the 1700-char gate. This is not a second world codec. */
+const NPC_MEM_VER = 1;
+const NPC_MEM_MAX = 8;
+const NPC_KINDS = ['none', 'hello', 'sleep', 'word'];
+const NPC_NAMES = ['COCO', 'BARNACLE BOB', 'PEARL', 'MANGO', 'SALTY SAM', 'CAPTAIN CRUMB', 'SHELLY', 'BISCUIT'];
+function emptyNpcMem() {
+  const out = [];
+  for (let i = 0; i < NPC_MEM_MAX; i++) out.push({ nights: 0, kind: 'none', met: false });
+  return out;
+}
+function npcPackSlot(s) {
+  s = s || {};
+  const nights = Math.max(0, Math.min(15, s.nights | 0));
+  let kind = typeof s.kind === 'number' ? s.kind : NPC_KINDS.indexOf(s.kind);
+  if (!(kind >= 0)) kind = 0;
+  kind = kind & 3;
+  return nights | (kind << 4) | ((s.met ? 1 : 0) << 6);
+}
+function npcUnpackSlot(b) {
+  b = b | 0;
+  return { nights: b & 15, kind: NPC_KINDS[(b >> 4) & 3], met: !!(b & 64) };
+}
+function encodeNpcMem(mem) {
+  mem = mem || [];
+  let last = -1;
+  const packed = [];
+  for (let i = 0; i < NPC_MEM_MAX; i++) {
+    const b = npcPackSlot(mem[i]);
+    packed[i] = b;
+    if (b) last = i;
+  }
+  if (last < 0) return '';
+  const n = last + 1;
+  const bytes = [(n << 4) | NPC_MEM_VER];
+  for (let i = 0; i < n; i++) bytes.push(packed[i]);
+  const buf = new Uint8Array(bytes);
+  let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  const b64 = (typeof btoa !== 'undefined' ? btoa(bin) : Buffer.from(buf).toString('base64'));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodeNpcMem(str) {
+  if (!str) return [];
+  let raw;
+  try {
+    const b64 = String(str).replace(/-/g, '+').replace(/_/g, '/');
+    if (typeof atob !== 'undefined') { const s = atob(b64); raw = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) raw[i] = s.charCodeAt(i); }
+    else raw = new Uint8Array(Buffer.from(b64, 'base64'));
+  } catch (e) { return []; }
+  if (!raw || !raw.length) return [];
+  const ver = raw[0] & 15, n = raw[0] >> 4;
+  if (ver !== NPC_MEM_VER || n < 1 || n > NPC_MEM_MAX || raw.length < 1 + n) return [];
+  const out = emptyNpcMem();
+  for (let i = 0; i < n; i++) out[i] = npcUnpackSlot(raw[1 + i]);
+  return out;
+}
+function npcRemember(mem, index, kind) {
+  const out = emptyNpcMem();
+  const src = mem || [];
+  for (let i = 0; i < NPC_MEM_MAX; i++) {
+    if (src[i]) out[i] = { nights: src[i].nights | 0, kind: src[i].kind || 'none', met: !!src[i].met };
+  }
+  if (index < 0 || index >= NPC_MEM_MAX) return out;
+  if (NPC_KINDS.indexOf(kind) < 1) return out;
+  const cur = out[index];
+  cur.kind = kind;
+  cur.met = true;
+  if (kind === 'sleep') cur.nights = Math.min(15, (cur.nights | 0) + 1);
+  return out;
+}
+function npcRememberedNames(mem) {
+  const out = [];
+  (mem || []).forEach(function (s, i) {
+    if (s && (s.nights > 0 || s.kind === 'sleep') && NPC_NAMES[i]) out.push(NPC_NAMES[i]);
+  });
+  return out;
+}
+function npcTalkLine(slot, name, title, crew) {
+  if (!slot) return '';
+  const T = title || 'Captain';
+  if (slot.nights > 0) return name + ' remembered last night. Good morning, ' + T + '!';
+  if (slot.kind === 'hello') return 'I remember your hello, ' + T + (crew ? ' ' + crew : '') + '!';
+  return '';
+}
+function overnightLine(o) {
+  o = o || {};
+  const names = (o.remembered && o.remembered.length) ? o.remembered.slice(0, 3) : npcRememberedNames(o.npcMem);
+  if (names.length === 1) return 'The island slept, and ' + names[0] + ' remembered you in the morning.';
+  if (names.length === 2) return 'The island slept, and ' + names[0] + ' and ' + names[1] + ' remembered you in the morning.';
+  if (names.length >= 3) return 'The island slept, and ' + names[0] + ', ' + names[1] + ' and ' + names[2] + ' remembered you in the morning.';
+  return 'The island slept, and in the morning the book was still here.';
+}
+/* SLEEP MULTI-BUTTON. The moon is the Sleep control. PLAY and DREAM stay
+   the dock heroes. Tap still opens tonight's chapter. Hold sleeps the
+   island and writes the overnight beat. Long-press opens the shelf.
+   The clock is the Dream clock. Nothing here invents a second home. */
+const SLEEP_HOLD_MS = DREAM_HOLD_MS;
+const SLEEP_LONG_MS = DREAM_LONG_MS;
+function sleepPressKind(ms) { return dreamPressKind(ms); }
+function sleepPressAct(kind) {
+  if (kind === 'long') return { door: 'shelf', kind: 'long' };
+  if (kind === 'hold') return { door: 'overnight', kind: 'hold' };
+  return { door: 'story', kind: 'tap' };
+}
+function runSleepAct(act) {
+  if (!act) return { ok: false, why: 'none', door: 'none' };
+  if (act.door === 'shelf' || act.kind === 'long') return { ok: true, door: 'shelf', kind: 'long' };
+  if (act.door === 'overnight') return { ok: true, door: 'overnight', kind: act.kind, slept: true };
+  return { ok: true, door: 'story', kind: act.kind || 'tap' };
+}
 function questTable(dream) {
   const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
   const base = questTableBase().concat([
     { id: 'goal1', need: 'goalsToday', n: 1, tell: 'score a goal on the soccer pitch',
-      done: 'A goal went in on the pitch, and the island cheered.' }]);
+      done: 'A goal went in on the pitch, and the island cheered.' },
+    { id: 'sleep1', need: 'sleptToday', n: 1, tell: 'sleep on the island and see who remembers you in the morning',
+      done: 'The island slept, and somebody remembered.' }]);
   return d ? [d].concat(base) : base;
 }
 function questTableBase() {
@@ -1233,6 +1354,7 @@ function chapter(o) {
   if (newHouses > 0) page1.push('By the time the sun went orange, ' + newHouses + ' new house' + (newHouses === 1 ? ' stood' : 's stood') + ' where there had been only sand.');
   else if (built > 0) page1.push('The island looked a little more like home than it did yesterday.');
   else page1.push('Today was a looking day, and looking days count too.');
+  if (o.overnight) page1.push(overnightLine(o));
   if (o.newIslanders && o.newIslanders.length) {
     page1.push(o.newIslanders.join(' and ') + ' moved in, and knocked on the door to say hello.');
   }
@@ -1357,6 +1479,7 @@ function bedtimeQuestion(o) {
   else if (keys.indexOf('arcade') !== -1) q = { ask: 'One arcade machine pays 20 points. Two machines pay?', right: '40 points', wrong: '20 points' };
   else if (keys.indexOf('factory') !== -1) q = { ask: 'How many houses make the chocolate factory open?', right: 'Three houses', wrong: 'Ten houses' };
   else if (keys.indexOf('tall') !== -1) q = { ask: 'How tall can a tower go on the island?', right: 'Eight blocks', wrong: 'Twenty blocks' };
+  else if (keys.indexOf('sleep') !== -1) q = { ask: 'Who remembers you after the island sleeps?', right: 'The islanders', wrong: 'Nobody' };
   else if (keys.indexOf('house') !== -1 || keys.indexOf('count') !== -1) q = { ask: 'What makes an islander move in?', right: 'Walls with a door', wrong: 'A palm tree' };
   else if (st.houses > 0) q = { ask: 'How many houses are on your island right now?', right: String(st.houses), wrong: String(st.houses + 2) };
   else q = { ask: 'What does a house need before somebody moves in?', right: 'A door', wrong: 'A window' };
@@ -1999,7 +2122,7 @@ function walkKick(walker, b, inp) {
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, kickTowardGoal, ballNudge, walkKick, BALL_CAR_REACH, BALL_WALK_REACH, BALL_TAP_SPEED, BALL_WALK_HIT, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
-  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, PLAY_HOLD_MS, PLAY_LONG_MS, PLAY_IDS, PLAY_NAMES, PLAY_ICONS, playPressKind, playPressAct, playLastOf, playNextOf, playCabinetOf, rememberPlay, runPlayAct, playKickVel, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, PLAY_HOLD_MS, PLAY_LONG_MS, PLAY_IDS, PLAY_NAMES, PLAY_ICONS, playPressKind, playPressAct, playLastOf, playNextOf, playCabinetOf, rememberPlay, runPlayAct, playKickVel, NPC_NAMES, NPC_KINDS, NPC_MEM_VER, NPC_MEM_MAX, SLEEP_HOLD_MS, SLEEP_LONG_MS, sleepPressKind, sleepPressAct, runSleepAct, encodeNpcMem, decodeNpcMem, npcRemember, npcRememberedNames, npcTalkLine, overnightLine, emptyNpcMem, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     PHONE_CAP, chromeEdge, dockSpan, dockFitsPhone, warmRgb,
@@ -2712,7 +2835,7 @@ if (typeof module !== 'undefined' && module.exports) {
     b.innerHTML = '<span class="ic">' + icon + '</span>' + label;
     b.addEventListener('click', onClick); return b;
   }
-  let dreamDockGen = 0, playDockGen = 0, journalReady = false;
+  let dreamDockGen = 0, playDockGen = 0, sleepDockGen = 0, journalReady = false;
   function dreamDockBtn() {
     const b = document.createElement('button');
     b.className = 'dock'; b.id = 'btn-dream'; b.type = 'button';
@@ -2968,7 +3091,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function shareUrl() {
     const p = new URLSearchParams(location.search).get('crew');
     return location.origin + location.pathname + (p ? '?crew=' + encodeURIComponent(p) : '')
-      + buildHash(encode(world.ref), bestLap, builder || CREW, chain, { coins: purse.coins, mask: trophyMask(purse.trophies), houses: houses(world.ref).length }, (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, all: pr.all }; })());
+      + buildHash(encode(world.ref), bestLap, builder || CREW, chain, { coins: purse.coins, mask: trophyMask(purse.trophies), houses: houses(world.ref).length }, (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, all: pr.all }; })(), npcMem);
   }
   async function share() {
     sayPersonal('share');
@@ -2987,7 +3110,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const hp = parseHash(location.hash);
     if (hp) {
       w = decode(hp.enc);
-      if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; linkVoy = hp.v || null; if (hp.r) linkRec = { name: hp.b, lap: hp.t, coins: hp.r.coins, mask: hp.r.mask, houses: hp.r.houses }; }
+      if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; linkVoy = hp.v || null; if (hp.r) linkRec = { name: hp.b, lap: hp.t, coins: hp.r.coins, mask: hp.r.mask, houses: hp.r.houses }; if (hp.m && hp.m.length) { npcMem = hp.m; journal.npcMem = npcMem; } }
     }
     let restored = false;
     if (!w) {
@@ -3036,7 +3159,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const hp = parseHash(location.hash);
     if (!hp) return;
     const w = decode(hp.enc);
-    if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; updateLineage(); }
+    if (w) { ghostLap = hp.t; builder = hp.b; chain = hp.c; updateLineage(); if (hp.m && hp.m.length) { npcMem = hp.m; journal.npcMem = npcMem; } }
     if (w) { linkVoy = hp.v || null; tellChallenge(); }
     if (w) { world.ref = w; garden = {}; redrawWorld(); syncCargo(); rebuildIslanders(); setVisitor(); toast('WELCOME ABOARD! This island travelled inside the link.'); }
   });
@@ -3347,6 +3470,10 @@ if (typeof module !== 'undefined' && module.exports) {
     }
     if (KEEP && hit.p === islanders[0]) { talkToKeeper(hit); return; }
     if (!journal.met) journal.met = {};
+    if (!hit.p.visitor) {
+      const ni = islanders.indexOf(hit.p);
+      if (ni >= 0) { npcMem = npcRemember(npcMem, ni, 'hello'); journal.npcMem = npcMem; saveJournal(journal); }
+    }
     if (!hit.p.visitor && !journal.met[hit.p.name]) {
       journal.met[hit.p.name] = 1; saveJournal(journal);
       const el0 = document.getElementById('bubble');
@@ -3367,6 +3494,12 @@ if (typeof module !== 'undefined' && module.exports) {
       ph = ['Word of the island: ' + wd.w + '! It means ' + wd.d + '.']; saidWord = true;
     } else if (journal.wordHeard && Math.random() < 0.25) { ph = ['Say it with me: ' + wd.w + '. It means ' + wd.d + '.']; saidWord = true; }
     if (saidWord) {}
+    else if (!hit.p.visitor && (function () {
+      const ni = islanders.indexOf(hit.p);
+      const line = ni >= 0 ? npcTalkLine(npcMem[ni], hit.p.name, TITLE, CREW) : '';
+      if (line) { ph = [line]; return true; }
+      return false;
+    })()) {}
     else if (hit.p.visitor) ph = ['I came on the morning boat!', 'Only here for today. Show me your best thing!', 'What a SPLENDID island!', 'Back on the boat tomorrow. I will tell everyone about this place.', 'Is that a whale? It IS a whale!'];
     else if (hit.p.play) ph = ['WATCH ME! High score!', 'One more go on the arcade!', 'DING DING! Twenty points!', 'This machine is the BEST.'];
     else if (factoryCells.length && Math.random() < 0.35) ph = ['The chocolate factory smells AMAZING!', 'Chocolate bars for everybody!', 'I work at the chocolate factory now!'];
@@ -5252,6 +5385,8 @@ if (typeof module !== 'undefined' && module.exports) {
   function hourNow() { if (HOUR_OVERRIDE != null) return HOUR_OVERRIDE; const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
   function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); SYNC.push('journal'); } catch (e) {} }
   let journal = loadJournal();
+  let npcMem = emptyNpcMem();
+  if (journal.npcMem && journal.npcMem.length) npcMem = journal.npcMem;
   journalReady = true;
   paintPlayBtn();
   function noteIslander(nm) {
@@ -5399,6 +5534,7 @@ if (typeof module !== 'undefined' && module.exports) {
     st.beaten = journal.lapBeatenEver || 0;
     st.bpFinishedToday = journal.bpFinishedToday || 0;
     st.tripsToday = journal.tripsToday || 0;
+    st.sleptToday = journal.sleptToday || 0;
     st.gain = journal.lapGainToday || 0;
     const cs = compassStats(world.ref); st.north = cs.north; st.east = cs.east; st.south = cs.south; st.west = cs.west;
     return st;
@@ -5454,6 +5590,7 @@ if (typeof module !== 'undefined' && module.exports) {
       walked: (journal.walkedToday || 0) + (walking && walker ? Math.round(walker.steps) : 0), jumped: (journal.jumpedToday || 0) + (walking && walker ? walker.jumps : 0),
       boat: (journal.boat && journal.boat.day === today()) ? journal.boat : null, garden: { planted: journal.planted || 0, sprouted: journal.sprouted || 0, treed: journal.treed || 0 },
       bpToday: journal.bpToday || null, tripsToday: journal.tripsToday || 0, goalsToday: journal.goalsToday || 0,
+      overnight: !!(journal.overnight || journal.sleptToday), remembered: npcRememberedNames(npcMem),
       voyage: (function () { const v = voyage(), pr = voyStatus(); return { no: v.no, done: pr.done, complete: pr.complete }; })(),
     });
     const entry = { day: today(), pages: pages, quest: q, stats: st, prevStats: journal.prevStats || {}, bestLap: bestLap,
@@ -5467,7 +5604,7 @@ if (typeof module !== 'undefined' && module.exports) {
     journal.deliveredToday = 0; journal.lapGainToday = 0; journal.planted = 0; journal.sprouted = 0; journal.treed = 0; journal.walkedToday = 0; journal.jumpedToday = 0; journal.chaseWinsToday = 0; journal.coinsToday = 0; journal.trophyNew = ''; journal.cabinetToday = {}; if (walking && walker) { walker.steps = 0; walker.jumps = 0; } journal.job = null; journal.lastQuestId = q.id; journal.wordHeard = false;
     if (q.ladder && journal.mastery[q.ladder] && q.rung > journal.mastery[q.ladder].rung) journal.mastery[q.ladder] = { rung: q.rung, streak: 0, miss: 0 };
     if (q.job) startJob(q);
-    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0; journal.goalsToday = 0; journal.goalCoinsToday = 0;
+    journal.lastQuestDone = ''; journal.lapBeaten = false; journal.bedtimeLast = null; journal.morning = true; journal.bpToday = null; journal.bpFinishedToday = 0; journal.tripsToday = 0; journal.goalsToday = 0; journal.goalCoinsToday = 0; journal.sleptToday = 0; journal.overnight = false; journal.npcMem = npcMem;
     journal.chapters = journal.book.length;
     saveJournal(journal);
     return entry;
@@ -5495,6 +5632,8 @@ if (typeof module !== 'undefined' && module.exports) {
     journal.morning = false; saveJournal(journal);
     storyMode = 'morning'; storyEntry = last;
     const lines = ['Good morning, ' + TITLE.charAt(0) + TITLE.slice(1).toLowerCase() + ' ' + CREW + '.'];
+    const remembered = npcRememberedNames(npcMem);
+    if (remembered.length) lines.push(overnightLine({ remembered: remembered }));
     if (last.quest) lines.push('Last night the book said: today you are going to ' + last.quest.tell + '.');
     lines.push(KEEP ? (islanders.length ? keeperName() + ' is carrying the book. Tap them if you forget.' : 'Build a house and somebody will move in to carry the book.') : 'Cleo the show dog is carrying the book. Tap her any time and she will tell you what to do next.');
     if ((journal.sprouted || 0) + (journal.treed || 0) > 0) lines.push('Go and look at the garden. Something grew while you slept.');
@@ -5574,7 +5713,94 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('sprev').disabled = storyIdx === 0;
     document.getElementById('snext').disabled = storyIdx === storyPages.length - 1;
   }
-  document.getElementById('btn-story').addEventListener('click', function () { openStory(); blip(520); setTimeout(function () { blip(680); }, 110); });
+  function doOvernight() {
+    for (let i = 0; i < islanders.length && i < NPC_MEM_MAX; i++) npcMem = npcRemember(npcMem, i, 'sleep');
+    journal.sleptToday = 1;
+    journal.overnight = true;
+    journal.npcMem = npcMem;
+    if (!journal.keys) journal.keys = [];
+    if (journal.keys.indexOf('sleep') === -1) journal.keys.push('sleep');
+    noteLearned('The islanders remember you after the island sleeps.', 'sleep', 'time');
+    saveJournal(journal);
+    refreshQuest();
+    const last = (journal.book || [])[journal.book ? journal.book.length - 1 : -1];
+    if (!last || last.day !== today()) writeChapter();
+    else {
+      const line = overnightLine({ remembered: npcRememberedNames(npcMem) });
+      if (last.pages && last.pages[0] && last.pages[0].lines && last.pages[0].lines.indexOf(line) === -1) {
+        last.pages[0].lines.push(line);
+        saveJournal(journal);
+      }
+    }
+    openMorning();
+    toast('GOOD MORNING! THEY REMEMBERED.');
+    blip(520); setTimeout(function () { blip(700); }, 110);
+  }
+  function applySleepAct(act) {
+    const r = runSleepAct(act);
+    if (r.door === 'shelf') {
+      const last = (journal.book || [])[(journal.book || []).length - 1];
+      if (!document.getElementById('story').classList.contains('on')) {
+        if (last) {
+          storyEntry = last;
+          storyMode = 'read';
+          storyPages = pagesFor(storyEntry, false);
+          storyIdx = 0;
+          renderStory();
+          document.getElementById('story').classList.add('on');
+        } else {
+          openStory();
+        }
+      }
+      renderShelf();
+      document.getElementById('shelf').classList.add('on');
+      toast('THE SHELF');
+      blip(520);
+      return r;
+    }
+    if (r.door === 'overnight') { doOvernight(); return r; }
+    openStory();
+    toast('TONIGHT\'S CHAPTER');
+    blip(520); setTimeout(function () { blip(680); }, 110);
+    return r;
+  }
+  function wireSleepMoon(b) {
+    const gen = ++sleepDockGen;
+    let downAt = 0, holdOn = false, longOn = false, holdT = 0, longT = 0;
+    function clearT() { clearTimeout(holdT); clearTimeout(longT); }
+    function up() {
+      if (gen !== sleepDockGen) return;
+      const held = Date.now() - downAt;
+      clearT();
+      b.classList.remove('on');
+      if (longOn) { longOn = false; holdOn = false; return; }
+      if (holdOn) { holdOn = false; applySleepAct(sleepPressAct('hold')); return; }
+      if (sleepPressKind(held) === 'tap') applySleepAct(sleepPressAct('tap'));
+    }
+    function down(e) {
+      e.preventDefault();
+      try { b.setPointerCapture(e.pointerId); } catch (x) {}
+      downAt = Date.now(); holdOn = false; longOn = false; clearT();
+      holdT = setTimeout(function () {
+        if (gen !== sleepDockGen) return;
+        holdOn = true;
+        b.classList.add('on');
+        toast('SLEEP!');
+        blip(700);
+      }, SLEEP_HOLD_MS);
+      longT = setTimeout(function () {
+        if (gen !== sleepDockGen) return;
+        longOn = true; holdOn = false;
+        b.classList.remove('on');
+        applySleepAct(sleepPressAct('long'));
+      }, SLEEP_LONG_MS);
+    }
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+  wireSleepMoon(document.getElementById('btn-story'));
   document.getElementById('sclose').addEventListener('click', function () { document.getElementById('story').classList.remove('on'); cleo.mood = 'sit'; blip(400); });
   document.getElementById('snext').addEventListener('click', function () { if (storyIdx < storyPages.length - 1) { storyIdx++; renderStory(); blip(640); } });
   document.getElementById('sprev').addEventListener('click', function () { if (storyIdx > 0) { storyIdx--; renderStory(); blip(560); } });
@@ -5591,6 +5817,12 @@ if (typeof module !== 'undefined' && module.exports) {
     tapPlay: () => applyPlayAct(playPressAct('tap', { last: journal.lastPlay })),
     holdPlay: () => applyPlayAct(playPressAct('hold', { last: journal.lastPlay })),
     longPlay: () => applyPlayAct(playPressAct('long')),
+    sleepPressKind, sleepPressAct, runSleepAct,
+    tapSleep: () => applySleepAct(sleepPressAct('tap')),
+    holdSleep: () => applySleepAct(sleepPressAct('hold')),
+    longSleep: () => applySleepAct(sleepPressAct('long')),
+    npcMem: () => npcMem, encodeNpcMem, decodeNpcMem, overnightLine, npcRememberedNames,
+    doOvernight,
     lastDream: () => journal.lastDream,
     tapDream: () => applyDreamAct(dreamPressAct('tap', { last: journal.lastDream, profileDream: dreamProfile() })),
     holdDream: (t) => applyDreamAct(dreamPressAct('hold', { heard: t })),

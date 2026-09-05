@@ -17,13 +17,14 @@ Verify every session with a cache-buster. These are the true shas as at this han
 
 | File | sha256 (first 8) | What it is |
 |---|---|---|
-| `island.html` | `e2b32d55` | The island. All the work happens here. |
+| `island.html` | Wave B brick 1 (this PR) | Overnight chapter + NPC memory in `#i=`. |
 | `arcade.html` | `bc0420d9` | OLLIE'S. Do not edit without Fabian asking. |
 | `storybook.html` | `bef56030` | OLLIE'S. Do not edit without Fabian asking. |
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
 | `ollie-update-2.html` | `304535ad` | Carousel two, 11 cards. Shipped. |
 | `ollie-update-3.html` | live | Carousel three, Dream button. Shipped. |
 | `ollie-update-4.html` | live | Carousel four, walk soccer + PLAY. Shipped. |
+| `ollie-update-5.html` | this PR | Carousel five, overnight + NPC memory only. |
 
 ```bash
 B=https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos
@@ -55,13 +56,13 @@ python3 -m playwright install chromium --only-shell
 Nothing ships that has not been through all six rungs, in order:
 
 1. `node --check` on both script blocks of `island.html`
-2. All 25 headless suites green
+2. All 31 headless suites green
 3. Robots in real Chromium driving the actual UI, on BOTH editions
 4. Screenshots taken and actually looked at
 5. Hygiene: zero console errors, zero external requests
 6. Live curl sha match after deploy, plus proof Ollie's files are unchanged
 
-**Current state: 25 suites, 937 checks, all green.**
+**Current state: 31 suites, 1456 checks, all green.** Includes `test-overnight` (110).
 
 | Suite | Checks | Suite | Checks |
 |---|---|---|---|
@@ -77,10 +78,11 @@ Nothing ships that has not been through all six rungs, in order:
 | test-challenge | 23 | test-story | 22 |
 | test-compass | 20 | test-poster | 18 |
 | test-sync | 18 | test-drive | 12 |
-| test-houses | 8 | | |
+| test-houses | 8 | test-overnight | 110 |
 
-Robots: `robot-soccer` (40), `robot-carousel2` (37), `robot-poster` (34), `robot-challenge` (29),
-`robot-blueprints` (27), `robot-voyage` (25), plus `robot-carousel`, `robot-cast`, `robot-sync`, `robot-trips`.
+Robots: `robot-overnight` (46), `robot-soccer` (74), `robot-chrome` (70), `robot-carousel5` (overnight + NPC memory),
+`robot-carousel4`, `robot-carousel3`, plus `robot-carousel2`, `robot-carousel`, `robot-poster`, `robot-challenge`,
+`robot-blueprints`, `robot-voyage`, `robot-cast`, `robot-sync`, `robot-trips`.
 
 Note: `robot-voyage`, `robot-poster` and `robot-challenge` bind their own ports (8234, 8235, 8240).
 Start servers on those ports or they fail to navigate and it looks like a code fault.
@@ -107,8 +109,10 @@ kick(vx,vy) layPitch openGames tapKick PITCH_W PITCH_H pitchGoals goalScored set
 lapInfo remix lineage saveNow openBook openStory`.
 
 Codec: 64x64 grid, height cap 8, 400 blocks, 3 bytes a block, base64url in the fragment.
-Link gate is 1700 chars. The challenge suffix `&v=no.done.all` is 12 chars worst case, taking the
-worst-case link to 1615. **Anything new that rides in the link must be measured against 1700.**
+Link gate is 1700 chars. The challenge suffix `&v=no.done.all` is 12 chars worst case.
+NPC memory rides as `&m=` (compact codec, empty adds nothing). One islander is 6 hash chars.
+Eight is 15. Worst-case island plus full memory measured 1277. **Anything new that rides in
+the link must be measured against 1700.**
 
 ---
 
@@ -146,10 +150,18 @@ scrolls and the old "never scrolls" comment is gone. Toasts, the walk hint, draw
 sit inside that edge. WARM on the walk HUD is a peach mix on fog and sky, not a Three rewrite.
 Place and kick get a tiny synth click. Carousel four is unchanged and still does not claim pretty modes.
 
+**Overnight + NPC memory.** Sleep rides the moon, not a new dock hero. Same tap / hold / long-press
+clock as Dream (280ms / 900ms). Tap still opens tonight's chapter. Hold sleeps the island, writes
+the overnight chapter line, opens the morning card, and bumps islander memory. Long-press opens
+the existing shelf. Compact `&m=` in the share hash: 6 chars for one islander, 15 for eight,
+worst-case island plus memory 1277. Quest `sleep1` is appended. No lock. No sell.
+
 **Carousel two**, `ollie-update-2.html`, 11 cards, five real screenshots of the live build baked in as a
 webp sprite sheet, same design language as carousel one.
 **Carousel four**, `ollie-update-4.html`, nine cards, four real photos: the walk ball, walk mode,
 the PLAY button, and the GAMES sheet.
+**Carousel five**, `ollie-update-5.html`, nine cards, four real photos: the moon, the morning card,
+the remembered line, and the shelf. Claims only overnight + NPC memory.
 
 ---
 
@@ -176,6 +188,8 @@ the PLAY button, and the GAMES sheet.
   cream-and-ink ball. Carousel four may claim it. Carousel three does not.
 - **PLAY multi-button is live.** One huge dock control. Tap continues, hold cycles
   Soccer → Whale → Bonk → Stack, long-press opens the GAMES sheet. Same clock as Dream.
+- **Overnight sleep is live.** Hold the moon. Morning card, chapter line, journal, and
+  `&m=` memory. Carousel five may claim it. Carousels one to four do not.
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **Real device test with Ollie on an actual iPad.** Still never done. This is not code, it is watching him.

@@ -29,6 +29,7 @@ From the repo root:
     node tests/test-dream-voice.js
     node tests/test-dream-dock.js
     node tests/test-chrome.js
+    node tests/test-overnight.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -40,6 +41,15 @@ no 3D walk soccer). That carousel stays the Dream-only story.
 `robot-carousel4.py` drives `ollie-update-4.html`: nine cards, four real photos, no invented
 Ollie quotes. Walk soccer and the Play multi-button MAY be claimed because both are live
 in the same ship. Pretty modes still may not.
+
+`robot-carousel5.py` drives `ollie-update-5.html`: nine cards, four real photos, no invented
+Ollie quotes. Overnight sleep and NPC memory in the share hash MAY be claimed because both
+are live in the same ship. Pretty modes, a bigger dock, build replay, and a synth suite
+still may not.
+
+`robot-overnight.py` drives the live moon on both editions: tap opens tonight's chapter,
+hold opens the morning card with a remembered islander, the share link carries `&m=`,
+and long-press opens the shelf. PLAY and DREAM stay the dock heroes.
 
 `tests/isle-core.js` is generated. Do not edit it and do not commit it.
 
@@ -121,6 +131,10 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
   PLAY and DREAM are kid-sized, so the bar must scroll. Chrome never sits closer
   than 16 points to a side. Warmth is a colour mix, not a second walk engine.
   LINK_MAX stays 1900.
+- **test-overnight.js** Sleep on the moon. Same tap / hold / long-press clock as Dream.
+  Overnight chapter line, quest `sleep1` appended, bedtime key `sleep`, compact NPC
+  memory codec in `&m=`. One islander is 6 hash chars, eight is 15, worst-case island
+  plus memory stays under 1700. PLAY and DREAM stay the dock heroes.
 
 `robot-chrome.py` drives the real island on a phone and a tablet and checks the
 picture: dock, chips, drawer, dream, games, toast, and the walk HUD all clear
