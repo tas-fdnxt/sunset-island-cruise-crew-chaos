@@ -108,7 +108,7 @@ def run(pw, url, label, w, hgt):
 
     pg.evaluate("document.getElementById('bottombar').scrollLeft=0")
     pg.wait_for_timeout(160)
-    first = box(pg, '#bottombar .dock')
+    first = box(pg, '#btn-undo')
     ck(label + ' first dock button clears the left edge', first and first['x'] >= EDGE - 2, first)
     shot(pg, '%s-dock' % label.replace(' ', '-'))
     pg.evaluate("document.getElementById('bottombar').scrollLeft=9999")
