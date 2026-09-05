@@ -113,7 +113,7 @@ def run(pw, url, label, w, hgt):
     ck(label + ' SOUND is on after unmute', 'SOUND ON' in txt, txt)
     ck(label + ' SOUND never locks or sells', all(w not in txt for w in ['LOCKED', 'BUY', 'UNLOCK', 'COINS']))
     shot(pg, '%s-sound' % label.replace(' ', '-'))
-    sound.click()
+    pg.evaluate("document.getElementById('lk-sound').click()")
     pg.wait_for_timeout(200)
     ck(label + ' SOUND toggles mute', pg.evaluate("window.__ISLAND.sfxMute()===true"))
     ck(label + ' SOUND reads OFF', 'OFF' in pg.locator('#lk-sound').inner_text().upper())

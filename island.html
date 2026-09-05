@@ -51,13 +51,13 @@
     min-width:80px; height:52px; border-radius:var(--radius); border:3px solid var(--ink); background:rgba(255,243,226,0.92);
     color:var(--ink); font:900 12px system-ui; box-shadow:0 4px 0 var(--ink); padding:0 12px; letter-spacing:0.06em; }
   #w-pretty.on { background:var(--peach); }
-  #lookchip { position:fixed; left:var(--pad-l); bottom:calc(env(safe-area-inset-bottom,0px) + 140px); z-index:6; }
+  #lookchip { position:fixed; left:var(--pad-l); bottom:calc(env(safe-area-inset-bottom,0px) + 176px); z-index:6; } }
     width:80px; height:80px; border-radius:22px; border:3px solid var(--ink); background:rgba(255,243,226,0.94);
     color:var(--ink); font:900 13px/1.1 system-ui; box-shadow:0 4px 0 rgba(20,8,30,0.5); letter-spacing:0.06em;
     padding:6px; cursor:pointer; touch-action:manipulation; }
   #lookchip.on { background:var(--peach); }
   #lookchip:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
-  #lookmenu { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 130px); z-index:9; display:none; }
+  #lookmenu { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 166px); z-index:9; display:none; } }
     background:rgba(255,243,226,0.98); border:4px solid var(--ink); border-radius:22px; padding:16px; box-shadow:0 8px 0 rgba(20,8,30,0.5); max-height:66dvh; overflow-y:auto; }
   #lookmenu.on { display:block; }
   #lookmenu .gm-hd { font:900 13px system-ui; letter-spacing:0.14em; margin-bottom:10px; color:var(--ink); }
@@ -100,18 +100,18 @@
   .dock .ic { font-size:26px; line-height:1; }
   .dock:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
   .dock.sel { border-color:var(--yellow); background:var(--dusk); }
-  #cur { width:92px; height:92px; border-color:var(--yellow); background:var(--dusk); font-size:12px; }
+  #cur { width:96px; height:96px; border-color:var(--yellow); background:var(--dusk); font-size:12px; }
   #cur canvas, .tool canvas, .pin canvas { width:40px; height:42px; image-rendering:auto; }
   #cur canvas { width:52px; height:54px; }
   .pin { width:76px; height:82px; font-size:10px; }
   #btn-share { background:linear-gradient(180deg,var(--yellow),#E8B830); color:var(--ink); }
   #btn-drive { background:linear-gradient(180deg,var(--coral),#C74744); }
   /* THE DRAWER. Every block, in three groups, drawn by the engine. One tap picks and it drops away. */
-  #drawer { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 130px); z-index:7; display:none; }
+  #drawer { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 166px); z-index:7; display:none; }
     background:rgba(255,243,226,0.97); border:4px solid var(--ink); border-radius:22px; padding:16px 16px 12px; box-shadow:0 8px 0 rgba(20,8,30,0.5);
     max-height:60dvh; overflow-y:auto; }
   #drawer.on { display:block; }
-  #gamemenu { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 130px); z-index:9; display:none; }
+  #gamemenu { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 166px); z-index:9; display:none; }
     background:rgba(255,243,226,0.98); border:4px solid var(--ink); border-radius:22px; padding:16px; box-shadow:0 8px 0 rgba(20,8,30,0.5); max-height:66dvh; overflow-y:auto; }
   #gamemenu.on { display:block; }
   #gamemenu .gm-hd { font-size:11px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:2px 4px 10px; }
@@ -119,7 +119,7 @@
     color:var(--ink); font-weight:900; font-size:14px; cursor:pointer; text-align:left; padding:8px 14px; }
   #gamemenu button.gm small { display:block; font-size:10px; font-weight:700; opacity:0.7; letter-spacing:0.04em; margin-top:3px; }
   #gm-close { width:100%; min-height:48px; border-radius:16px; border:3px solid var(--ink); background:var(--dusk); color:var(--cream); font-weight:900; font-size:12px; cursor:pointer; }
-  #dreampanel { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 130px); z-index:9; display:none; }
+  #dreampanel { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 166px); z-index:9; display:none; }
     background:rgba(255,243,226,0.98); border:4px solid var(--ink); border-radius:22px; padding:16px; box-shadow:0 8px 0 rgba(20,8,30,0.5); max-height:72dvh; overflow-y:auto; }
   #dreampanel.on { display:block; }
   #dreampanel .gm-hd { font-size:11px; font-weight:900; letter-spacing:0.18em; color:var(--dusk); margin:2px 4px 10px; }
@@ -135,13 +135,17 @@
     background:var(--yellow); color:var(--ink); font:900 16px system-ui; box-shadow:0 4px 0 rgba(20,8,30,0.45); cursor:pointer; }
   #dream-close { width:100%; min-height:48px; border-radius:16px; border:3px solid var(--ink); background:var(--dusk); color:var(--cream); font-weight:900; font-size:12px; cursor:pointer; }
   #btn-dream { background:linear-gradient(180deg,#B784E0,#5C3A6E); color:var(--cream);
-    width:88px; height:88px; font-size:12px; border-color:#E4C6FF; touch-action:none; user-select:none; -webkit-user-select:none; }
-  #btn-dream .ic { font-size:32px; }
+    width:112px; height:112px; font-size:15px; border-width:5px; border-color:#E4C6FF; touch-action:none; user-select:none; -webkit-user-select:none;
+    transform:translateY(-10px); box-shadow:0 7px 0 rgba(20,8,30,0.55); }
+  #btn-dream .ic { font-size:42px; }
   #btn-dream.on { background:linear-gradient(180deg,#FF8A70,var(--yellow)); color:var(--ink); }
+  #btn-dream:active { transform:translateY(-4px); box-shadow:0 2px 0 rgba(20,8,30,0.55); }
   #btn-play { background:linear-gradient(180deg,#3FA96B,#2A7A4A); color:var(--cream);
-    width:96px; height:96px; font-size:13px; border-color:#B8F0C8; touch-action:none; user-select:none; -webkit-user-select:none; }
-  #btn-play .ic { font-size:36px; }
+    width:120px; height:120px; font-size:16px; border-width:5px; border-color:#B8F0C8; touch-action:none; user-select:none; -webkit-user-select:none;
+    transform:translateY(-14px); box-shadow:0 8px 0 rgba(20,8,30,0.55); }
+  #btn-play .ic { font-size:48px; }
   #btn-play.on { background:linear-gradient(180deg,var(--yellow),#FFB067); color:var(--ink); }
+  #btn-play:active { transform:translateY(-6px); box-shadow:0 2px 0 rgba(20,8,30,0.55); }
   #dream-picks { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 12px; }
   #dream-picks .dream-pick { min-height:76px; border-radius:16px; border:3px solid var(--ink);
     background:#fff; color:var(--ink); font:900 13px/1.15 system-ui; cursor:pointer;
@@ -154,7 +158,7 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; box-shadow:0 3px 0 rgba(20,8,30,0.35); letter-spacing:0.04em; padding:0; }
   .tool:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.35); }
   .tool.sel { background:var(--yellow); }
-  #tip { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 146px); z-index:6; display:none; }
+  #tip { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 176px); z-index:6; display:none; }
     background:var(--ink); color:var(--cream); border:3px solid var(--cream); border-radius:var(--radius); padding:10px 16px; font-weight:800; font-size:13px; max-width:var(--toast-max); text-align:center; overflow-wrap:anywhere; box-sizing:border-box; }
   #tip.on { display:block; }
   #tip b { color:var(--yellow); }
@@ -162,7 +166,7 @@
   #btn-undo  { background:linear-gradient(180deg,var(--peach),var(--coral)); color:var(--ink);
     touch-action:none; user-select:none; -webkit-user-select:none; }
   #btn-undo.on { background:linear-gradient(180deg,var(--yellow),#FFB067); color:var(--ink); }
-  #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 146px); }
+  #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
     background:rgba(42,27,61,0.94); color:var(--yellow); font-weight:900; font-size:13px;
     padding:12px 18px; border-radius:22px; border:2px solid rgba(255,243,226,0.5); opacity:0;
     transition:opacity 0.25s; pointer-events:none; max-width:var(--toast-max); text-align:center; line-height:1.35; overflow-wrap:anywhere; box-sizing:border-box; z-index:8; }
@@ -278,11 +282,11 @@
     color:var(--cream); font-size:26px; font-weight:900; box-shadow:0 4px 0 rgba(20,8,30,0.5); cursor:pointer; touch-action:none; }
   #btn-story:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
   #btn-story.on { border-color:var(--yellow); background:var(--peach); color:var(--ink); }
-  #quest { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 146px); }
+  #quest { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
     z-index:5; display:none; background:rgba(42,27,61,0.92); color:var(--yellow); border:2px solid rgba(255,243,226,0.5);
     border-radius:18px; padding:8px 16px; font-weight:900; font-size:12px; max-width:var(--toast-max); text-align:center; overflow-wrap:anywhere; box-sizing:border-box; }
   #quest.on { display:block; }
-  #next { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 146px); }
+  #next { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
     z-index:5; display:none; background:rgba(255,243,226,0.94); color:var(--ink); border:2px solid var(--ink);
     border-radius:18px; padding:8px 16px 8px 12px; font-weight:800; font-size:12px; max-width:var(--toast-max); text-align:left; line-height:1.35; overflow-wrap:anywhere; box-sizing:border-box; }
   #next.on { display:block; }
@@ -357,10 +361,10 @@
     #dream-text { min-height:120px; font-size:22px; padding:16px 18px; border-radius:20px; }
     #dream-go { min-height:72px; font-size:22px; border-radius:20px; }
     #dream-close { min-height:60px; font-size:16px; }
-    #btn-dream { width:104px; height:104px; font-size:15px; }
-    #btn-dream .ic { font-size:42px; }
-    #btn-play { width:116px; height:116px; font-size:17px; }
-    #btn-play .ic { font-size:48px; }
+    #btn-dream { width:136px; height:136px; font-size:18px; }
+    #btn-dream .ic { font-size:52px; }
+    #btn-play { width:148px; height:148px; font-size:20px; }
+    #btn-play .ic { font-size:60px; }
     #dream-picks { gap:12px; }
     #dream-picks .dream-pick { min-height:88px; font-size:18px; border-radius:20px; }
     #drawer .grp { font-size:14px; letter-spacing:0.2em; margin:12px 6px 8px; }
@@ -394,7 +398,7 @@
     #w-exit { height:82px; font-size:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 176px); }
     #w-hint { font-size:18px; padding:14px 22px; }
     #w-pretty { min-width:96px; height:64px; font-size:15px; border-radius:22px; }
-    #lookchip { width:96px; height:96px; font-size:16px; border-radius:26px; bottom:calc(env(safe-area-inset-bottom,0px) + 172px); }
+    #lookchip { width:96px; height:96px; font-size:16px; border-radius:26px; bottom:calc(env(safe-area-inset-bottom,0px) + 204px); }
     #lookmenu { left:8vw; right:8vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px; }
     #lookmenu button.lk { min-height:72px; font-size:22px; border-radius:20px; }
     #lk-close { min-height:60px; font-size:16px; }
@@ -1994,7 +1998,7 @@ function cellSizeAt(zoom) { return { w: 44 * zoom, h: 22 * zoom }; }
 const PHONE_CAP = {
   W: 390, EDGE: 16, DOCK_PAD: 16, DOCK_GAP: 8,
   CM: 38, TOOL_CM: 2,
-  TOOL_W: 76, TOOL_H: 84, CUR_W: 92, PLAY_W: 96, PLAY_H: 96, DREAM_W: 88, DREAM_H: 88,
+  TOOL_W: 76, TOOL_H: 84, CUR_W: 96, PLAY_W: 120, PLAY_H: 120, DREAM_W: 112, DREAM_H: 112,
   LOOK_W: 80, LOOK_H: 80, CORNER: 20,
   SLOTS_VISIBLE: 10, SLOTS_ALL: 11
 };
@@ -2113,20 +2117,20 @@ function prettyLine(o) {
    Nothing rides in the share hash. */
 const SFX_IDS = ['place', 'erase', 'dream', 'sleep', 'look', 'goal', 'toast'];
 const SFX = {
-  place: { id: 'place', wave: 'triangle', hz: [196, 294], dur: 0.12, vol: 0.18, gap: 0.03, slide: true, hiss: 0.05, hissVol: 0.05, hissHz: 1400 },
-  erase: { id: 'erase', wave: 'sine', hz: [247, 185], dur: 0.10, vol: 0.14, gap: 0.04, slide: true },
-  dream: { id: 'dream', wave: 'sine', hz: [392, 494, 587], dur: 0.14, vol: 0.16, gap: 0.07 },
-  sleep: { id: 'sleep', wave: 'sine', hz: [330, 262], dur: 0.20, vol: 0.12, gap: 0.10, slide: true },
-  look: { id: 'look', wave: 'triangle', hz: [523, 659], dur: 0.10, vol: 0.14, gap: 0.05 },
-  goal: { id: 'goal', wave: 'sine', hz: [392, 523, 659], dur: 0.16, vol: 0.20, gap: 0.07 },
-  toast: { id: 'toast', wave: 'sine', hz: [440], dur: 0.09, vol: 0.12, gap: 0 }
+  place: { id: 'place', wave: 'triangle', hz: [196, 294, 392], dur: 0.16, vol: 0.26, gap: 0.03, slide: true, hiss: 0.07, hissVol: 0.08, hissHz: 1400 },
+  erase: { id: 'erase', wave: 'sine', hz: [277, 196, 147], dur: 0.14, vol: 0.22, gap: 0.04, slide: true },
+  dream: { id: 'dream', wave: 'sine', hz: [392, 523, 659], dur: 0.18, vol: 0.24, gap: 0.07 },
+  sleep: { id: 'sleep', wave: 'sine', hz: [392, 330, 262], dur: 0.22, vol: 0.22, gap: 0.09, slide: true },
+  look: { id: 'look', wave: 'triangle', hz: [523, 659, 784], dur: 0.14, vol: 0.22, gap: 0.05 },
+  goal: { id: 'goal', wave: 'sine', hz: [392, 523, 659, 784], dur: 0.20, vol: 0.26, gap: 0.07 },
+  toast: { id: 'toast', wave: 'sine', hz: [523, 659], dur: 0.12, vol: 0.22, gap: 0.05 }
 };
 function sfxOf(name) { return SFX[String(name)] || null; }
 function sfxMuted(flag) { return !!flag; }
 function sfxSafe(v) {
   if (!v || !v.hz || !v.hz.length || v.hz.length > 4) return false;
   if (v.dur < 0.04 || v.dur > 0.30) return false;
-  if (!(v.vol > 0) || v.vol > 0.26) return false;
+  if (!(v.vol > 0) || v.vol > 0.30) return false;
   if (v.wave !== 'sine' && v.wave !== 'triangle') return false;
   for (let i = 0; i < v.hz.length; i++) if (v.hz[i] < 140 || v.hz[i] > 1200) return false;
   return true;
@@ -3373,7 +3377,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function ac() {
     if (!AC) {
       AC = new (window.AudioContext || window.webkitAudioContext)();
-      MASTER = AC.createGain(); MASTER.gain.value = sfxMuteOn ? 0.0001 : 0.85; MASTER.connect(AC.destination);
+      MASTER = AC.createGain(); MASTER.gain.value = sfxMuteOn ? 0.0001 : 1; MASTER.connect(AC.destination);
     }
     if (AC.state === 'suspended') AC.resume();
     return AC;
@@ -3416,7 +3420,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function setSfxMute(on) {
     sfxMuteOn = !!on;
     try { localStorage.setItem('captains-island-sfx-mute-v1', sfxMuteOn ? '1' : '0'); } catch (e) {}
-    if (MASTER) MASTER.gain.setValueAtTime(sfxMuteOn ? 0.0001 : 0.85, (AC && AC.currentTime) || 0);
+    if (MASTER) MASTER.gain.setValueAtTime(sfxMuteOn ? 0.0001 : 1, (AC && AC.currentTime) || 0);
     return sfxMuteOn;
   }
   function playSfx(name, opts) {
@@ -4122,6 +4126,18 @@ if (typeof module !== 'undefined' && module.exports) {
     const list = document.getElementById('lk-list');
     if (!list) return;
     list.innerHTML = '';
+    const sound = document.createElement('button');
+    sound.id = 'lk-sound';
+    sound.type = 'button';
+    sound.className = sfxMuteOn ? 'off' : '';
+    sound.textContent = sfxMuteOn ? 'SOUND OFF' : 'SOUND ON';
+    sound.addEventListener('click', function () {
+      setSfxMute(!sfxMuteOn);
+      lastSfx = { id: 'mute', silent: true, why: 'toggle', at: Date.now() };
+      toast(sfxMuteOn ? 'SOUND OFF' : 'SOUND ON');
+      openLook();
+    });
+    list.appendChild(sound);
     PRETTY_IDS.forEach(function (id) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -4154,18 +4170,6 @@ if (typeof module !== 'undefined' && module.exports) {
       });
       list.appendChild(b);
     });
-    const sound = document.createElement('button');
-    sound.id = 'lk-sound';
-    sound.type = 'button';
-    sound.className = sfxMuteOn ? 'off' : '';
-    sound.textContent = sfxMuteOn ? 'SOUND OFF' : 'SOUND ON';
-    sound.addEventListener('click', function () {
-      setSfxMute(!sfxMuteOn);
-      lastSfx = { id: 'mute', silent: true, why: 'toggle', at: Date.now() };
-      toast(sfxMuteOn ? 'SOUND OFF' : 'SOUND ON');
-      openLook();
-    });
-    list.appendChild(sound);
     document.getElementById('lookmenu').classList.add('on');
   }
   function closeLook() {

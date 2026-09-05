@@ -40,7 +40,7 @@ ok('only sine or triangle in the suite', SFX_IDS.every(function (id) {
   const w = sfxOf(id).wave;
   return w === 'sine' || w === 'triangle';
 }));
-ok('suite volumes stay gentle', SFX_IDS.every(function (id) { return sfxOf(id).vol <= 0.24; }));
+ok('suite volumes are juice, not a whisper', SFX_IDS.every(function (id) { return sfxOf(id).vol >= 0.20 && sfxOf(id).vol <= 0.28; }));
 ok('suite notes stay short', SFX_IDS.every(function (id) { return sfxOf(id).dur <= 0.28 && sfxOf(id).hz.length <= 4; }));
 ok('suite pitches stay in the kid band', SFX_IDS.every(function (id) {
   return sfxOf(id).hz.every(function (h) { return h >= 140 && h <= 1200; });
@@ -54,10 +54,10 @@ ok('every voice sounds different', new Set(fingerprints).size === 7, fingerprint
 ok('place is a landing thunk', sfxOf('place').wave === 'triangle' && sfxOf('place').hz[0] < 280);
 ok('erase falls away', sfxOf('erase').slide === true && sfxOf('erase').hz[0] > sfxOf('erase').hz[sfxOf('erase').hz.length - 1]);
 ok('dream climbs', sfxOf('dream').hz[0] < sfxOf('dream').hz[sfxOf('dream').hz.length - 1] && sfxOf('dream').hz.length >= 3);
-ok('sleep falls and stays soft', sfxOf('sleep').hz[0] > sfxOf('sleep').hz[sfxOf('sleep').hz.length - 1] && sfxOf('sleep').vol <= 0.16);
+ok('sleep falls and still has juice', sfxOf('sleep').hz[0] > sfxOf('sleep').hz[sfxOf('sleep').hz.length - 1] && sfxOf('sleep').vol >= 0.20);
 ok('look is brighter than place', sfxOf('look').hz[0] > sfxOf('place').hz[0]);
 ok('goal is a three-note cheer', sfxOf('goal').hz.length >= 3 && sfxOf('goal').hz[0] < sfxOf('goal').hz[2]);
-ok('toast is a short ping', sfxOf('toast').hz.length === 1 && sfxOf('toast').dur <= 0.12);
+ok('toast is a clear ping', sfxOf('toast').hz.length >= 2 && sfxOf('toast').dur <= 0.16);
 
 (function () {
   const a = sfxPlayPlan('place', false);
