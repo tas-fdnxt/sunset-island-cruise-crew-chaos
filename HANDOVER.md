@@ -21,7 +21,9 @@ Verify every session with a cache-buster. These are the true shas as at this han
 | `arcade.html` | `bc0420d9` | OLLIE'S. Do not edit without Fabian asking. |
 | `storybook.html` | `bef56030` | OLLIE'S. Do not edit without Fabian asking. |
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
-| `ollie-update-2.html` | `304535ad` | Carousel two, 11 cards. Shipped today. |
+| `ollie-update-2.html` | `304535ad` | Carousel two, 11 cards. Shipped. |
+| `ollie-update-3.html` | live | Carousel three, Dream button. Shipped. |
+| `ollie-update-4.html` | this wave | Carousel four, walk soccer + PLAY. |
 
 ```bash
 B=https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos
@@ -131,10 +133,17 @@ A goal pays 1 coin capped at 5 a day (`journal.goalCoinsToday`), islanders stop 
 `journal.goalsToday` feeds a voyage goal, quest row `goal1`, and a chapter line.
 Walk mode draws that same ball in first person as a sixteen-triangle cream-and-ink chunk and
 kicks it with the same helpers. Tap the projected ball (96px target) or walk into it. Standing
-still is not a kick. Carousel three is unchanged and still does not claim this.
+still is not a kick. Carousel four may claim this. Carousel three does not.
+
+**PLAY multi-button.** Replaces the GAMES dock button. Same tap / hold / long-press clock as Dream
+(280ms / 900ms). Tap continues the current game (kick via `kickTowardGoal`, or keep a cabinet going).
+Hold cycles Soccer → Whale → Bonk → Stack. Long-press opens the existing `#gamemenu` sheet.
+Nothing locked, nothing for sale, nothing in the share link.
 
 **Carousel two**, `ollie-update-2.html`, 11 cards, five real screenshots of the live build baked in as a
 webp sprite sheet, same design language as carousel one.
+**Carousel four**, `ollie-update-4.html`, nine cards, four real photos: the walk ball, walk mode,
+the PLAY button, and the GAMES sheet.
 
 ---
 
@@ -156,10 +165,11 @@ webp sprite sheet, same design language as carousel one.
 
 ## 7. WHAT IS NOT BUILT
 
-- **The ball in walk / 3D is now drawn and kickable.** Same `pitchOf` / `ballStart` / `stepBall` /
-  `goalScored`. A walk tap uses `kickTowardGoal`. Walking into the ball uses `walkKick` (the car
-  nudge). Walk draws a sixteen-triangle cream-and-ink ball at the real pitch coordinates,
-  the same colours as the island ball, not a smooth sphere. Carousel three still does not claim walk soccer.
+- **Walk / 3D soccer is live.** Same `pitchOf` / `ballStart` / `stepBall` / `goalScored`.
+  A walk tap uses `kickTowardGoal`. Walking into the ball uses `walkKick`. Sixteen-triangle
+  cream-and-ink ball. Carousel four may claim it. Carousel three does not.
+- **PLAY multi-button is live.** One huge dock control. Tap continues, hold cycles
+  Soccer → Whale → Bonk → Stack, long-press opens the GAMES sheet. Same clock as Dream.
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **D2 deliveries and a second passenger seat. D3 named stunts. D4 world reactions.**
 - **Real device test with Ollie on an actual iPad.** Still never done. This is not code, it is watching him.

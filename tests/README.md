@@ -25,6 +25,7 @@ From the repo root:
     node tests/test-coins.js
     node tests/test-arcade.js
     node tests/test-dream-place.js
+    node tests/test-play-dock.js
     node tests/test-dream-voice.js
     node tests/test-dream-dock.js
 
@@ -33,7 +34,11 @@ so the suites always test the real shipped code rather than a copy that can drif
 
 `robot-carousel3.py` drives `ollie-update-3.html`: ten cards, four real photos, no invented
 Ollie quotes, and no claim of a thing that is not live (no Play multi-button, no pretty modes,
-no 3D walk soccer).
+no 3D walk soccer). That carousel stays the Dream-only story.
+
+`robot-carousel4.py` drives `ollie-update-4.html`: nine cards, four real photos, no invented
+Ollie quotes. Walk soccer and the Play multi-button MAY be claimed because both are live
+in the same ship. Pretty modes still may not.
 
 `tests/isle-core.js` is generated. Do not edit it and do not commit it.
 
@@ -107,3 +112,7 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
 - **test-soccer.js** the pitch blueprint, a derived ball, rolling, goals, and the walk/3D kick:
   `kickTowardGoal` aims at the far mouth, `walkKick` shoves only when the walker is moving and close.
   Same `stepBall` / `goalScored`. No second pitch.
+- **test-play-dock.js** the Play multi-button. Tap / hold / long-press are three doors into
+  games that already exist: tap continues (kick or cabinet), hold cycles Soccer → Whale →
+  Bonk → Stack, long-press opens the GAMES sheet. Same clock as Dream. No fourth engine,
+  no lock or sell, nothing rides in the share link.

@@ -103,6 +103,10 @@
     width:76px; height:76px; font-size:11px; border-color:#E4C6FF; touch-action:none; user-select:none; -webkit-user-select:none; }
   #btn-dream .ic { font-size:28px; }
   #btn-dream.on { background:linear-gradient(180deg,#FF8A70,var(--yellow)); color:var(--ink); }
+  #btn-play { background:linear-gradient(180deg,#3FA96B,#2A7A4A); color:var(--cream);
+    width:80px; height:80px; font-size:12px; border-color:#B8F0C8; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #btn-play .ic { font-size:32px; }
+  #btn-play.on { background:linear-gradient(180deg,var(--yellow),#FFB067); color:var(--ink); }
   #dream-picks { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 12px; }
   #dream-picks .dream-pick { min-height:76px; border-radius:16px; border:3px solid var(--ink);
     background:#fff; color:var(--ink); font:900 13px/1.1 system-ui; cursor:pointer;
@@ -317,6 +321,8 @@
     #dream-close { min-height:60px; font-size:16px; }
     #btn-dream { width:96px; height:96px; font-size:14px; }
     #btn-dream .ic { font-size:40px; }
+    #btn-play { width:108px; height:108px; font-size:16px; }
+    #btn-play .ic { font-size:44px; }
     #dream-picks { gap:12px; }
     #dream-picks .dream-pick { min-height:88px; font-size:18px; border-radius:20px; }
     #drawer .grp { font-size:14px; letter-spacing:0.2em; margin:12px 6px 8px; }
@@ -966,6 +972,64 @@ function runDreamAct(w, act) {
   const script = dreamScript(act.dream);
   const r = applyDream(w, script);
   return { ok: r.ok, placed: r.placed, skipped: r.skipped, why: r.why, encodeLen: r.encodeLen, script: script, door: 'dreamScript', dream: act.dream };
+}
+/* PLAY MULTI-BUTTON. Three gestures, four live games. Tap continues. Hold cycles
+   Soccer → Whale → Bonk → Stack. Long-press opens the GAMES sheet.
+   The clock is the Dream clock. Cabinets still open with openCabinet(g, 0).
+   A soccer tap kicks through kickTowardGoal. Nothing here invents a fifth game. */
+const PLAY_HOLD_MS = DREAM_HOLD_MS;
+const PLAY_LONG_MS = DREAM_LONG_MS;
+const PLAY_IDS = ['soccer', 'whale', 'bonk', 'stack'];
+const PLAY_NAMES = { soccer: 'SOCCER', whale: 'WHALE SONG', bonk: 'SEAGULL BONK', stack: 'CARGO STACK' };
+const PLAY_ICONS = { soccer: '\u26BD', whale: '\uD83D\uDC0B', bonk: '\uD83D\uDC26', stack: '\uD83D\uDCE6' };
+function playPressKind(ms) { return dreamPressKind(ms); }
+function playLastOf(last) { return PLAY_IDS.indexOf(last) >= 0 ? last : 'soccer'; }
+function rememberPlay(last, next) { return playLastOf(next); }
+function playNextOf(current) {
+  const i = PLAY_IDS.indexOf(playLastOf(current));
+  return PLAY_IDS[(i + 1) % PLAY_IDS.length];
+}
+function playCabinetOf(id) {
+  const i = PLAY_IDS.indexOf(id);
+  return i > 0 ? i - 1 : null;
+}
+function playPressAct(kind, opts) {
+  opts = opts || {};
+  const last = playLastOf(opts.last);
+  if (kind === 'long') return { door: 'games', kind: 'long' };
+  if (kind === 'hold') {
+    const game = playNextOf(last);
+    return { door: 'switch', kind: 'hold', from: last, game: game, cabinet: playCabinetOf(game) };
+  }
+  return { door: last === 'soccer' ? 'soccer' : 'cabinet', kind: 'tap', game: last, cabinet: playCabinetOf(last) };
+}
+function playKickVel(p, b) { return kickTowardGoal(p, b); }
+function runPlayAct(act, ctx) {
+  ctx = ctx || {};
+  if (!act) return { ok: false, why: 'none', door: 'none' };
+  if (act.door === 'games' || act.kind === 'long') {
+    return { ok: true, door: 'games', kind: 'long', remember: playLastOf(ctx.last) };
+  }
+  if (act.door === 'switch') {
+    if (act.game === 'soccer') {
+      if (ctx.hasPitch) return { ok: true, door: 'soccer', kind: 'hold', game: 'soccer', remember: 'soccer' };
+      return { ok: true, door: 'layPitch', kind: 'hold', game: 'soccer', remember: 'soccer' };
+    }
+    return { ok: true, door: 'cabinet', kind: 'hold', game: act.game, cabinet: act.cabinet, remember: act.game };
+  }
+  if (act.door === 'soccer') {
+    if (ctx.hasPitch && ctx.hasBall) return { ok: true, door: 'kick', kind: act.kind, game: 'soccer', remember: 'soccer' };
+    if (ctx.hasPitch) return { ok: true, door: 'soccer', kind: act.kind, game: 'soccer', remember: 'soccer' };
+    return { ok: true, door: 'layPitch', kind: act.kind, game: 'soccer', remember: 'soccer' };
+  }
+  if (act.door === 'cabinet') {
+    if (ctx.cabinetOpen && ctx.cabinetGame === act.cabinet) {
+      if (ctx.cabinetOver) return { ok: true, door: 'replay', kind: act.kind, game: act.game, cabinet: act.cabinet, remember: act.game };
+      return { ok: true, door: 'continue', kind: act.kind, game: act.game, cabinet: act.cabinet, remember: act.game };
+    }
+    return { ok: true, door: 'cabinet', kind: act.kind, game: act.game, cabinet: act.cabinet, remember: act.game };
+  }
+  return { ok: false, why: 'unknown', door: 'none' };
 }
 function questTable(dream) {
   const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
@@ -1898,7 +1962,7 @@ function walkKick(walker, b, inp) {
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, kickTowardGoal, ballNudge, walkKick, BALL_CAR_REACH, BALL_WALK_REACH, BALL_TAP_SPEED, BALL_WALK_HIT, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
-  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, PLAY_HOLD_MS, PLAY_LONG_MS, PLAY_IDS, PLAY_NAMES, PLAY_ICONS, playPressKind, playPressAct, playLastOf, playNextOf, playCabinetOf, rememberPlay, runPlayAct, playKickVel, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
@@ -2610,12 +2674,27 @@ if (typeof module !== 'undefined' && module.exports) {
     b.innerHTML = '<span class="ic">' + icon + '</span>' + label;
     b.addEventListener('click', onClick); return b;
   }
-  let dreamDockGen = 0;
+  let dreamDockGen = 0, playDockGen = 0, journalReady = false;
   function dreamDockBtn() {
     const b = document.createElement('button');
     b.className = 'dock'; b.id = 'btn-dream'; b.type = 'button';
     b.innerHTML = '<span class="ic">\uD83C\uDFA4</span>DREAM';
     wireDreamDock(b);
+    return b;
+  }
+  function playIconOf(id) { return PLAY_ICONS[playLastOf(id)] || PLAY_ICONS.soccer; }
+  function paintPlayBtn(b) {
+    const el = b || document.getElementById('btn-play');
+    if (!el) return;
+    const id = playLastOf(journalReady ? journal.lastPlay : 'soccer');
+    el.innerHTML = '<span class="ic">' + playIconOf(id) + '</span>PLAY';
+    el.setAttribute('aria-label', 'PLAY ' + PLAY_NAMES[id]);
+  }
+  function playDockBtn() {
+    const b = document.createElement('button');
+    b.className = 'dock'; b.id = 'btn-play'; b.type = 'button';
+    paintPlayBtn(b);
+    wirePlayDock(b);
     return b;
   }
   function renderDock() {
@@ -2638,7 +2717,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const rm = dockBtn('btn-remix', 'REMIX', '\u2728', function () { remix(); }); if (builder && builder !== CREW) rm.classList.add('on'); bar.appendChild(rm);
     bar.appendChild(dockBtn('btn-walk', 'WALK', '\uD83D\uDEB6', function () { setWalk(true); }));
     bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
-    bar.appendChild(dockBtn('btn-games', 'GAMES', '\uD83C\uDFAE', function () { openGames(); }));
+    bar.appendChild(playDockBtn());
     bar.appendChild(dreamDockBtn());
     bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
@@ -4231,6 +4310,8 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function openCabinet(x, y) {
     const game = cabinetGame(x, y);
+    const playId = PLAY_IDS[game + 1];
+    if (playId) { journal.lastPlay = rememberPlay(journal.lastPlay, playId); saveJournal(journal); paintPlayBtn(); }
     ag = { game: game, name: CABINETS[game], score: 0, over: false, coins: 0, msg: '' };
     journal.arcadePlays = (journal.arcadePlays || 0) + 1; saveJournal(journal); purse.arcadeGoes++; savePurse();
     document.getElementById('ag-name').textContent = ag.name; agScore(0);
@@ -4262,6 +4343,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const pp = pitchOf(world.ref);
     mk('\u26BD SOCCER', pp ? 'Your pitch is ready. Tap the ball, drive into it, or walk up and kick it.' : 'Get the pitch plan and build it. Hands are free.',
       function () {
+        journal.lastPlay = rememberPlay(journal.lastPlay, 'soccer'); saveJournal(journal); paintPlayBtn();
         if (pp) { centreOn(pp.x + PITCH_W / 2, pp.y + PITCH_H / 2); toast('KICK IT INTO A GOAL! Tap the ball, drive at it, or walk into it.'); }
         else layPitch();
       });
@@ -4273,6 +4355,114 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('gm-close').addEventListener('click', function () {
     document.getElementById('gamemenu').classList.remove('on'); blip(420);
   });
+  /* PLAY DOOR. Tap / hold / long-press on the dock. Same clock as Dream.
+     Tap continues. Hold cycles. Long-press opens the GAMES sheet. */
+  function playCtx() {
+    ballSync();
+    return {
+      last: journal.lastPlay,
+      hasPitch: !!pitchOf(world.ref),
+      hasBall: !!(ball && ballPitch),
+      cabinetOpen: !!ag,
+      cabinetGame: ag ? ag.game : null,
+      cabinetOver: !!(ag && ag.over)
+    };
+  }
+  function rememberOpened(id) {
+    journal.lastPlay = rememberPlay(journal.lastPlay, id);
+    saveJournal(journal);
+    paintPlayBtn();
+    return journal.lastPlay;
+  }
+  function goPlaySoccer(r) {
+    const pp = pitchOf(world.ref);
+    if (r.door === 'layPitch' || !pp) { layPitch(); return; }
+    if (walking) {
+      const hint = document.getElementById('w-hint');
+      if (hint) { hint.textContent = 'WALK INTO THE BALL, OR TAP IT.'; hint.classList.add('on');
+        clearTimeout(hintT); hintT = setTimeout(function () { hint.classList.remove('on'); }, 1600); }
+    } else {
+      centreOn(pp.x + PITCH_W / 2, pp.y + PITCH_H / 2);
+    }
+    toast('KICK IT INTO A GOAL!');
+  }
+  function goPlayKick() {
+    ballSync();
+    if (!ball || !ballPitch) { goPlaySoccer({ door: 'soccer' }); return; }
+    const k = playKickVel(ballPitch, ball);
+    if (k) kickBall(k.vx, k.vy);
+    if (!walking) centreOn(ball.x, ball.y);
+    toast('KICK!');
+    if (walking) {
+      const hint = document.getElementById('w-hint');
+      if (hint) { hint.textContent = 'KICK!'; hint.classList.add('on');
+        clearTimeout(hintT); hintT = setTimeout(function () { hint.classList.remove('on'); }, 1200); }
+    }
+  }
+  function applyPlayAct(act) {
+    const r = runPlayAct(act, playCtx());
+    if (r.remember) rememberOpened(r.remember);
+    if (r.door === 'games') { openGames(); return r; }
+    document.getElementById('gamemenu').classList.remove('on');
+    closeDream();
+    if (r.door === 'kick') {
+      if (ag) closeCabinet();
+      goPlayKick();
+      return r;
+    }
+    if (r.door === 'soccer' || r.door === 'layPitch') {
+      if (ag) closeCabinet();
+      goPlaySoccer(r);
+      return r;
+    }
+    if (r.door === 'continue') { toast('KEEP GOING! ' + PLAY_NAMES[r.game]); blip(700); return r; }
+    if (r.door === 'replay') { agReplay(); toast(PLAY_NAMES[r.game] + ' AGAIN!'); return r; }
+    if (r.door === 'cabinet') {
+      if (walking) setWalk(false);
+      openCabinet(r.cabinet, 0);
+      toast(PLAY_NAMES[r.game] + '!');
+      return r;
+    }
+    return r;
+  }
+  function wirePlayDock(b) {
+    const gen = ++playDockGen;
+    let downAt = 0, holdOn = false, longOn = false, holdT = 0, longT = 0;
+    function clearT() { clearTimeout(holdT); clearTimeout(longT); }
+    function up() {
+      if (gen !== playDockGen) return;
+      const held = Date.now() - downAt;
+      clearT();
+      b.classList.remove('on');
+      if (longOn) { longOn = false; holdOn = false; return; }
+      if (holdOn) { holdOn = false; applyPlayAct(playPressAct('hold', { last: journal.lastPlay })); return; }
+      if (playPressKind(held) === 'tap') {
+        applyPlayAct(playPressAct('tap', { last: journal.lastPlay }));
+      }
+    }
+    function down(e) {
+      e.preventDefault();
+      try { b.setPointerCapture(e.pointerId); } catch (x) {}
+      downAt = Date.now(); holdOn = false; longOn = false; clearT();
+      holdT = setTimeout(function () {
+        if (gen !== playDockGen) return;
+        holdOn = true;
+        b.classList.add('on');
+        toast(PLAY_NAMES[playNextOf(journal.lastPlay)] + '!');
+        blip(700);
+      }, PLAY_HOLD_MS);
+      longT = setTimeout(function () {
+        if (gen !== playDockGen) return;
+        longOn = true; holdOn = false;
+        b.classList.remove('on');
+        applyPlayAct(playPressAct('long'));
+      }, PLAY_LONG_MS);
+    }
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
   /* DREAM DOOR. Tap / hold / long-press on the dock. Voice or paste is only an input.
      The mapper is still dreamScript. Hold reuses the same Web Speech path. */
   let dreamRec = null, dreamListening = false, dreamHeard = '';
@@ -5013,6 +5203,8 @@ if (typeof module !== 'undefined' && module.exports) {
   function hourNow() { if (HOUR_OVERRIDE != null) return HOUR_OVERRIDE; const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
   function saveJournal(j) { try { localStorage.setItem(JKEY, JSON.stringify(j)); SYNC.push('journal'); } catch (e) {} }
   let journal = loadJournal();
+  journalReady = true;
+  paintPlayBtn();
   function noteIslander(nm) {
     if (journal.newIslanders.indexOf(nm) === -1) { journal.newIslanders.push(nm); saveJournal(journal); }
   }
@@ -5345,6 +5537,11 @@ if (typeof module !== 'undefined' && module.exports) {
     openDream, closeDream, placeHeardDream, hearDream: (t) => placeHeardDream(t),
     dreamOpen: () => document.getElementById('dreampanel').classList.contains('on'),
     dreamPressKind, dreamPressAct, dreamPickAct, runDreamAct,
+    playPressKind, playPressAct, runPlayAct, playKickVel, PLAY_IDS, PLAY_NAMES,
+    lastPlay: () => journal.lastPlay || 'soccer',
+    tapPlay: () => applyPlayAct(playPressAct('tap', { last: journal.lastPlay })),
+    holdPlay: () => applyPlayAct(playPressAct('hold', { last: journal.lastPlay })),
+    longPlay: () => applyPlayAct(playPressAct('long')),
     lastDream: () => journal.lastDream,
     tapDream: () => applyDreamAct(dreamPressAct('tap', { last: journal.lastDream, profileDream: dreamProfile() })),
     holdDream: (t) => applyDreamAct(dreamPressAct('hold', { heard: t })),
