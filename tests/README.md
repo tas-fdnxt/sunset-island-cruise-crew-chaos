@@ -31,6 +31,10 @@ From the repo root:
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
 
+`robot-carousel3.py` drives `ollie-update-3.html`: ten cards, four real photos, no invented
+Ollie quotes, and no claim of a thing that is not live (no Play multi-button, no pretty modes,
+no 3D walk soccer).
+
 `tests/isle-core.js` is generated. Do not edit it and do not commit it.
 
 ## What each file guards

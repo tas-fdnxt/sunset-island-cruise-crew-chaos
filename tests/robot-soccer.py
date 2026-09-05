@@ -48,6 +48,16 @@ def run(pw, url, label, w, hgt):
     else:
         ck(label + ' dock fits, nothing to scroll', True, m)
 
+    ck(label + ' DREAM is in the dock', pg.locator('#btn-dream').count() == 1)
+    ck(label + ' the island engine booted', pg.evaluate("!!window.__ISLAND && typeof window.__ISLAND.openDream==='function'"))
+    pg.evaluate("window.__ISLAND.openDream()")
+    pg.wait_for_timeout(300)
+    ck(label + ' the dream picker opens', pg.evaluate("window.__ISLAND.dreamOpen()===true"))
+    picks = pg.locator('#dream-picks').inner_text().upper()
+    ck(label + ' CASTLE is on the dream list', 'CASTLE' in picks, picks[:80])
+    pg.evaluate("window.__ISLAND.closeDream()")
+    pg.wait_for_timeout(200)
+
     ck(label + ' GAMES is in the dock', pg.locator('#btn-games').count() == 1)
     pg.locator('#btn-games').click(); pg.wait_for_timeout(500)
     ck(label + ' the picker opens', pg.locator('#gamemenu.on').count() == 1)
