@@ -767,6 +767,113 @@ function parseProfile(str) {
   p.hex = PROFILE.COLOURS[p.colour].hex;
   return p;
 }
+/* DREAM → PLACE. A free-text dream (or a PROFILE.DREAMS index) becomes a short list of place()
+   calls near the middle of the island. Recipes stay tiny so the share link stays under LINK_MAX.
+   Hands can still build on top. Nothing here invents a second island. */
+function dreamHouseCols(ox, oy) {
+  /* a door plus ten neighbour cells: houses() will count it, and it is twelve blocks. */
+  return [
+    { dx: ox + 0, dy: oy + 0, ids: [3] }, { dx: ox + 1, dy: oy + 0, ids: [3] }, { dx: ox + 2, dy: oy + 0, ids: [3] },
+    { dx: ox + 0, dy: oy + 1, ids: [3] }, { dx: ox + 1, dy: oy + 1, ids: [3] }, { dx: ox + 2, dy: oy + 1, ids: [3] },
+    { dx: ox + 0, dy: oy + 2, ids: [3] }, { dx: ox + 1, dy: oy + 2, ids: [6] }, { dx: ox + 2, dy: oy + 2, ids: [3] },
+    { dx: ox + 0, dy: oy + 3, ids: [3] }, { dx: ox + 1, dy: oy + 3, ids: [3] }, { dx: ox + 2, dy: oy + 3, ids: [3] },
+  ];
+}
+function dreamRecipe(key) {
+  if (key === 0) return [ /* CASTLE: one four-high tower, brick walls, a door */
+    { dx: 0, dy: 0, ids: [4, 4, 4, 4] }, { dx: 1, dy: 0, ids: [4, 4] }, { dx: 2, dy: 0, ids: [4, 4] },
+    { dx: 0, dy: 1, ids: [4, 4] }, { dx: 2, dy: 1, ids: [4, 4] },
+    { dx: 0, dy: 2, ids: [4, 4] }, { dx: 1, dy: 2, ids: [6, 4] }, { dx: 2, dy: 2, ids: [4, 4] },
+  ];
+  if (key === 1) return dreamHouseCols(0, 0).concat(dreamHouseCols(8, 0), dreamHouseCols(0, 8)); /* ZOO: three animal houses */
+  if (key === 2) return [ /* RACETRACK: a flag and a little sand loop */
+    { dx: 0, dy: 0, ids: [9] },
+    { dx: 1, dy: 0, ids: [2] }, { dx: 2, dy: 0, ids: [2] }, { dx: 3, dy: 0, ids: [2] }, { dx: 4, dy: 0, ids: [2] },
+    { dx: 4, dy: 1, ids: [2] }, { dx: 4, dy: 2, ids: [2] }, { dx: 4, dy: 3, ids: [2] },
+    { dx: 3, dy: 3, ids: [2] }, { dx: 2, dy: 3, ids: [2] }, { dx: 1, dy: 3, ids: [2] }, { dx: 0, dy: 3, ids: [2] },
+    { dx: 0, dy: 2, ids: [2] }, { dx: 0, dy: 1, ids: [2] },
+  ];
+  if (key === 3) return dreamHouseCols(0, 0).concat([{ dx: 4, dy: 1, ids: [11] }]); /* BAKERY: a shop and its oven */
+  if (key === 4) return [ /* ROCKET BASE: a four-high launch tower on a sand pad */
+    { dx: 0, dy: 1, ids: [2] }, { dx: 1, dy: 0, ids: [2] }, { dx: 2, dy: 1, ids: [2] }, { dx: 1, dy: 2, ids: [2] },
+    { dx: 1, dy: 1, ids: [3, 3, 3, 7] }, { dx: 3, dy: 1, ids: [9] },
+  ];
+  if (key === 6) return [ /* FLOWER GARDEN: ten grass and two seeds. Never a sprout or a tree. */
+    { dx: 0, dy: 0, ids: [1] }, { dx: 1, dy: 0, ids: [1] }, { dx: 2, dy: 0, ids: [1] }, { dx: 3, dy: 0, ids: [1] }, { dx: 4, dy: 0, ids: [1] },
+    { dx: 0, dy: 1, ids: [1] }, { dx: 1, dy: 1, ids: [1] }, { dx: 2, dy: 1, ids: [1] }, { dx: 3, dy: 1, ids: [1] }, { dx: 4, dy: 1, ids: [1] },
+    { dx: 1, dy: 2, ids: [12] }, { dx: 3, dy: 2, ids: [12] },
+  ];
+  return dreamHouseCols(0, 0); /* SECRET HIDEOUT, and the safest default */
+}
+function dreamMatch(dreamTextOrIndex) {
+  if (typeof dreamTextOrIndex === 'number' && isFinite(dreamTextOrIndex)) {
+    const n = dreamTextOrIndex | 0;
+    return (n >= 0 && n < PROFILE.DREAMS.length) ? n : 5;
+  }
+  const raw = String(dreamTextOrIndex == null ? '' : dreamTextOrIndex).trim();
+  if (/^[0-6]$/.test(raw)) return parseInt(raw, 10);
+  const t = raw.toUpperCase();
+  for (let i = 0; i < PROFILE.DREAMS.length; i++) if (t.indexOf(PROFILE.DREAMS[i].name) !== -1) return i;
+  if (/CASTLE|KEEP|FORT|PALACE|TOWER/.test(t) && !/LAUNCH|ROCKET/.test(t)) return 0;
+  if (/ZOO|ANIMAL|CAGE/.test(t)) return 1;
+  if (/RACE|TRACK|CIRCUIT|LAP/.test(t)) return 2;
+  if (/BAKERY|BAKE|OVEN|CAKE|BREAD|COOKIE/.test(t)) return 3;
+  if (/ROCKET|LAUNCH|SPACE|PAD/.test(t)) return 4;
+  if (/GARDEN|FLOWER|BLOOM|GRASS/.test(t)) return 6;
+  return 5; /* unknown words become a hideout, never an empty island */
+}
+function dreamSpot(cols, opts) {
+  opts = opts || {};
+  let mw = 0, mh = 0;
+  cols.forEach(function (c) { if (c.dx > mw) mw = c.dx; if (c.dy > mh) mh = c.dy; });
+  const preferX = opts.ox != null ? Math.floor(opts.ox) : Math.floor(ISLE.N / 2 - (mw + 1) / 2);
+  const preferY = opts.oy != null ? Math.floor(opts.oy) : Math.floor(ISLE.N / 2 - (mh + 1) / 2);
+  function fits(ox, oy) {
+    for (let i = 0; i < cols.length; i++) { const x = ox + cols[i].dx, y = oy + cols[i].dy; if (!isLand(x, y)) return false; }
+    return true;
+  }
+  if (fits(preferX, preferY)) return { x: preferX, y: preferY };
+  for (let r = 1; r < 48; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    if (fits(preferX + dx, preferY + dy)) return { x: preferX + dx, y: preferY + dy };
+  }
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) if (isLand(x, y)) return { x: x, y: y };
+  return { x: preferX, y: preferY };
+}
+function dreamFlatten(cols, ox, oy) {
+  const out = [];
+  cols.forEach(function (c) {
+    const x = ox + c.dx, y = oy + c.dy;
+    if (!isLand(x, y)) return;
+    (c.ids || []).forEach(function (id) {
+      if (id < 1 || id >= ISLE.TYPES.length || id === 13 || id === 14) return;
+      out.push({ x: x, y: y, id: id });
+    });
+  });
+  return out;
+}
+function dreamScript(dreamTextOrIndex, opts) {
+  const cols = dreamRecipe(dreamMatch(dreamTextOrIndex));
+  const sp = dreamSpot(cols, opts);
+  let script = dreamFlatten(cols, sp.x, sp.y);
+  if (script.length) return script;
+  /* land exists somewhere: lay the safest hideout, or a single wood if that is all that fits. */
+  const hide = dreamHouseCols(0, 0), hs = dreamSpot(hide, opts);
+  script = dreamFlatten(hide, hs.x, hs.y);
+  if (script.length) return script;
+  for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) if (isLand(x, y)) return [{ x: x, y: y, id: 3 }];
+  return [];
+}
+function applyDream(w, script) {
+  script = script || [];
+  let placed = 0;
+  for (let i = 0; i < script.length; i++) {
+    const r = place(w, script[i].x, script[i].y, script[i].id);
+    if (!r.ok) return { ok: false, placed: placed, skipped: script.length - placed, why: r.why, encodeLen: encode(w).length };
+    placed++;
+  }
+  return { ok: true, placed: placed, skipped: 0, why: '', encodeLen: encode(w).length };
+}
 function questTable(dream) {
   const d = (dream >= 0 && dream < PROFILE.DREAMS.length) ? PROFILE.DREAMS[dream].quest : null;
   const base = questTableBase().concat([
@@ -1671,7 +1778,7 @@ function stepBall(w, b, dt) {
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
-  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
+  tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     CAR, steerToward, turnRate, carTopSpeed, driftOf, camLead, engineHz, coinArc };
@@ -2641,6 +2748,14 @@ if (typeof module !== 'undefined' && module.exports) {
       if (sv && sv.w.count > 0) { w = sv.w; bestLap = sv.t; chain = sv.c; carIdx = PRO ? PRO.ride : (sv.car || 0); garden = sv.g || {}; restored = true; }
     }
     world.ref = w || makeWorld();
+    if (!world.ref.count) {
+      let dreamQ = '';
+      try { dreamQ = new URLSearchParams(location.search).get('dream') || ''; } catch (e) {}
+      if (dreamQ) {
+        const laid = applyDream(world.ref, dreamScript(dreamQ));
+        if (laid.placed) toast('A DREAM TOOK SHAPE ON THE SAND.');
+      }
+    }
     updateLineage();
     if (restored) toast('YOUR ISLAND IS BACK, ' + TITLE + ' ' + CREW + '!');
     else if (w) toast(builder && builder !== CREW ? 'WELCOME TO ' + builder + "'S ISLAND! Tap REMIX to make it yours."

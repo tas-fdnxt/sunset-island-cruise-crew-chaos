@@ -24,6 +24,7 @@ From the repo root:
     node tests/test-walk.js
     node tests/test-coins.js
     node tests/test-arcade.js
+    node tests/test-dream-place.js
 
 `extract-core.js` pulls the pure logic module out of the first script block in `island.html`,
 so the suites always test the real shipped code rather than a copy that can drift.
@@ -88,3 +89,6 @@ real failure disappear. If a test is wrong, fix the test deliberately and say so
 - **test-arcade.js** the cabinets. Which game a cabinet runs, the whale's seeded song that never repeats a note twice
   running, the gull window that shrinks but never below a five year old's reach, the crate overlap maths, ten points is a
   coin, and the chapter line for a day at the arcade.
+- **test-dream-place.js** the dream → place script. Every PROFILE.DREAM index becomes a tiny recipe of existing blocks,
+  applyDream stops cleanly on cargo/water/grow, the encode stays under LINK_MAX, decode roundtrips, and free-text "castle"
+  matches CASTLE. Unknown words become a hideout, never an empty island.
