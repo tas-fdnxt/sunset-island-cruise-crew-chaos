@@ -146,13 +146,21 @@ def run(pw, w, hgt, label):
     shot(pg, '%s-home' % label)
 
     # drawer
+    # Taught 11 Sep 2026: on an iPad the block in the hand pops the block row (it no longer sits on screen all
+    # the time, Uncle Tabs: "it's in the way, it should pop up"). A phone still opens the drawer.
     pg.evaluate("document.getElementById('cur').click()")
     pg.wait_for_timeout(240)
-    drawer = measure(pg, '#drawer')
-    ck(label + ' drawer opens', drawer is not None, drawer)
+    tall = pg.evaluate("document.body.classList.contains('railopen')")
+    if tall:  # the row is a full-width strip; what must clear the sides is its buttons
+        drawer = pg.evaluate("""()=>{const bs=[...document.querySelectorAll('#rail button')].map(b=>b.getBoundingClientRect()).filter(r=>r.width>2);
+          if(!bs.length) return null; const l=Math.min(...bs.map(r=>r.left)),r=Math.max(...bs.map(r=>r.right)),t=Math.min(...bs.map(r=>r.top)),b=Math.max(...bs.map(r=>r.bottom));
+          return {l:l,r:r,t:t,b:b,w:r-l,h:b-t}}""")
+    else:
+        drawer = measure(pg, '#drawer')
+    ck(label + (' block row pops up' if tall else ' drawer opens'), drawer is not None, drawer)
     ck(label + ' drawer clears the sides', inset_ok(drawer, vw, vh), drawer)
     shot(pg, '%s-drawer' % label)
-    pg.evaluate("document.getElementById('drawer').classList.remove('on')")
+    pg.evaluate("document.getElementById('drawer').classList.remove('on'); document.body.classList.remove('railopen')")
 
     # dream + games
     pg.evaluate("window.__ISLAND.openDream()")

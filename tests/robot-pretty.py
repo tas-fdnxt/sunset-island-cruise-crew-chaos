@@ -77,7 +77,8 @@ def run(pw, url, label, w, hgt):
     ck(label + ' dock corners are soft', dock_rad >= 16, dock_rad)
     chip_txt = pg.locator('#lookchip').inner_text().upper()
     ck(label + ' LOOK is labeled LOOK', 'LOOK' in chip_txt, chip_txt)
-    ck(label + ' LOOK names the live look', 'WARM' in chip_txt, chip_txt)
+    # Taught 11 Sep 2026: the chip speaks kid words now. warm is shown as SUNSET (Ollie could not read WARM).
+    ck(label + ' LOOK names the live look', 'SUNSET' in chip_txt, chip_txt)
 
     def sky_rgb():
         png = pg.screenshot()
@@ -124,7 +125,7 @@ def run(pw, url, label, w, hgt):
     pg.evaluate("window.__ISLAND.tapPretty()")
     pg.wait_for_timeout(280)
     ck(label + ' tap cycles back to warm', pg.evaluate("window.__ISLAND.prettyMode()") == 'warm')
-    ck(label + ' chip flashes the new look', 'WARM' in pg.locator('#lookchip').inner_text().upper())
+    ck(label + ' chip flashes the new look', 'SUNSET' in pg.locator('#lookchip').inner_text().upper())
 
     pg.evaluate("window.__ISLAND.setHour(14)")
     pg.evaluate("window.__ISLAND.setPrettyTime('auto')")
@@ -153,7 +154,7 @@ def run(pw, url, label, w, hgt):
     pg.wait_for_timeout(350)
     ck(label + ' long-press opens the LOOK sheet', pg.evaluate("window.__ISLAND.lookOpen()===true"))
     sheet = pg.locator('#lookmenu').inner_text().upper()
-    ck(label + ' the sheet names the three looks', 'SOFT' in sheet and 'WARM' in sheet and 'CRISP' in sheet, sheet[:180])
+    ck(label + ' the sheet names the three looks', 'SUNNY' in sheet and 'SUNSET' in sheet and 'BRIGHT' in sheet, sheet[:180])
     ck(label + ' the sheet names day and night', 'DAY' in sheet and 'NIGHT' in sheet, sheet[:180])
     ck(label + ' the sheet never locks or sells', all(w not in sheet for w in ['LOCKED', 'BUY NOW', 'UNLOCK', 'COINS TO PLAY']))
     shot(pg, '%s-sheet' % label.replace(' ', '-'))

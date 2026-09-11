@@ -29,8 +29,9 @@ ok('the hero gap is obvious next to a tool', PHONE_CAP.PLAY_W - PHONE_CAP.TOOL_W
 ok('LOOK stays far smaller than PLAY', PHONE_CAP.LOOK_W <= PHONE_CAP.PLAY_W - 16);
 ok('the current block is bigger than a tool', PHONE_CAP.CUR_W > PHONE_CAP.TOOL_W);
 ok('gap grew with the buttons', PHONE_CAP.DOCK_GAP >= 8);
-ok('ten slots show when remix is hidden', PHONE_CAP.SLOTS_VISIBLE === 10);
-ok('eleven slots when a foreign island is open', PHONE_CAP.SLOTS_ALL === 11);
+// Taught 11 Sep 2026: HELP joined DREAM on the dock (Uncle Tabs asked for help beside DREAM).
+ok('eleven slots show when remix is hidden', PHONE_CAP.SLOTS_VISIBLE === 11);
+ok('twelve slots when a foreign island is open', PHONE_CAP.SLOTS_ALL === 12);
 ok('LOOK stays a sand-side target', PHONE_CAP.LOOK_W >= 92 && PHONE_CAP.LOOK_H >= 92);
 ok('LOOK is not a third dock hero slot', PHONE_CAP.LOOK_DOCK == null);
 ok('LOOK stays smaller than PLAY', PHONE_CAP.LOOK_W < PHONE_CAP.PLAY_W);
@@ -39,8 +40,8 @@ ok('no second dock was invented', PHONE_CAP.DOCKS == null && PHONE_CAP.DOCK2 == 
 const span = dockSpan(false);
 const spanRemix = dockSpan(true);
 ok('the honest dock is the pad plus the live buttons', span ===
-  PHONE_CAP.DOCK_PAD * 2 + 7 * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
-  + PHONE_CAP.PLAY_W + PHONE_CAP.DREAM_W + 9 * PHONE_CAP.DOCK_GAP);
+  PHONE_CAP.DOCK_PAD * 2 + 8 * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
+  + PHONE_CAP.PLAY_W + PHONE_CAP.DREAM_W + 10 * PHONE_CAP.DOCK_GAP); // taught 11 Sep 2026: HELP is the eighth tool
 ok('the honest dock is wider than a 390 phone', span > PHONE_CAP.W, span);
 ok('remix makes it wider still', spanRemix > span);
 ok('a 390 phone does not fit the dock', dockFitsPhone(390, false) === false);

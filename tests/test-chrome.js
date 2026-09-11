@@ -13,8 +13,9 @@ ok('tool buttons are at least about 2cm', PHONE_CAP.TOOL_W >= 76);
 ok('PLAY is the hero and bigger than a tool', PHONE_CAP.PLAY_W >= 112 && PHONE_CAP.PLAY_W > PHONE_CAP.TOOL_W);
 ok('DREAM is the second hero', PHONE_CAP.DREAM_W >= 104 && PHONE_CAP.DREAM_W > PHONE_CAP.TOOL_W);
 ok('the current block is bigger than a pin', PHONE_CAP.CUR_W > PHONE_CAP.TOOL_W);
-ok('ten slots show when remix is hidden', PHONE_CAP.SLOTS_VISIBLE === 10);
-ok('eleven slots when a foreign island is open', PHONE_CAP.SLOTS_ALL === 11);
+// taught 11 Sep 2026: HELP joined DREAM
+ok('eleven slots show when remix is hidden', PHONE_CAP.SLOTS_VISIBLE === 11);
+ok('twelve slots when a foreign island is open', PHONE_CAP.SLOTS_ALL === 12);
 
 const span = dockSpan(false);
 const spanRemix = dockSpan(true);

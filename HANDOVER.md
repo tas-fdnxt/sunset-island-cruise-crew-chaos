@@ -1,6 +1,6 @@
 # SUNSET ISLAND: HANDOVER TO THE TERMINAL
 
-Written 5 September 2026. This file is the checkpoint. The repo is the only thing that
+Written 5 September 2026, updated 11 September 2026 after Forge 10. This file is the checkpoint. The repo is the only thing that
 survives a sandbox, so this lives here, not in a chat.
 
 Read `sunset-island-doctrine.md` first if it is attached to the session. When the Doctrine and
@@ -17,7 +17,7 @@ Verify every session with a cache-buster. These are the true shas as at this han
 
 | File | sha256 (first 8) | What it is |
 |---|---|---|
-| `island.html` | `ff4cb285` | Punch LOOK. Tested on this branch. Not live until merge. |
+| `island.html` | see section 5 | Forge 10: the Captain's fix list. The Punch LOOK (`ff4cb285`) was already live on main before it; the old "not live until merge" note was wrong. |
 | `arcade.html` | `bc0420d9` | OLLIE'S. Do not edit without Fabian asking. |
 | `storybook.html` | `bef56030` | OLLIE'S. Do not edit without Fabian asking. |
 | `ollie-update.html` | `a646da7a` | Carousel one, 17 cards. Shipped. |
@@ -66,7 +66,7 @@ Nothing ships that has not been through all six rungs, in order:
 5. Hygiene: zero console errors, zero external requests
 6. Live curl sha match after deploy, plus proof Ollie's files are unchanged
 
-**Current state: 35 suites, including `test-pretty` (134), `test-synth` (72), `test-dock` (47), all green.**
+**Current state: 36 suites, including `test-captain-fixes` (50), `test-pretty` (134), `test-synth` (72), `test-dock` (47), all green. Robot `robot-fixes` runs Ollie's edition on four iPad shapes and a phone, and everyone's edition on iPad and phone. Ollie plays on his iPad: iPad is the first viewport, always.**
 
 | Suite | Checks | Suite | Checks |
 |---|---|---|---|
@@ -127,6 +127,35 @@ the link must be measured against 1700.**
 ---
 
 ## 5. WHAT SHIPPED TODAY
+
+### Forge 10, 11 September 2026: the Captain's fix list
+
+From a recorded playtest with Ollie on the live island. Every item was a red test before it was fixed
+(`tests/test-captain-fixes.js`, `tests/robot-fixes.py`), proven red on the live bytes `ff4cb285`.
+
+- **Stacking.** `cellAt` undid the view at ground level only, so a tap on the top of a 5 high tower placed a
+  block on the ground five squares behind it, drawn where the tower top is. New pure `pickColumn` walks every
+  column that could be under the finger and returns the front-most one whose picture contains the point.
+- **ONE AT A TIME is the default.** A drag moves the island. Hold the block in the hand for ONE / LOTS
+  (`#modepop`). LOTS brings back the stroke painter. The block in the hand wears a badge (x1 or LOTS).
+- **Dream.** `dreamSpot` ignored what was built, so every DREAM tap laid the next castle on top of the last
+  until the middle was 8 high and it said THE DREAM COULD NOT FIND LAND with sand all around. With a world it
+  now only lands on clear sand. Every failure has its own sentence (`dreamWhyLine`); the old line is gone.
+- **Blueprint rectangle.** `bpSpot` checked only a plan's outline, so the hollow pitch could close around a
+  hut. `bpRectFree` checks every square, and a full outward sweep runs before anyone is told no.
+- **The plan moves.** An untouched blueprint can be held and dragged (`bpDragStart/To/End`). Green when it
+  fits, red when not, springs back to clear sand. Pinned once its first block is laid.
+- **The block row pops up.** On an iPad `#rail` sat on screen all the time. Now the block in the hand pops it
+  up and picking a block puts it away (`body.railopen`). A phone still uses the drawer.
+- **Side columns.** The side buttons were placed by hand, one `top:` each, and on an iPad LOG sat on top of
+  the find-my-island button. They now live in two stacks, `#sideR` and `#sideL`.
+- **Title pill.** His own island shows a small anchor pill; a tap shows the whole name. A friend's island
+  keeps the full name, it is the credit.
+- **LOOK words.** SOFT / WARM / CRISP became SUNNY / SUNSET / BRIGHT. Keys unchanged, saves unchanged.
+- **HELP beside DREAM.** Eighth tool on the dock. `PHONE_CAP.SLOTS_*` are 11 and 12.
+- **The dock leans in.** Buttons under the finger grow into the dock's own top padding (off under reduced motion).
+- **Trees.** The three fruit on a grown tree shared one canvas path with no `moveTo`, so every tree had a
+  big pink wedge across it. Ollie: "The trees are pink and green. I don't want that." Separate circles, gold.
 
 **The dock scroll defect, fixed.** `#bottombar` is `display:flex` with eight buttons at 52px, 416px of
 content on a 390px phone, and the file had no `overflow-x` rule anywhere. It could never scroll, and
@@ -212,6 +241,23 @@ this brick. Do not merge from a sandbox.
 
 ## 6. DEFECTS FOUND AND FIXED TODAY (ALL MINE)
 
+Forge 10, 11 September 2026:
+
+- **Found in the engine and fixed:** the stacking pick, the dream stacking on itself, the hollow blueprint
+  check, the LOG overlap, and the pink tree wedge above. Also three that nobody had noticed:
+  the zoom knob shared the id `knob` with the walk stick, so zooming moved the walk stick and the zoom knob
+  never moved (it is `zknob` now and rides the real track height); the `#voybtn` size rules sat outside
+  their brace since they were written, so the voyage flag drew as a tiny default button; and `#btn-book`
+  overlapped `#voybtn`, `#mini` overlapped the title on an iPad.
+- **Tests that were wrong, taught out loud:** `robot-blueprints` assumed every day's blueprint has a door and
+  failed on the live build on doorless days (racetrack, pitch); `test-pretty` called SOFT/WARM/CRISP kid-clear;
+  five suites hardcoded a seven-tool dock span; `robot-chrome` expected the drawer on an iPad; `robot-pretty`
+  read the old words.
+- **My own slip:** I ran `git stash` while the robot fleet was running, which swapped the file under one robot
+  for a few seconds. That fleet run was thrown away and the whole ladder rerun on the final bytes.
+
+Earlier:
+
 1. **Put the pitch at the FRONT of `BLUEPRINTS`**, which changed the daily blueprint rotation for every
    child on every day. Caught by `robot-blueprints`. Moved to the end. **Rule: never insert into a rotation,
    always append.**
@@ -227,6 +273,12 @@ this brick. Do not merge from a sandbox.
 ---
 
 ## 7. WHAT IS NOT BUILT
+
+- **Forge 10 bricks still to come:** B3 (wider sea with waves, background picker), B4 (cars redrawn, water
+  splash and SEA CRUISER floats), B5 (islander cards), B5b (the mansion, promised to Ollie out loud), B6
+  carousel ten. See `claude/forge-10-plan.md` in the project.
+- **Robot ports.** `robot-carousel` needs a server on 8231 and `robot-trips` on 8233, as well as 8099, 8234,
+  8235 and 8240. Start them all or those robots fail to navigate and it looks like a code fault.
 
 - **Walk / 3D soccer is live.** Same `pitchOf` / `ballStart` / `stepBall` / `goalScored`.
   A walk tap uses `kickTowardGoal`. Walking into the ball uses `walkKick`. Sixteen-triangle

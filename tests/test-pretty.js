@@ -25,7 +25,8 @@ ok('prettyMixRgb is a colour mix, not a mesh', typeof prettyMixRgb === 'function
 ok('prettySky tints the living sky', typeof prettySky === 'function');
 ok('prettyLine is the chapter beat', typeof prettyLine === 'function');
 ok('three pretty ids, no fourth look', PRETTY_IDS.join() === 'soft,warm,crisp');
-ok('kid-clear names', PRETTY_NAMES.soft === 'SOFT' && PRETTY_NAMES.warm === 'WARM' && PRETTY_NAMES.crisp === 'CRISP');
+// Taught 11 Sep 2026: SOFT, WARM, CRISP were not kid-clear. Ollie read the chip and asked "What is this?"
+ok('kid-clear names', PRETTY_NAMES.soft === 'SUNNY' && PRETTY_NAMES.warm === 'SUNSET' && PRETTY_NAMES.crisp === 'BRIGHT');
 ok('LINK_MAX stays 1900', ISLE.LINK_MAX === 1900);
 ok('MAX_BLOCKS stays 1000', ISLE.MAX_BLOCKS === 1000);
 ok('PROFILE.VER stays 1', PROFILE.VER === 1);
@@ -131,8 +132,8 @@ ok('LOOK is a kid-can-not-miss sand chip', PHONE_CAP.LOOK_W >= 92 && PHONE_CAP.L
 ok('LOOK stays smaller than the PLAY hero', PHONE_CAP.LOOK_W < PHONE_CAP.PLAY_W && PHONE_CAP.LOOK_W <= PHONE_CAP.PLAY_W - 16);
 ok('LOOK is not a third dock hero slot', PHONE_CAP.LOOK_DOCK == null);
 ok('dock span is unchanged by LOOK', dockSpan(false) ===
-  PHONE_CAP.DOCK_PAD * 2 + 7 * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
-  + PHONE_CAP.PLAY_W + PHONE_CAP.DREAM_W + 9 * PHONE_CAP.DOCK_GAP);
+  PHONE_CAP.DOCK_PAD * 2 + 8 * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
+  + PHONE_CAP.PLAY_W + PHONE_CAP.DREAM_W + 10 * PHONE_CAP.DOCK_GAP); // taught 11 Sep 2026: HELP is the eighth tool
 ok('a 390 phone still cannot hold the dock', dockFitsPhone(390, false) === false);
 ok('chrome still never kisses a side', chromeEdge() === 16 && PHONE_CAP.EDGE === 16);
 ok('corners are soft and kid-round', PHONE_CAP.CORNER >= 18 && chromeCorner() === PHONE_CAP.CORNER);

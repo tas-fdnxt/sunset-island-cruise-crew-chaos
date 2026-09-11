@@ -60,7 +60,7 @@
     padding:8px 6px; cursor:pointer; touch-action:manipulation;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; }
   #lookchip small { display:block; letter-spacing:0.18em; font-size:12px; }
-  #lookchip b { display:block; font-size:20px; letter-spacing:0.04em; }
+  #lookchip b { display:block; font-size:16px; letter-spacing:0; white-space:nowrap; } /* SUNSET and BRIGHT are six letters: they fit inside the chip */
   #lookchip.on { background:var(--peach); }
   #lookchip:active, #lookchip.held { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
   #lookchip.flash { transform:scale(1.08); }
@@ -116,7 +116,32 @@
   .dock .ic { font-size:26px; line-height:1; }
   .dock:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(20,8,30,0.5); }
   .dock.sel { border-color:var(--yellow); background:var(--dusk); }
-  #cur { width:96px; height:96px; border-color:var(--yellow); background:var(--dusk); font-size:12px; }
+  #cur { width:96px; height:96px; border-color:var(--yellow); background:var(--dusk); font-size:12px; position:relative; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+  #cur .mode { position:absolute; top:4px; right:4px; font:900 10px system-ui; letter-spacing:0.04em; background:var(--yellow); color:var(--ink); border-radius:8px; padding:2px 6px; line-height:1.2; }
+  #bottombar .dock { transform-origin:50% 100%; transition:transform 0.09s ease-out; }
+  /* ONE / LOTS: hold the block in the hand and this pops up. */
+  #modepop { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 150px); z-index:30; display:none;
+    flex-direction:column; gap:10px; width:min(calc(100vw - 32px), 380px); background:var(--cream); color:var(--ink);
+    border:4px solid var(--ink); border-radius:24px; padding:14px; box-shadow:0 8px 0 rgba(20,8,30,0.45); box-sizing:border-box; }
+  #modepop.on { display:flex; }
+  #modepop h4 { margin:0; text-align:center; font:900 15px system-ui; letter-spacing:0.12em; }
+  #modepop button { font:900 20px system-ui; padding:14px 10px; border-radius:18px; border:3px solid var(--ink); background:#FFFFFF; color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; }
+  #modepop button small { font:700 13px system-ui; opacity:0.75; letter-spacing:0.02em; }
+  #modepop button.sel { background:var(--yellow); }
+  /* ONE COLUMN EACH SIDE. The side buttons used to be placed one by one by hand, and on an iPad
+     the LOG button landed on top of the find-my-island button. Now each side is a stack. */
+  #sideR, #sideL { position:fixed; top:calc(env(safe-area-inset-top,0px) + 56px); z-index:6; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  #sideR { right:var(--pad-r); }
+  #sideL { left:var(--pad-l); }
+  #sideR > *, #sideL > * { pointer-events:auto; }
+  #sideR #btn-book, #sideR #btn-story, #sideR #voybtn, #sideR #dial, #sideR #keeper, #sideL #mini, #sideL #btn-board { position:static; top:auto; right:auto; left:auto; margin:0; }
+  #title-badge { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:auto; cursor:pointer; }
+  #title-badge.pill { flex:0 1 auto; max-width:200px; }
+  #title-badge.pill .tb-nm::before { content:"\2693\00a0"; }
+  #title-badge.pill .tb-rest { display:none; }
+  #title-badge.pill.open { max-width:none; }
+  #title-badge.pill.open .tb-rest { display:inline; }
   #cur canvas, .tool canvas, .pin canvas { width:40px; height:42px; image-rendering:auto; }
   #cur canvas { width:52px; height:54px; }
   .pin { width:76px; height:82px; font-size:10px; }
@@ -369,7 +394,10 @@
     #cur canvas { width:72px; height:76px; }
     .pin { width:88px; height:96px; font-size:12px; }
     #bottombar { gap:12px; padding:14px max(18px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(18px, env(safe-area-inset-left, 0px)); }
-    #rail { display:flex; }
+    body.railopen #rail { display:flex; }
+    body.railopen #lookchip { visibility:hidden; } /* the block row pops up when you tap the block in the hand, then hides again */
+    #sideR, #sideL { top:calc(env(safe-area-inset-top,0px) + 70px); gap:10px; }
+    #title-badge.pill { max-width:230px; }
     #drawer { left:6vw; right:6vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px 20px 14px; }
     #dreampanel { left:8vw; right:8vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px; }
     #dream-help { font-size:18px; }
@@ -418,7 +446,7 @@
     #w-pretty b { font-size:20px; }
     #lookchip { width:112px; height:112px; font-size:16px; border-radius:28px; bottom:calc(env(safe-area-inset-bottom,0px) + 204px); }
     #lookchip small { font-size:14px; }
-    #lookchip b { font-size:24px; }
+    #lookchip b { font-size:20px; }
     #lookmenu { left:8vw; right:8vw; bottom:calc(env(safe-area-inset-bottom,0px) + 132px); border-radius:30px; padding:20px; }
     #lookmenu button.lk { min-height:72px; font-size:22px; border-radius:20px; }
     #lk-close { min-height:60px; font-size:16px; }
@@ -439,7 +467,7 @@
  body.driving #chalbar, body.walking #chalbar, body.driving #dreampanel { display:none; }
 </style>
 <style>
- #voybtn { position:fixed; right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 108px); z-index:6; }
+ #voybtn { position:fixed; right:var(--pad-r); top:calc(env(safe-area-inset-top,0px) + 108px); z-index:6;
    width:46px; height:46px; border-radius:50%; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; font:900 20px system-ui; cursor:pointer; }
  #voybtn.done { background:#7BD389; }
  body.walking #voybtn, body.driving #voybtn { display:none; }
@@ -460,15 +488,19 @@
  #posterwrap button { font:900 15px system-ui; padding:13px 18px; border-radius:16px; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; cursor:pointer; min-width:min(80vw,300px); }
  #posterwrap button.alt { background:#FFF3E2; }
  #voymenu .go { display:block; width:100%; font:900 16px system-ui; padding:14px; border-radius:16px; border:3px solid #2A1B3D; background:#FFD447; color:#2A1B3D; margin-top:14px; cursor:pointer; }
+  @media (min-width:700px) and (min-height:700px) and (max-height:900px) {
+    #sideR #dial .track { height:56px; }
+    #sideR #dial { gap:6px; }
+  }
 </style>
 </head>
 <body>
 <canvas id="world"></canvas>
 <canvas id="gl"></canvas>
 <div id="lookveil"></div>
-<div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-pretty" type="button"><small>LOOK</small><b>WARM</b></button><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
+<div id="walkui"><div id="stick"><div id="knob"></div></div><button id="w-pretty" type="button"><small>LOOK</small><b>SUNSET</b></button><button id="w-jump">JUMP</button><button id="w-exit">STOP<br>WALKING</button><div id="w-hint">Left thumb walks. Right thumb looks. Tap an islander to talk.</div></div>
 <div id="topbar">
-  <div class="badge" id="title-badge" style="flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis">OLLIE'S ISLAND</div>
+  <div class="badge" id="title-badge">OLLIE'S ISLAND</div>
   <div class="badge" id="pop" style="color:#8FD8E8" aria-label="Islanders 0"><span class="folk"></span>0</div>
   <div class="badge" id="coins"><span class="coin"></span><span id="coinn">0</span></div>
   <div class="badge" id="cargo">CARGO 0/1000</div>
@@ -481,14 +513,15 @@
 <div id="win"><div class="wincard"><canvas id="wincv" width="360" height="240"></canvas><h3 id="wintitle"></h3><div class="sub" id="winsub"></div><div class="tro" id="wintro"></div><button class="bigbtn" id="wclose">HOORAY!</button></div></div>
 <div id="board"><div id="boardcard"><h3>THE BOARD</h3><div id="boardbody"></div><button class="bigbtn" id="bdclose" style="margin-top:12px">BACK TO THE ISLAND</button></div></div>
 <div id="agame"><div id="ag-top"><span id="ag-name"></span><span id="ag-score">0</span><button id="ag-exit" aria-label="Back to the island">&#10005;</button></div><canvas id="agc"></canvas></div>
-<div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="knob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
+<div id="dial"><button id="zin" aria-label="Zoom in">+</button><div class="track"><span class="snap" style="top:6px"></span><span class="snap" style="top:46px"></span><span class="snap" style="top:86px"></span><div class="knob" id="zknob"></div></div><button id="zout" aria-label="Zoom out">&minus;</button><button id="home" aria-label="Find my island">&#8962;</button></div>
 <canvas id="mini" width="192" height="192" aria-label="Map of the island"></canvas>
-<button id="lookchip" type="button" aria-label="LOOK WARM"><small>LOOK</small><b>WARM</b></button>
+<button id="lookchip" type="button" aria-label="LOOK SUNSET"><small>LOOK</small><b>SUNSET</b></button>
 <div id="lookmenu">
   <div class="gm-hd">PICK A LOOK</div>
   <div id="lk-list"></div>
   <button id="lk-close" type="button">BACK TO THE ISLAND</button>
 </div>
+<div id="modepop" role="dialog" aria-label="How do you build?"><h4>HOW DO YOU BUILD?</h4><button id="mode-one" type="button">ONE AT A TIME<small>tap, tap, tap</small></button><button id="mode-lots" type="button">LOTS<small>drag your finger to lay a line</small></button></div>
 <div id="quest"></div>
 <div id="bpbar"></div>
 <div id="bpmenu"></div>
@@ -955,21 +988,48 @@ function dreamMatch(dreamTextOrIndex) {
 }
 function dreamSpot(cols, opts) {
   opts = opts || {};
+  const w = opts.w || null;
   let mw = 0, mh = 0;
   cols.forEach(function (c) { if (c.dx > mw) mw = c.dx; if (c.dy > mh) mh = c.dy; });
   const preferX = opts.ox != null ? Math.floor(opts.ox) : Math.floor(ISLE.N / 2 - (mw + 1) / 2);
   const preferY = opts.oy != null ? Math.floor(opts.oy) : Math.floor(ISLE.N / 2 - (mh + 1) / 2);
+  /* With a world, a dream only lands on clear sand. Without one (the old callers) it only needs land.
+     Ollie, 11 Sep 2026: every DREAM tap laid the next castle on top of the last one, until the
+     middle was eight high and it said THE DREAM COULD NOT FIND LAND with sand all around. */
   function fits(ox, oy) {
-    for (let i = 0; i < cols.length; i++) { const x = ox + cols[i].dx, y = oy + cols[i].dy; if (!isLand(x, y)) return false; }
+    for (let i = 0; i < cols.length; i++) {
+      const x = ox + cols[i].dx, y = oy + cols[i].dy;
+      if (!isLand(x, y)) return false;
+      if (w && topZ(w, x, y) >= 0) return false;
+    }
     return true;
   }
   if (fits(preferX, preferY)) return { x: preferX, y: preferY };
-  for (let r = 1; r < 48; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+  const far = w ? ISLE.N : 48;
+  for (let r = 1; r < far; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
     if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
     if (fits(preferX + dx, preferY + dy)) return { x: preferX + dx, y: preferY + dy };
   }
+  if (w) return null;
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) if (isLand(x, y)) return { x: x, y: y };
   return { x: preferX, y: preferY };
+}
+function dreamSizeOf(cols) {
+  let mw = 0, mh = 0;
+  cols.forEach(function (c) { if (c.dx > mw) mw = c.dx; if (c.dy > mh) mh = c.dy; });
+  return { w: mw + 1, h: mh + 1 };
+}
+/* Every way a dream can fail has its own sentence. None of them is THE DREAM COULD NOT FIND LAND. */
+function dreamWhyLine(why, size) {
+  const sz = size || { w: 3, h: 3 };
+  if (why === 'room') return 'THE DREAM NEEDS A CLEAR PATCH ' + sz.w + ' BY ' + sz.h + '. Erase a few blocks, or clear some sand further out!';
+  if (why === 'height') return 'That spot is already as tall as it goes. The dream needs its own patch of sand.';
+  if (why === 'plant' || why === 'grow') return 'Something is growing there! The dream needs its own patch of sand.';
+  if (why === 'soil') return 'Seeds need bare sand. Clear a little patch and dream again.';
+  if (why === 'cargo') return 'CARGO HOLD FULL, CAPTAIN! Undo something first.';
+  if (why === 'link') return 'THE LINK IS FULL! Erase a few blocks, or build closer together.';
+  if (why === 'water') return 'That is the sea! Dreams need sand.';
+  return 'The dream needs a clear patch of sand. Erase a few blocks and dream again!';
 }
 function dreamFlatten(cols, ox, oy) {
   const out = [];
@@ -986,10 +1046,12 @@ function dreamFlatten(cols, ox, oy) {
 function dreamScript(dreamTextOrIndex, opts) {
   const cols = dreamRecipe(dreamMatch(dreamTextOrIndex));
   const sp = dreamSpot(cols, opts);
+  if (!sp) return []; /* only with a world: no clear patch big enough. runDreamAct says how big. */
   let script = dreamFlatten(cols, sp.x, sp.y);
   if (script.length) return script;
   /* land exists somewhere: lay the safest hideout, or a single wood if that is all that fits. */
   const hide = dreamHouseCols(0, 0), hs = dreamSpot(hide, opts);
+  if (!hs) return [];
   script = dreamFlatten(hide, hs.x, hs.y);
   if (script.length) return script;
   for (let y = 0; y < ISLE.N; y++) for (let x = 0; x < ISLE.N; x++) if (isLand(x, y)) return [{ x: x, y: y, id: 3 }];
@@ -1009,7 +1071,8 @@ function applyDream(w, script) {
    mapper, then applyDream. Nothing here invents a second recipe list. */
 function hearDream(w, text) {
   const heard = String(text == null ? '' : text).trim();
-  const script = dreamScript(heard);
+  const script = dreamScript(heard, { w: w });
+  if (!script.length) return { ok: false, placed: 0, skipped: 0, why: 'room', size: dreamSizeOf(dreamRecipe(dreamMatch(heard))), encodeLen: encode(w).length, heard: heard, script: script };
   const r = applyDream(w, script);
   return { ok: r.ok, placed: r.placed, skipped: r.skipped, why: r.why, encodeLen: r.encodeLen, heard: heard, script: script };
 }
@@ -1050,7 +1113,8 @@ function runDreamAct(w, act) {
     r.door = 'hearDream';
     return r;
   }
-  const script = dreamScript(act.dream);
+  const script = dreamScript(act.dream, { w: w });
+  if (!script.length) return { ok: false, placed: 0, skipped: 0, why: 'room', size: dreamSizeOf(dreamRecipe(dreamMatch(act.dream))), encodeLen: encode(w).length, script: script, door: 'dreamScript', dream: act.dream };
   const r = applyDream(w, script);
   return { ok: r.ok, placed: r.placed, skipped: r.skipped, why: r.why, encodeLen: r.encodeLen, script: script, door: 'dreamScript', dream: act.dream };
 }
@@ -2020,13 +2084,13 @@ const PHONE_CAP = {
   CM: 38, TOOL_CM: 2,
   TOOL_W: 76, TOOL_H: 84, CUR_W: 96, PLAY_W: 120, PLAY_H: 120, DREAM_W: 112, DREAM_H: 112,
   LOOK_W: 96, LOOK_H: 96, CORNER: 20,
-  SLOTS_VISIBLE: 10, SLOTS_ALL: 11
+  SLOTS_VISIBLE: 11, SLOTS_ALL: 12 /* HELP joined DREAM on 11 Sep 2026 */
 };
 function chromeEdge() { return PHONE_CAP.EDGE; }
 function chromeCorner() { return PHONE_CAP.CORNER; }
 function dockSpan(remixOn) {
-  const tools = remixOn ? 8 : 7;
-  const gaps = remixOn ? 10 : 9;
+  const tools = remixOn ? 9 : 8;
+  const gaps = remixOn ? 11 : 10;
   return PHONE_CAP.DOCK_PAD * 2 + tools * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
     + PHONE_CAP.PLAY_W + PHONE_CAP.DREAM_W + gaps * PHONE_CAP.DOCK_GAP;
 }
@@ -2046,7 +2110,7 @@ function warmRgb(rgb, on) {
 const PRETTY_HOLD_MS = DREAM_HOLD_MS;
 const PRETTY_LONG_MS = DREAM_LONG_MS;
 const PRETTY_IDS = ['soft', 'warm', 'crisp'];
-const PRETTY_NAMES = { soft: 'SOFT', warm: 'WARM', crisp: 'CRISP' };
+const PRETTY_NAMES = { soft: 'SUNNY', warm: 'SUNSET', crisp: 'BRIGHT' }; /* Ollie could not read WARM (11 Sep 2026). Keys stay, labels change. */
 const PRETTY_DEFAULT = 'warm';
 function prettyPressKind(ms) { return dreamPressKind(ms); }
 function prettyOf(id) {
@@ -2334,18 +2398,57 @@ function bpDone(w, bp, ox, oy) {
     return true;
   });
 }
+/* THE PLAN NEVER SITS ON HIS BLOCKS. A hollow blueprint (the pitch is an outline of 22 blocks
+   around a 9 by 6 field) used to check only its outline, so it could close around a hut Ollie had
+   built. Now every square inside the rectangle has to be clear sand. */
+function bpRectFree(w, bp, ox, oy) {
+  const sz = bpSize(bp);
+  for (let y = oy; y < oy + sz.h; y++) for (let x = ox; x < ox + sz.w; x++) {
+    if (!inBounds(x, y) || !isLand(x, y) || topZ(w, x, y) >= 0) return false;
+  }
+  return true;
+}
 function bpSpot(w, bp, near) {
   for (let r = 3; r <= 34; r++) for (let a = 0; a < 24; a++) {
     const ang = a / 24 * Math.PI * 2, cx = Math.round(near.x + Math.cos(ang) * r), cy = Math.round(near.y + Math.sin(ang) * r);
-    let ok = true;
-    for (let i = 0; i < bp.cols.length && ok; i++) {
-      const c = bp.cols[i], x = cx + c.dx, y = cy + c.dy;
-      if (!inBounds(x, y) || !isLand(x, y) || topZ(w, x, y) >= 0) ok = false;
-    }
-    if (ok) return { x: cx, y: cy };
+    if (bpRectFree(w, bp, cx, cy)) return { x: cx, y: cy };
+  }
+  /* the ring skips squares far out, so a crowded island gets a full sweep before anyone is told no */
+  const nx = Math.round(near.x), ny = Math.round(near.y);
+  for (let r = 0; r < ISLE.N; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    if (bpRectFree(w, bp, nx + dx, ny + dy)) return { x: nx + dx, y: ny + dy };
   }
   return null;
 }
+/* THE FINGER GETS WHAT IT SEES. The old tap undid the view at ground level only, so a tap on the
+   top of a tall tower landed on a ground square far behind it and the new block appeared to float.
+   Ollie, 11 Sep 2026: "I try to build higher. It doesn't really work." This walks every column that
+   could be under the finger and returns the front-most one whose picture contains the point.
+   ax, ay are measured from ORIGIN, in the renderer's own tile numbers (tw, th, zh). */
+function pickColumn(w, ax, ay, tw, th, zh) {
+  const hw = tw / 2, hh = th / 2, gy0 = ay - zh;
+  const gx = Math.round((ax / hw + gy0 / hh) / 2), gy = Math.round((gy0 / hh - ax / hw) / 2);
+  let best = null, bestS = -1;
+  const reach = Math.ceil((ISLE.ZMAX * zh) / hh) + 2;
+  for (let y = gy - 2; y <= gy + reach; y++) for (let x = gx - 2; x <= gx + reach; x++) {
+    if (!inBounds(x, y)) continue;
+    const t = topZ(w, x, y);
+    if (t < 0) continue;
+    const dx = Math.abs(ax - (x - y) * hw);
+    if (dx > hw) continue;
+    const half = hh * (1 - dx / hw), mid = (x + y) * hh;
+    if (ay < mid - t * zh - half || ay > mid + zh + half) continue;
+    if (x + y > bestS) { bestS = x + y; best = { x: x, y: y, z: t }; }
+  }
+  if (best) return best;
+  return inBounds(gx, gy) ? { x: gx, y: gy, z: topZ(w, gx, gy) } : null;
+}
+/* ONE AT A TIME is the default. A dragged finger moves the island unless LOTS is chosen by
+   holding the block in the hand. Uncle Tabs, 11 Sep 2026: "if you put your finger across, it just
+   builds out of control." */
+const BUILD_MODES = ['one', 'lots'];
+function buildModeOf(m) { return m === 'lots' ? 'lots' : 'one'; }
 function ballBlocked(w, x, y) {
   const cx = Math.floor(x), cy = Math.floor(y);
   if (!inBounds(cx, cy)) return true;
@@ -2418,7 +2521,7 @@ function walkKick(walker, b, inp) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, kickTowardGoal, ballNudge, walkKick, BALL_CAR_REACH, BALL_WALK_REACH, BALL_TAP_SPEED, BALL_WALK_HIT, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, PLAY_HOLD_MS, PLAY_LONG_MS, PLAY_IDS, PLAY_NAMES, PLAY_ICONS, playPressKind, playPressAct, playLastOf, playNextOf, playCabinetOf, rememberPlay, runPlayAct, playKickVel, NPC_NAMES, NPC_KINDS, NPC_MEM_VER, NPC_MEM_MAX, SLEEP_HOLD_MS, SLEEP_LONG_MS, sleepPressKind, sleepPressAct, runSleepAct, encodeNpcMem, decodeNpcMem, npcRemember, npcRememberedNames, npcTalkLine, overnightLine, emptyNpcMem, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
-    BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot,
+    BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot, bpRectFree, pickColumn, BUILD_MODES, buildModeOf, dreamWhyLine, dreamSizeOf,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     PHONE_CAP, chromeEdge, chromeCorner, dockSpan, dockFitsPhone, warmRgb,
     PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES, PRETTY_DEFAULT, prettyPressKind, prettyPressAct, runPrettyAct,
@@ -2546,8 +2649,13 @@ if (typeof module !== 'undefined' && module.exports) {
   window.__SYNC = SYNC;
   function updateLineage() {
     const own = !builder || builder === CREW;
-    document.getElementById('title-badge').textContent =
-      (own ? (PRO ? TITLE + ' ' : '') + CREW : builder) + "'S ISLAND";
+    const tb = document.getElementById('title-badge');
+    if (own) { /* his own island: a small pill, the whole name on a tap. Ollie: "We know this is Ollie's Island. Take that away." */
+      tb.textContent = '';
+      const nm = document.createElement('span'); nm.className = 'tb-nm'; nm.textContent = (PRO ? TITLE + ' ' : '') + CREW;
+      const rest = document.createElement('span'); rest.className = 'tb-rest'; rest.textContent = "'S ISLAND";
+      tb.appendChild(nm); tb.appendChild(rest); tb.classList.add('pill');
+    } else { tb.textContent = builder + "'S ISLAND"; tb.classList.remove('pill', 'open'); } /* a friend's island keeps the full name, it is the credit */
     const el = document.getElementById('lineage');
     if (chain.length) { el.textContent = 'REMIXED FROM ' + chain.join(' \u2190 '); el.classList.add('on'); }
     else el.classList.remove('on');
@@ -2619,9 +2727,13 @@ if (typeof module !== 'undefined' && module.exports) {
       g.fillStyle = 'rgba(42,27,61,0.22)'; g.beginPath(); g.ellipse(cx, by, 13, 6, 0, 0, 6.29); g.fill();
       g.fillStyle = t.side; g.fillRect(cx - 3, by - 24, 6, 24);
       g.fillStyle = t.top; g.beginPath(); g.arc(cx, by - 32, 15, 0, 6.29); g.fill();
-      g.beginPath(); g.arc(cx - 10, by - 25, 10, 0, 6.29); g.arc(cx + 10, by - 25, 10, 0, 6.29); g.fill();
+      g.beginPath(); g.arc(cx - 10, by - 25, 10, 0, 6.29); g.moveTo(cx + 20, by - 25); g.arc(cx + 10, by - 25, 10, 0, 6.29); g.fill();
       g.fillStyle = '#3FA96B'; g.beginPath(); g.arc(cx - 4, by - 36, 8, 0, 6.29); g.fill();
-      g.fillStyle = '#FF6E6C'; g.beginPath(); g.arc(cx + 6, by - 30, 2.2, 0, 6.29); g.arc(cx - 9, by - 22, 2.2, 0, 6.29); g.arc(cx + 1, by - 40, 2.2, 0, 6.29); g.fill();
+      /* Three little fruit. They used to share one path with no moveTo, so the canvas joined them into a
+         big pink wedge across every tree. Ollie, 11 Sep 2026: "The trees are pink and green. I don't want that."
+         Each fruit is its own circle now, and gold, not pink. */
+      g.fillStyle = '#FFD447';
+      [[6, -30], [-9, -22], [1, -40]].forEach(function (f) { g.beginPath(); g.arc(cx + f[0], by + f[1], 2.2, 0, 6.29); g.fill(); });
       return;
     }
     // left face
@@ -2896,7 +3008,18 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function syncDial() {
     const t = (Math.log(cam.zoom) - Math.log(ZMIN)) / (Math.log(ZMAXV) - Math.log(ZMIN));
-    const k = document.getElementById('knob'); if (k) k.style.top = Math.round(86 - t * 80) + 'px';
+    /* The zoom knob shared its id with the walk stick's knob, so this used to move the walk stick and the
+       zoom knob never moved at all. It has its own id now, and it rides the real track height. */
+    const k = document.getElementById('zknob'); if (!k) return;
+    const tr = k.parentElement, th = (tr && tr.clientHeight) || 96, kh = k.offsetHeight || 22;
+    const at = function (u) { return Math.round((th - kh - 2) - u * (th - kh - 4)); };
+    k.style.top = at(t) + 'px';
+    const sn = tr ? tr.querySelectorAll('.snap') : [];
+    [ZOOMS.whole, ZOOMS.build, ZOOMS.close].forEach(function (z, i) {
+      if (!sn[2 - i]) return;
+      const u = (Math.log(z) - Math.log(ZMIN)) / (Math.log(ZMAXV) - Math.log(ZMIN));
+      sn[2 - i].style.top = (at(u) + kh / 2 - 1) + 'px';
+    });
   }
   function snapTo(dir) {
     const levels = [ZOOMS.whole, ZOOMS.build, ZOOMS.close];
@@ -2936,7 +3059,15 @@ if (typeof module !== 'undefined' && module.exports) {
     }
     if (pts.size === 1) {
       const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
-      if (gesture.kind === 'maybe-tap' && Math.hypot(dx, dy) > 10) gesture.kind = paintStart(gesture.x, gesture.y) ? 'paint' : 'pan';
+      if (gesture.kind === 'maybe-tap' && Math.hypot(dx, dy) > 10) {
+        if (bpDragStart(gesture.x, gesture.y)) gesture.kind = 'bpmove';
+        else if (buildMode === 'lots') gesture.kind = paintStart(gesture.x, gesture.y) ? 'paint' : 'pan';
+        else {
+          gesture.kind = 'pan';
+          if (!toldDrag && tool !== -1 && !driving && !walking) { const c0 = cellAt(gesture.x, gesture.y); if (c0 && paintable(world.ref, c0.x, c0.y)) { toldDrag = true; showTip('Dragging moves the island. <b>Hold ' + nameOf(tool) + '</b> to build LOTS.'); } }
+        }
+      }
+      if (gesture.kind === 'bpmove') { bpDragTo(e.clientX, e.clientY); return; }
       if (gesture.kind === 'paint') { paintTo(e.clientX, e.clientY); return; }
       if (gesture.kind === 'pan') {
         const now = performance.now();
@@ -2953,6 +3084,7 @@ if (typeof module !== 'undefined' && module.exports) {
       tapAt(e.clientX, e.clientY); // a single tap on top of a block is how you go UP, so there is no double-tap zoom on purpose
     }
     if (gesture && gesture.kind === 'paint' && pts.size === 0) endStroke();
+    if (gesture && gesture.kind === 'bpmove' && pts.size === 0) bpDragEnd();
     if (gesture && gesture.kind === 'pan' && pts.size === 0) { const age = lastMove ? performance.now() - lastMove.t : 999; if (age > 80) { vel.x = 0; vel.y = 0; } }
     if (pts.size === 1) { const a = [...pts.values()][0]; gesture = { kind: 'pan', cx: cam.x, cy: cam.y, x: a.x, y: a.y, t: performance.now() }; }
     else if (pts.size === 0) { gesture = null; lastMove = null; }
@@ -3012,7 +3144,8 @@ if (typeof module !== 'undefined' && module.exports) {
   mini.addEventListener('pointerdown', function (e) { e.stopPropagation(); miniJump(e); });
   function cellAt(sx, sy) {
     const wx = (sx - cam.x) / cam.zoom, wy = (sy - cam.y) / cam.zoom;
-    // invert base-level iso (z rendered at ground plane offset ZH)
+    if (world.ref) { const pc = pickColumn(world.ref, wx - ORIGIN.x, wy - ORIGIN.y, TW, TH, ZH); return pc ? { x: pc.x, y: pc.y } : null; }
+    // before the world exists: invert base-level iso (z rendered at ground plane offset ZH)
     const ax = wx - ORIGIN.x, ay = wy - (ORIGIN.y + ZH);
     const fx = (ax / (TW / 2) + ay / (TH / 2)) / 2;
     const fy = (ay / (TH / 2) - ax / (TW / 2)) / 2;
@@ -3020,6 +3153,23 @@ if (typeof module !== 'undefined' && module.exports) {
     return inBounds(x, y) ? { x, y } : null;
   }
   let tool = 3; // wood first: house building starts with walls
+  let buildMode = 'one', toldDrag = false;
+  try { buildMode = buildModeOf(localStorage.getItem('captains-island-build-v1')); } catch (e) { buildMode = 'one'; }
+  function setBuildMode(m, quiet) {
+    buildMode = buildModeOf(m);
+    try { localStorage.setItem('captains-island-build-v1', buildMode); } catch (e) {}
+    document.getElementById('modepop').classList.remove('on');
+    if (!quiet) { blip(buildMode === 'lots' ? 880 : 660); toast(buildMode === 'lots' ? 'LOTS! Drag your finger to lay a line.' : 'ONE AT A TIME. Tap, tap, tap.'); }
+    paintModePop(); renderDock();
+    return buildMode;
+  }
+  function paintModePop() {
+    document.getElementById('mode-one').classList.toggle('sel', buildMode === 'one');
+    document.getElementById('mode-lots').classList.toggle('sel', buildMode === 'lots');
+  }
+  function openModePop() { paintModePop(); tipEl.classList.remove('on'); drawer.classList.remove('on'); document.body.classList.remove('railopen'); document.getElementById('modepop').classList.add('on'); blip(760); }
+  document.getElementById('mode-one').addEventListener('click', function () { setBuildMode('one'); });
+  document.getElementById('mode-lots').addEventListener('click', function () { setBuildMode('lots'); });
   /* THE STROKE. A dragged finger lays a line of blocks. It only ever fills bare ground, so a stroke
      can never build a tower by accident, which is the thing that defeated Ollie on the iPad.
      Every stroke is one press of UNDO, not thirty. */
@@ -3090,6 +3240,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function tapAt(sx, sy) {
     if (replayLive) skipReplay();
     if (driving || walking) return;
+    if (document.body.classList.contains('railopen') || document.getElementById('modepop').classList.contains('on')) { document.body.classList.remove('railopen'); document.getElementById('modepop').classList.remove('on'); return; }
     const ch = cleoAt(sx, sy);
     if (ch) { talkToKeeper(ch); return; }
     const hit = islanderAt(sx, sy);
@@ -3148,7 +3299,7 @@ if (typeof module !== 'undefined' && module.exports) {
     tool = id;
     if (id !== -1) { recent = [id].concat(recent.filter(function (r) { return r !== id; })).slice(0, 3); }
     renderDock(); renderDrawer(); renderRail();
-    drawer.classList.remove('on');
+    drawer.classList.remove('on'); document.body.classList.remove('railopen');
     if (!quiet) { blip(600); showTip('<b>' + nameOf(id) + ':</b> ' + TIPS[String(id)]); }
     try { localStorage.setItem('captains-island-recent-v1', JSON.stringify(recent)); } catch (e) {}
   }
@@ -3295,7 +3446,22 @@ if (typeof module !== 'undefined' && module.exports) {
     });
     const cur = document.createElement('button'); cur.className = 'dock'; cur.id = 'cur'; cur.dataset.val = tool;
     cur.appendChild(iconFor(tool)); cur.appendChild(document.createTextNode(nameOf(tool)));
-    cur.addEventListener('click', function () { drawer.classList.toggle('on'); blip(drawer.classList.contains('on') ? 700 : 500); if (drawer.classList.contains('on')) showTip('Pick a block. <b>' + nameOf(tool) + '</b> is in your hand.'); });
+    if (tool !== -1) { const md = document.createElement('span'); md.className = 'mode'; md.textContent = buildMode === 'lots' ? 'LOTS' : '\u00d71'; cur.appendChild(md); }
+    let curHold = 0, curHeld = false;
+    cur.addEventListener('pointerdown', function () { curHeld = false; clearTimeout(curHold); curHold = setTimeout(function () { curHeld = true; openModePop(); }, 550); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) { cur.addEventListener(t, function () { clearTimeout(curHold); }); });
+    cur.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    cur.addEventListener('click', function () {
+      if (curHeld) { curHeld = false; return; }
+      document.getElementById('modepop').classList.remove('on');
+      if (BIG) {
+        const on = !document.body.classList.contains('railopen');
+        document.body.classList.toggle('railopen', on); blip(on ? 700 : 500);
+        if (on) showTip('Pick a block. <b>' + nameOf(tool) + '</b> is in your hand. Hold it for ONE or LOTS.');
+        return;
+      }
+      drawer.classList.toggle('on'); blip(drawer.classList.contains('on') ? 700 : 500); if (drawer.classList.contains('on')) showTip('Pick a block. <b>' + nameOf(tool) + '</b> is in your hand. Hold it for ONE or LOTS.');
+    });
     bar.appendChild(cur);
     const er = dockBtn('btn-erase', 'ERASE', '\u2716', function () { setTool(-1); }); if (tool === -1) er.classList.add('sel'); bar.appendChild(er);
     const rm = dockBtn('btn-remix', 'REMIX', '\u2728', function () { remix(); }); if (builder && builder !== CREW) rm.classList.add('on'); bar.appendChild(rm);
@@ -3303,6 +3469,7 @@ if (typeof module !== 'undefined' && module.exports) {
     bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
     bar.appendChild(playDockBtn());
     bar.appendChild(dreamDockBtn());
+    bar.appendChild(dockBtn('btn-help', 'HELP', '?', function () { openBook(0); blip(700); }));
     bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
   function renderDrawer() {
@@ -3340,6 +3507,42 @@ if (typeof module !== 'undefined' && module.exports) {
   if (!recent.length) recent = [3, 6, 2];
   setTool(3, true);
   document.getElementById('keeper').textContent = 'LOG';
+  (function sideColumns() {
+    const R = document.createElement('div'); R.id = 'sideR';
+    const L = document.createElement('div'); L.id = 'sideL';
+    ['btn-book', 'btn-story', 'voybtn', 'dial', 'keeper'].forEach(function (id) { const e = document.getElementById(id); if (e) R.appendChild(e); });
+    ['mini', 'btn-board'].forEach(function (id) { const e = document.getElementById(id); if (e) L.appendChild(e); });
+    document.body.appendChild(R); document.body.appendChild(L);
+  })();
+  let titleT = 0;
+  document.getElementById('title-badge').addEventListener('click', function () {
+    const tb = document.getElementById('title-badge');
+    if (!tb.classList.contains('pill')) return;
+    const on = !tb.classList.contains('open');
+    tb.classList.toggle('open', on); blip(on ? 760 : 560);
+    clearTimeout(titleT); if (on) titleT = setTimeout(function () { tb.classList.remove('open'); }, 3500);
+  });
+  /* THE DOCK LEANS IN. Uncle Tabs, 11 Sep 2026: "like a Mac, swipe across and it should magnify".
+     Buttons under the finger grow into the dock's own top padding, so nothing is ever clipped. */
+  (function dockLean() {
+    let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (reduce) return;
+    function lean(x) {
+      const padT = parseFloat(getComputedStyle(bar).paddingTop) || 10;
+      bar.querySelectorAll('.dock').forEach(function (b) {
+        const r = b.getBoundingClientRect(); if (!r.width) return;
+        const base = r.width / (parseFloat(b.dataset.lean) || 1), h = r.height / (parseFloat(b.dataset.lean) || 1);
+        const d = Math.abs(r.left + r.width / 2 - x), k = Math.max(0, 1 - d / (base * 1.6));
+        const max = 1 + Math.max(0, padT - 2) / h, sc = 1 + (max - 1) * k;
+        b.dataset.lean = sc.toFixed(3); b.style.transform = sc > 1.002 ? 'scale(' + sc.toFixed(3) + ')' : '';
+      });
+    }
+    function rest() { bar.querySelectorAll('.dock').forEach(function (b) { b.style.transform = ''; b.dataset.lean = ''; }); }
+    bar.addEventListener('pointermove', function (e) { if (e.pointerType !== 'touch') lean(e.clientX); });
+    bar.addEventListener('touchstart', function (e) { if (e.touches[0]) lean(e.touches[0].clientX); }, { passive: true });
+    bar.addEventListener('touchmove', function (e) { if (e.touches[0]) lean(e.touches[0].clientX); }, { passive: true });
+    ['pointerleave', 'touchend', 'touchcancel'].forEach(function (t) { bar.addEventListener(t, rest, { passive: true }); });
+  })();
   document.getElementById('keeper').addEventListener('click', function () {
     if (!KEEP) { centreOn(cleo.x, cleo.y); const px = W / 2, py = H / 2; setTimeout(function () { talkToKeeper({ px: px, py: py }); }, 350); }
     else { const k = islanders[0]; if (k) { centreOn(k.x, k.y); setTimeout(function () { talkToKeeper({ px: W / 2, py: H / 2 }); }, 350); } else talkToKeeper({ px: W / 2, py: H * 0.4 }); }
@@ -4485,6 +4688,44 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!bp) return { name: '', toGo: 0, bp: null };
     return { name: bp.name, toGo: bpBlocks(bp) - bpLaid(world.ref, bp, journal.bp.x, journal.bp.y), bp: bp };
   }
+  /* THE PLAN MOVES. Uncle Tabs, 11 Sep 2026: "If you hold your hand down on the yellow part, you should be
+     able to move it around, because it hasn't really been built yet." An untouched plan follows a dragged
+     finger square by square. It only ever lands on clear sand; a full spot sends it back where it was.
+     Once the first block of it is laid it stays put, because it has started to be real. */
+  let bpDrag = null;
+  function bpMovable() {
+    if (!journal.bp || crewOn || !canSave()) return false;
+    const bp = blueprintById(journal.bp.id); if (!bp) return false;
+    return bpLaid(world.ref, bp, journal.bp.x, journal.bp.y) === 0;
+  }
+  function groundAt(sx, sy) {
+    const wx = (sx - cam.x) / cam.zoom, wy = (sy - cam.y) / cam.zoom, ax = wx - ORIGIN.x, ay = wy - (ORIGIN.y + ZH);
+    return { x: Math.round((ax / (TW / 2) + ay / (TH / 2)) / 2), y: Math.round((ay / (TH / 2) - ax / (TW / 2)) / 2) };
+  }
+  function bpDragStart(sx, sy) {
+    if (!bpMovable()) return false;
+    const bp = blueprintById(journal.bp.id), sz = bpSize(bp), c = groundAt(sx, sy);
+    if (c.x < journal.bp.x || c.x >= journal.bp.x + sz.w || c.y < journal.bp.y || c.y >= journal.bp.y + sz.h) return false;
+    bpDrag = { bp: bp, dx: c.x - journal.bp.x, dy: c.y - journal.bp.y, good: { x: journal.bp.x, y: journal.bp.y }, from: { x: journal.bp.x, y: journal.bp.y }, fits: true };
+    blip(640);
+    return true;
+  }
+  function bpDragTo(sx, sy) {
+    if (!bpDrag || !journal.bp) return;
+    const c = groundAt(sx, sy), nx = c.x - bpDrag.dx, ny = c.y - bpDrag.dy;
+    if (nx === journal.bp.x && ny === journal.bp.y) return;
+    journal.bp.x = nx; journal.bp.y = ny;
+    bpDrag.fits = bpRectFree(world.ref, bpDrag.bp, nx, ny);
+    if (bpDrag.fits) bpDrag.good = { x: nx, y: ny };
+  }
+  function bpDragEnd() {
+    if (!bpDrag) return;
+    const d = bpDrag; bpDrag = null;
+    if (!journal.bp) return;
+    if (!d.fits) { journal.bp.x = d.good.x; journal.bp.y = d.good.y; toast('That spot has blocks on it. The plan went back to clear sand.'); blip(300); }
+    else if (journal.bp.x !== d.from.x || journal.bp.y !== d.from.y) { toast('PLAN MOVED! Build into the glowing shape.'); blip(880); }
+    saveJournal(journal); updateBpBar(); refreshNext();
+  }
   function scrollSpot() {
     const d = dockCell(), c = ISLE.N / 2;
     let vx = c - d.x, vy = c - d.y; const L = Math.hypot(vx, vy) || 1; vx /= L; vy /= L;
@@ -4593,6 +4834,15 @@ if (typeof module !== 'undefined' && module.exports) {
     const bp = blueprintById(journal.bp.id); if (!bp) return;
     const next = bpNext(world.ref, bp, journal.bp.x, journal.bp.y);
     ctx.save(); ctx.translate(cam.x, cam.y); ctx.scale(cam.zoom, cam.zoom);
+    if (bpMovable()) { /* the yellow part you can hold: the whole rectangle, green or red while it moves */
+      const sz = bpSize(bp), x0 = journal.bp.x - 0.5, y0 = journal.bp.y - 0.5, x1 = x0 + sz.w, y1 = y0 + sz.h;
+      const P = function (x, y) { return [isoX(x, y), isoY(x, y, -1) + ZH]; };
+      const q = [P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)];
+      ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) ctx.lineTo(q[i][0], q[i][1]); ctx.closePath();
+      const col = bpDrag ? (bpDrag.fits ? '#7BD389' : '#FF6E6C') : '#FFD447';
+      ctx.fillStyle = bpDrag ? (bpDrag.fits ? 'rgba(123,211,137,0.30)' : 'rgba(255,110,108,0.30)') : 'rgba(255,212,71,0.16)';
+      ctx.fill(); ctx.setLineDash([]); ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.stroke();
+    }
     ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeStyle = '#FFD447';
     next.forEach(function (q) {
       const cx = isoX(q.x, q.y), cy = isoY(q.x, q.y, q.z - 1) + ZH;
@@ -5324,11 +5574,7 @@ if (typeof module !== 'undefined' && module.exports) {
         saveJournal(journal);
       }
       if (r.script && r.script[0]) centreOn(r.script[0].x, r.script[0].y);
-    } else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
-    else if (r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.');
-    else if (r.why === 'water') toast('That is the sea! Build on the sand.');
-    else if (r.why === 'grow') toast('Something is growing there! Build next to it, not on it.');
-    else toast('THE DREAM COULD NOT FIND LAND.');
+    } else toast(dreamWhyLine(r.why, r.size));
     return r;
   }
   function placeHeardDream(text) {
@@ -5753,7 +5999,7 @@ if (typeof module !== 'undefined' && module.exports) {
     driving = on;
     document.getElementById('drivebar').classList.toggle('on', on);
     document.getElementById('bottombar').style.display = on ? 'none' : 'flex';
-    railEl.style.display = on ? 'none' : (BIG ? 'flex' : 'none');
+    railEl.style.display = on ? 'none' : ''; document.body.classList.remove('railopen');
     drawer.classList.remove('on'); tipEl.classList.remove('on');
     closeDream();
     document.getElementById('lapbar').classList.toggle('on', on && flags(world.ref).length > 0);
@@ -6452,6 +6698,7 @@ if (typeof module !== 'undefined' && module.exports) {
     trip: function () { return trip ? { name: trip.p.name, label: trip.label, x: trip.x, y: trip.y, kind: trip.dest.kind } : null; },
     warpCar: function (x, y) { car.x = x; car.y = y; car.sp = 0; },
     tripDest: tripDest, purse: purse,
+    bpMovable, putAwayBlueprint, buildMode: () => buildMode, setBuildMode: (m) => setBuildMode(m, true), openModePop, pickColumn,
     owner: OWNER, cleo, questStats, setTool, tool: () => tool, recent: () => recent.slice(), heightPop: () => heightPop, hover: (c) => { hoverCell = c; }, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, bp: () => journal.bp, bpInfo, scrollScreen, scrollWaiting, openBlueprint, hireCrew, crewStep, crewOn: () => crewOn, bpNextCells: () => { const b = journal.bp && blueprintById(journal.bp.id); return b ? bpNext(world.ref, b, journal.bp.x, journal.bp.y) : []; }, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),
     cars: CARS, carIdx: () => carIdx, setCar: (i) => { carIdx = i; }, personal: PERSONAL, sayPersonal,

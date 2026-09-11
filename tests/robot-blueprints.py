@@ -86,8 +86,10 @@ with sync_playwright() as pw:
     ok(pg.evaluate("()=>%s.crewOn()" % api), 'ollie: the crew is on the job')
 
     # the crew builds it block by block; the robot pumps their clock instead of waiting on the wall
+    door = False
     for _ in range(120):
         if pg.evaluate("()=>%s.bp()" % api) is None: break
+        door = door or pg.evaluate("()=>%s.bpNextCells().some(c=>c.id===6)" % api)
         pg.evaluate("()=>%s.crewStep(2)" % api)
         pg.wait_for_timeout(40)
     ok(pg.evaluate("()=>%s.bp()" % api) is None, 'ollie: the blueprint finished')
@@ -100,7 +102,12 @@ with sync_playwright() as pw:
     ok(pg.evaluate("()=>%s.scrollWaiting()" % api), 'ollie: a fresh scroll waits on the dock again')
     hn = pg.evaluate("()=>%s.houses().length" % api)
     pn = pg.evaluate("()=>%s.islandersRef().length" % api)
-    ok(hn >= 1 and pn == hn, 'ollie: crew-built doors invite islanders just like hand-built ones', {'houses': hn, 'islanders': pn})
+    # Taught 11 Sep 2026: this assumed every day's blueprint has a door. The racetrack and the pitch do not,
+    # so on those days it failed on the live build too. A doorless blueprint must simply not invent islanders.
+    if door:
+        ok(hn >= 1 and pn == hn, 'ollie: crew-built doors invite islanders just like hand-built ones', {'houses': hn, 'islanders': pn})
+    else:
+        ok(pn == hn, 'ollie: a doorless blueprint invents no islanders', {'houses': hn, 'islanders': pn, 'door': door})
     pg.wait_for_timeout(600); pg.evaluate(DIS)
     pg.screenshot(path='shot-bp-done.png')
     ok(len(outside) == 0, 'ollie: zero requests left the device', outside[:2])

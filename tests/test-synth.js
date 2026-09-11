@@ -100,8 +100,8 @@ ok('DREAM stays the second hero', PHONE_CAP.DREAM_W >= 76);
 ok('LOOK is not a third dock hero', PHONE_CAP.LOOK_DOCK == null);
 ok('mute is not a dock hero width', PHONE_CAP.MUTE_W == null && PHONE_CAP.SFX_W == null);
 ok('dock span is unchanged by the suite', dockSpan(false) ===
-  PHONE_CAP.DOCK_PAD * 2 + 7 * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
-  + PHONE_CAP.PLAY_W + PHONE_CAP.DREAM_W + 9 * PHONE_CAP.DOCK_GAP);
+  PHONE_CAP.DOCK_PAD * 2 + 8 * PHONE_CAP.TOOL_W + PHONE_CAP.CUR_W
+  + PHONE_CAP.PLAY_W + PHONE_CAP.DREAM_W + 10 * PHONE_CAP.DOCK_GAP); // taught 11 Sep 2026: HELP is the eighth tool
 ok('a 390 phone still cannot hold the dock', dockFitsPhone(390, false) === false);
 
 // share hash: synth adds nothing. Measure the 1700 gate out loud.

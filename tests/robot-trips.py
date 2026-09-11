@@ -47,7 +47,14 @@ async def run():
             ck(label+': HUD names the place', bool(trip) and trip['label'].split("'")[0][:6] in hud, hud)
             ck(label+': HUD gives a direction or says here', any(w in hud.lower() for w in ['north','south','east','west','here']), hud)
             coins0 = await pg.evaluate("__ISLAND.purse.coins")
-            await pg.evaluate("__ISLAND.warpCar(__ISLAND.trip().x+0.5, __ISLAND.trip().y+0.5)")
+            # Taught 11 Sep 2026: this warped the car onto the destination square itself. When that square is a
+            # house wall the car's collision puts it back where it came from, so the fare failed at random on the
+            # live build too (3 of 4 runs). Park on clear ground next to the destination instead, inside the drop-off.
+            await pg.evaluate("""(()=>{const I=__ISLAND,t=I.trip(),w=I.world.ref,N=I.ISLE.N,Z=I.ISLE.ZMAX;
+              const clear=(x,y)=>{if(!I.isLand(x,y)) return false; for(let z=0;z<Z;z++) if(w.cols[(y*N+x)*Z+z]) return false; return true;};
+              let best=null; for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++){const x=t.x+dx,y=t.y+dy;
+                if(clear(x,y)&&Math.hypot(dx,dy)<2.2&&(!best||Math.hypot(dx,dy)<best.d)) best={x:x,y:y,d:Math.hypot(dx,dy)};}
+              if(best) I.warpCar(best.x+0.5,best.y+0.5); else I.warpCar(t.x+0.5,t.y+0.5);})()""")
             done = await poll(pg, "__ISLAND.trip()===null", True)
             ck(label+': passenger delivered', done is True, done)
             ck(label+': fare paid one coin', await pg.evaluate("__ISLAND.purse.coins") == coins0+1, coins0)
