@@ -100,8 +100,8 @@ def run(pw, url, label, w, hgt):
     ck(label + ' tools stay smaller than DREAM', erase and dream and erase['width'] <= dream['width'] + 0.5, (erase, dream))
 
     look = box(pg, '#lookchip')
-    ck(label + ' LOOK is a kid-can-not-miss chip', look and look['width'] >= 90 and look['height'] >= 90, look)
-    ck(label + ' LOOK is labeled LOOK', 'LOOK' in pg.locator('#lookchip').inner_text().upper())
+    ck(label + ' LOOK is a finger-sized side button (Forge 11: "I don\'t need this. What is this?")', look and look['width'] >= 44 and look['height'] >= 44, look)
+    ck(label + ' LOOK has the word LOOK under it', pg.evaluate("document.getElementById('lookchip').getAttribute('data-w')") == 'LOOK')
     ck(label + ' LOOK sits on the sand, not the dock', pg.evaluate("document.getElementById('lookchip').parentElement.id!=='bottombar'"))
     ck(label + ' LOOK is not a third dock hero', pg.locator('#btn-look').count() == 0)
     if look and play:

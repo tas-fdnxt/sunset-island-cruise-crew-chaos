@@ -69,14 +69,15 @@ def run(pw, url, label, w, hgt):
     ck(label + ' DREAM stays on the dock', pg.locator('#btn-dream').count() == 1)
     ck(label + ' LOOK is not a third dock hero', pg.locator('#btn-look').count() == 0)
     chip = pg.locator('#lookchip').bounding_box()
-    ck(label + ' LOOK is a kid-can-not-miss chip', chip and chip['width'] >= 90 and chip['height'] >= 90, chip)
+    ck(label + ' LOOK is a finger-sized side button (Forge 11)', chip and chip['width'] >= 44 and chip['height'] >= 44, chip)
     ck(label + ' LOOK sits on the island, not the dock', pg.evaluate("document.getElementById('lookchip').parentElement.id!=='bottombar'"))
     rad = pg.evaluate("parseFloat(getComputedStyle(document.getElementById('lookchip')).borderRadius)")
     ck(label + ' LOOK has a soft corner', rad >= 18, rad)
     dock_rad = pg.evaluate("parseFloat(getComputedStyle(document.querySelector('#bottombar .dock')).borderRadius)")
     ck(label + ' dock corners are soft', dock_rad >= 16, dock_rad)
-    chip_txt = pg.locator('#lookchip').inner_text().upper()
-    ck(label + ' LOOK is labeled LOOK', 'LOOK' in chip_txt, chip_txt)
+    # Taught 12 Sep 2026 (Forge 11): the chip is a sun button with the word LOOK under it; the live look rides in its label.
+    chip_txt = (pg.evaluate("document.getElementById('lookchip').getAttribute('aria-label')") or '').upper()
+    ck(label + ' LOOK is labeled LOOK', 'LOOK' in chip_txt and pg.evaluate("document.getElementById('lookchip').getAttribute('data-w')") == 'LOOK', chip_txt)
     # Taught 11 Sep 2026: the chip speaks kid words now. warm is shown as SUNSET (Ollie could not read WARM).
     ck(label + ' LOOK names the live look', 'SUNSET' in chip_txt, chip_txt)
 
@@ -125,7 +126,7 @@ def run(pw, url, label, w, hgt):
     pg.evaluate("window.__ISLAND.tapPretty()")
     pg.wait_for_timeout(280)
     ck(label + ' tap cycles back to warm', pg.evaluate("window.__ISLAND.prettyMode()") == 'warm')
-    ck(label + ' chip flashes the new look', 'SUNSET' in pg.locator('#lookchip').inner_text().upper())
+    ck(label + ' chip flashes the new look', 'SUNSET' in (pg.evaluate("document.getElementById('lookchip').getAttribute('aria-label')") or '').upper())
 
     pg.evaluate("window.__ISLAND.setHour(14)")
     pg.evaluate("window.__ISLAND.setPrettyTime('auto')")
@@ -143,7 +144,7 @@ def run(pw, url, label, w, hgt):
     ck(label + ' night sky is dark at a glance', night_lum < 90, (night_rgb, night_lum))
     stars = star_hits()
     ck(label + ' night sky shows stars', stars >= 6, stars)
-    ck(label + ' chip names NIGHT after the hold', 'NIGHT' in pg.locator('#lookchip').inner_text().upper())
+    ck(label + ' chip names NIGHT after the hold', 'NIGHT' in (pg.evaluate("document.getElementById('lookchip').getAttribute('aria-label')") or '').upper() and pg.evaluate("document.body.classList.contains('look-night')"))
     shot(pg, '%s-night' % label.replace(' ', '-'))
     pg.evaluate("window.__ISLAND.holdPretty()")
     pg.wait_for_timeout(300)

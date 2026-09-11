@@ -526,6 +526,54 @@
     #sideR #dial { gap:6px; }
   }
 </style>
+<style>
+ /* FORGE 11: THE CAPTAIN'S CONTROLS. Ollie on his iPad, 11 Sep 2026: "I'm trying to press it. Nothing happens."
+    Uncle Tabs: "Buttons like a Mac dock." The dock sizes come from dockPlan(w, h) in the core, so the whole dock
+    fits an iPad with no swiping. Picture buttons get a word under them. Every button squishes under the finger. */
+ button.pressed, #pop.pressed { scale:0.92; filter:brightness(1.12); }
+ button, #pop { transition:scale 0.08s ease-out, filter 0.08s ease-out; }
+ #btn-book { display:none !important; } /* one help button: HELP, beside DREAM */
+ #sideR, #sideL { gap:18px; }
+ #sideR #btn-story, #sideR #voybtn, #sideR #home, #sideL #btn-board, #sideL #lookchip, #sideL #btn-share { position:relative; } /* the word sits under its own button */
+ #sideR [data-w]::after, #sideL [data-w]::after { content:attr(data-w); position:absolute; top:100%; left:50%; transform:translateX(-50%); margin-top:2px;
+   font:900 10px/1 system-ui; letter-spacing:0.08em; color:#FFF3E2; text-shadow:0 1px 0 #2A1B3D, 0 0 3px #2A1B3D; white-space:nowrap; pointer-events:none; }
+ #sideR #dial [data-w]::after { margin-top:3px; }
+ #sideL #lookchip { top:auto; bottom:auto; left:auto; right:auto; width:44px; height:44px; border-radius:50%; border-width:3px; padding:0; font-size:0; box-shadow:0 3px 0 rgba(20,8,30,0.5); }
+ #sideL #lookchip small, #sideL #lookchip b { display:none; }
+ #sideL #lookchip::before { content:'\2600'; font-size:22px; line-height:1; color:#2A1B3D; }
+ body.look-night #sideL #lookchip::before { content:'\263E'; } /* hold LOOK for night and the sun turns into a moon */
+ #voybtn { width:44px; height:44px; }
+ #pop { min-height:40px; min-width:52px; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; }
+ .share-side { width:44px; height:44px; border-radius:50%; border:3px solid #2A1B3D; background:#FFF3E2; color:#2A1B3D; font:900 20px system-ui; cursor:pointer;
+   display:flex; align-items:center; justify-content:center; padding:0; box-shadow:0 3px 0 rgba(20,8,30,0.5); touch-action:manipulation; }
+ #dream-picks .dream-pick { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+ #dream-picks .dream-pick canvas { width:96px; height:58px; display:block; }
+ #dreampanel, #gamemenu { max-height:60dvh; overflow-y:auto; } /* the island always shows above a sheet, so a tap there closes it */
+ @media (min-width:700px) and (min-height:700px), (min-width:1000px) {
+   #bottombar { gap:var(--dg, 12px); }
+   #bottombar .dock { width:var(--dt, 88px); height:var(--dth, 100px); }
+   #bottombar .dock .ic { font-size:calc(var(--dt, 88px) * 0.4); }
+   #bottombar .dock.pin canvas { width:calc(var(--dt, 88px) * 0.66); height:calc(var(--dt, 88px) * 0.7); }
+   #bottombar #cur { width:var(--dc, 120px); height:var(--dc, 120px); }
+   #bottombar #cur canvas { width:calc(var(--dc, 120px) * 0.6); height:calc(var(--dc, 120px) * 0.63); }
+   #bottombar #btn-play, #bottombar #btn-dream { width:var(--dh, 136px); height:var(--dh, 136px); }
+   #bottombar #btn-play .ic, #bottombar #btn-dream .ic { font-size:calc(var(--dh, 136px) * 0.38); }
+   #sideL #lookchip, #voybtn, .share-side { width:64px; height:64px; }
+   #sideL #lookchip { border-width:4px; }
+   #sideL #lookchip::before { font-size:32px; }
+   .share-side { font-size:28px; border-width:4px; }
+   #sideR [data-w]::after, #sideL [data-w]::after { font-size:12px; }
+   #dream-picks .dream-pick canvas { width:132px; height:80px; }
+   #dream-picks .dream-pick { font-size:17px; }
+   #gamemenu button.gm { min-height:76px; padding:12px 18px; border-radius:20px; }
+   #gamemenu button.gm span { font-size:20px; }
+   #gamemenu button.gm small { font-size:14px; }
+   #gamemenu .gm-hd, #dreampanel .gm-hd { font-size:14px; }
+   #dreampanel, #gamemenu { max-height:62dvh; }
+   #bottombar { justify-content:center; }
+   #bottombar::before, #bottombar::after { display:none; } /* the plan counts every pixel; the spacers added two gaps it could not see */
+ }
+</style>
 </head>
 <body>
 <canvas id="world"></canvas>
@@ -536,7 +584,7 @@
   <div class="badge" id="title-badge">OLLIE'S ISLAND</div>
   <div class="badge" id="pop" style="color:#8FD8E8" aria-label="Islanders 0"><span class="folk"></span>0</div>
   <div class="badge" id="coins"><span class="coin"></span><span id="coinn">0</span></div>
-  <div class="badge" id="cargo">CARGO 0/1000</div>
+  <div class="badge" id="cargo">BLOCKS 0/1000</div>
 </div>
 <div id="lineage"></div>
 <button id="btn-book" aria-label="How to play">?</button>
@@ -597,7 +645,7 @@
 <div id="gamemenu"><div class="gm-hd">PICK A GAME</div><div id="gm-list"></div><button id="gm-close">BACK TO THE ISLAND</button></div>
 <div id="dreampanel">
   <div class="gm-hd">PICK A DREAM</div>
-  <p id="dream-help">Tap DREAM to build the last one. Hold DREAM and talk. Press longer to pick CASTLE to GARDEN, or type a dream in the box.</p>
+  <p id="dream-help">Tap a picture. Your crew builds it.</p>
   <div id="dream-picks"></div>
   <button id="dream-mic" type="button">HOLD TO TALK</button>
   <textarea id="dream-text" rows="3" placeholder="Or paste a dream here" autocomplete="off" autocorrect="on" spellcheck="false"></textarea>
@@ -1087,7 +1135,7 @@ function dreamWhyLine(why, size) {
   if (why === 'height') return 'That spot is already as tall as it goes. The dream needs its own patch of sand.';
   if (why === 'plant' || why === 'grow') return 'Something is growing there! The dream needs its own patch of sand.';
   if (why === 'soil') return 'Seeds need bare sand. Clear a little patch and dream again.';
-  if (why === 'cargo') return 'CARGO HOLD FULL, CAPTAIN! Undo something first.';
+  if (why === 'cargo') return 'YOUR ISLAND IS FULL, CAPTAIN! Undo something first.';
   if (why === 'link') return 'THE LINK IS FULL! Erase a few blocks, or build closer together.';
   if (why === 'water') return 'That is the sea! Dreams need sand.';
   return 'The dream needs a clear patch of sand. Erase a few blocks and dream again!';
@@ -2147,6 +2195,46 @@ const PHONE_CAP = {
   LOOK_W: 96, LOOK_H: 96, CORNER: 20,
   SLOTS_VISIBLE: 11, SLOTS_ALL: 12 /* HELP joined DREAM on 11 Sep 2026 */
 };
+/* DOCK PLAN. Forge 11. On an iPad the whole dock fits with no swiping: the sizes shrink together, the block in
+   his hand never goes under 88, PLAY and DREAM never under 96, a tool never under 60 (a six year old's finger).
+   SHARE lives on the side, not on his dock. The phone keeps its measured sizes and scrolls, honestly. */
+function dockPlan(w, h, remixOn) {
+  const phone = !(isFinite(w) && isFinite(h)) || !bigScreen(w, h);
+  if (phone) {
+    const P = PHONE_CAP, t = { w: P.TOOL_W, h: P.TOOL_H };
+    const ids = ['undo', 'pin', 'pin', 'cur', 'erase'].concat(remixOn ? ['remix'] : [], ['walk', 'drive', 'play', 'dream', 'help', 'share']);
+    const items = ids.map(function (id) {
+      if (id === 'cur') return { id: id, w: P.CUR_W, h: P.CUR_W };
+      if (id === 'play') return { id: id, w: P.PLAY_W, h: P.PLAY_H };
+      if (id === 'dream') return { id: id, w: P.DREAM_W, h: P.DREAM_H };
+      return { id: id, w: t.w, h: t.h };
+    });
+    const total = P.DOCK_PAD * 2 + items.reduce(function (a, i) { return a + i.w; }, 0) + (items.length - 1) * P.DOCK_GAP;
+    return { scroll: true, items: items, pad: P.DOCK_PAD, gap: P.DOCK_GAP, total: total };
+  }
+  const pad = 18;
+  const tries = [[2, 0.9], [1, 0.8], [0, 0.6]];
+  let last = null;
+  for (let k = 0; k < tries.length; k++) {
+    for (let s = 1; s >= tries[k][1] - 1e-9; s -= 0.02) {
+      const tw = Math.round(88 * s), th = Math.round(100 * s), cw = Math.max(88, Math.round(120 * s)), hw = Math.max(96, Math.round(136 * s)), gap = Math.max(6, Math.round(12 * s));
+      if (tw < 60) break;
+      const ids = ['undo'];
+      for (let p = 0; p < tries[k][0]; p++) ids.push('pin');
+      ids.push('cur', 'erase'); if (remixOn) ids.push('remix'); ids.push('walk', 'drive', 'play', 'dream', 'help');
+      const items = ids.map(function (id) {
+        if (id === 'cur') return { id: id, w: cw, h: cw };
+        if (id === 'play' || id === 'dream') return { id: id, w: hw, h: hw };
+        return { id: id, w: tw, h: th };
+      });
+      const total = pad * 2 + items.reduce(function (a, i) { return a + i.w; }, 0) + (items.length - 1) * gap;
+      last = { scroll: false, items: items, pad: pad, gap: gap, total: total };
+      if (total <= w) return last;
+    }
+  }
+  if (last) last.scroll = last.total > w;
+  return last;
+}
 function chromeEdge() { return PHONE_CAP.EDGE; }
 function chromeCorner() { return PHONE_CAP.CORNER; }
 function dockSpan(remixOn) {
@@ -2617,7 +2705,7 @@ if (typeof module !== 'undefined' && module.exports) {
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, PLAY_HOLD_MS, PLAY_LONG_MS, PLAY_IDS, PLAY_NAMES, PLAY_ICONS, playPressKind, playPressAct, playLastOf, playNextOf, playCabinetOf, rememberPlay, runPlayAct, playKickVel, NPC_NAMES, NPC_KINDS, NPC_MEM_VER, NPC_MEM_MAX, SLEEP_HOLD_MS, SLEEP_LONG_MS, sleepPressKind, sleepPressAct, runSleepAct, encodeNpcMem, decodeNpcMem, npcRemember, npcRememberedNames, npcTalkLine, overnightLine, emptyNpcMem, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
     BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot, bpRectFree, pickColumn, BUILD_MODES, buildModeOf, dreamWhyLine, dreamSizeOf, dreamRecipe, mansionCols, BACKDROPS, backdropOf, ISLANDER_CARDS, carCorners, CAR_SEA, seaSpeedCap,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
-    PHONE_CAP, chromeEdge, chromeCorner, dockSpan, dockFitsPhone, warmRgb,
+    PHONE_CAP, chromeEdge, chromeCorner, dockSpan, dockFitsPhone, warmRgb, dockPlan,
     PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES, PRETTY_DEFAULT, prettyPressKind, prettyPressAct, runPrettyAct,
     prettyOf, prettyNextOf, prettyTimeOf, prettyPeekTime, prettyClockHour, prettyMixRgb, prettySky, prettyLine, prettyAfterSleep, prettyDist, prettyNightMix,
     REPLAY_HOLD_MS, REPLAY_LONG_MS, REPLAY_LAST, REPLAY_ALL, replayPressKind, replayPressAct, runReplayAct, replayTape, peelReplay, replayStep, replayLine,
@@ -3308,7 +3396,20 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('mode-one').classList.toggle('sel', buildMode === 'one');
     document.getElementById('mode-lots').classList.toggle('sel', buildMode === 'lots');
   }
-  function openModePop() { paintModePop(); tipEl.classList.remove('on'); drawer.classList.remove('on'); document.body.classList.remove('railopen'); document.getElementById('modepop').classList.add('on'); blip(760); }
+  /* ONE THING OPEN AT A TIME. Forge 11: sheets used to pile on top of each other, so the one he could see was not
+     the one his finger reached. Every opener closes the others first. A tap on the island closes whatever is open. */
+  const SHEET_IDS = ['dreampanel', 'gamemenu', 'lookmenu', 'drawer', 'people', 'board', 'voymenu', 'modepop', 'bpmenu'];
+  function sheetsOpen() {
+    const on = SHEET_IDS.filter(function (id) { const e = document.getElementById(id); return e && e.classList.contains('on'); });
+    if (document.body.classList.contains('railopen')) on.push('rail');
+    return on;
+  }
+  function closeSheets(keep) {
+    SHEET_IDS.forEach(function (id) { if (id === keep) return; const e = document.getElementById(id); if (e) e.classList.remove('on'); });
+    if (keep !== 'rail') document.body.classList.remove('railopen');
+    if (keep !== 'dreampanel') { try { stopHear(false); } catch (e) {} }
+  }
+  function openModePop() { closeSheets('modepop'); paintModePop(); tipEl.classList.remove('on'); drawer.classList.remove('on'); document.body.classList.remove('railopen'); document.getElementById('modepop').classList.add('on'); blip(760); }
   document.getElementById('mode-one').addEventListener('click', function () { setBuildMode('one'); });
   document.getElementById('mode-lots').addEventListener('click', function () { setBuildMode('lots'); });
   /* THE STROKE. A dragged finger lays a line of blocks. It only ever fills bare ground, so a stroke
@@ -3344,7 +3445,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let r;
     if (tool === -1) { if (topZ(world.ref, x, y) < 0) return; r = erase(world.ref, x, y); }
     else { if (!paintable(world.ref, x, y)) return; r = place(world.ref, x, y, tool); }
-    if (!r || !r.ok) { if (r && r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
+    if (!r || !r.ok) { if (r && r.why === 'cargo') toast('YOUR ISLAND IS FULL, CAPTAIN! Undo something first.');
       else if (r && r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.'); return; }
     stroke.n++;
     lastPlaced = { x: x, y: y };
@@ -3381,7 +3482,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function tapAt(sx, sy) {
     if (replayLive) skipReplay();
     if (driving || walking) return;
-    if (document.body.classList.contains('railopen') || document.getElementById('modepop').classList.contains('on')) { document.body.classList.remove('railopen'); document.getElementById('modepop').classList.remove('on'); return; }
+    if (sheetsOpen().length) { closeSheets(null); blip(420); return; }
     const ch = cleoAt(sx, sy);
     if (ch) { talkToKeeper(ch); return; }
     const hit = islanderAt(sx, sy);
@@ -3414,7 +3515,7 @@ if (typeof module !== 'undefined' && module.exports) {
     else if (r.why === 'soil') toast('A seed needs bare ground. Find an empty patch of sand.');
     else if (r.why === 'plant') toast('Something is growing there! Build next to it, not on it.');
     else if (r.why === 'link') toast('THE LINK IS FULL! Erase a few blocks, or build closer together.');
-    else if (r.why === 'cargo') toast('CARGO HOLD FULL, CAPTAIN! Undo something first.');
+    else if (r.why === 'cargo') toast('YOUR ISLAND IS FULL, CAPTAIN! Undo something first.');
     else if (r.why === 'height') toast('MAX HEIGHT! Eight blocks tall is the limit.');
   }
 
@@ -3580,8 +3681,16 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function renderDock() {
     bar.innerHTML = '';
+    const plan = BIG ? dockPlan(innerWidth, innerHeight, !!(builder && builder !== CREW)) : null;
+    let pinN = 2;
+    if (plan) {
+      const tl = plan.items.filter(function (i) { return i.id === 'undo'; })[0], cu = plan.items.filter(function (i) { return i.id === 'cur'; })[0], he = plan.items.filter(function (i) { return i.id === 'play'; })[0];
+      bar.style.setProperty('--dt', tl.w + 'px'); bar.style.setProperty('--dth', tl.h + 'px'); bar.style.setProperty('--dc', cu.w + 'px');
+      bar.style.setProperty('--dh', he.w + 'px'); bar.style.setProperty('--dg', plan.gap + 'px');
+      pinN = plan.items.filter(function (i) { return i.id === 'pin'; }).length;
+    }
     bar.appendChild(replayDockBtn());
-    recent.filter(function (r) { return r !== tool; }).slice(0, 2).forEach(function (id) {
+    recent.filter(function (r) { return r !== tool; }).slice(0, pinN).forEach(function (id) {
       const b = document.createElement('button'); b.className = 'dock pin'; b.dataset.val = id; b.appendChild(iconFor(id)); b.appendChild(document.createTextNode(nameOf(id)));
       b.addEventListener('click', function () { setTool(id); }); bar.appendChild(b);
     });
@@ -3597,10 +3706,12 @@ if (typeof module !== 'undefined' && module.exports) {
       document.getElementById('modepop').classList.remove('on');
       if (BIG) {
         const on = !document.body.classList.contains('railopen');
+        if (on) closeSheets('rail');
         document.body.classList.toggle('railopen', on); blip(on ? 700 : 500);
         if (on) showTip('Pick a block. <b>' + nameOf(tool) + '</b> is in your hand. Hold it for ONE or LOTS.');
         return;
       }
+      if (!drawer.classList.contains('on')) closeSheets('drawer');
       drawer.classList.toggle('on'); blip(drawer.classList.contains('on') ? 700 : 500); if (drawer.classList.contains('on')) showTip('Pick a block. <b>' + nameOf(tool) + '</b> is in your hand. Hold it for ONE or LOTS.');
     });
     bar.appendChild(cur);
@@ -3611,8 +3722,10 @@ if (typeof module !== 'undefined' && module.exports) {
     bar.appendChild(playDockBtn());
     bar.appendChild(dreamDockBtn());
     bar.appendChild(dockBtn('btn-help', 'HELP', '?', function () { openBook(0); blip(700); }));
-    bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
+    if (!BIG) bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
+  let dockResizeT = 0;
+  addEventListener('resize', function () { clearTimeout(dockResizeT); dockResizeT = setTimeout(function () { if (BIG) renderDock(); }, 120); });
   function renderDrawer() {
     drawer.innerHTML = '';
     GROUPS.forEach(function (grp) {
@@ -3652,8 +3765,28 @@ if (typeof module !== 'undefined' && module.exports) {
     const R = document.createElement('div'); R.id = 'sideR';
     const L = document.createElement('div'); L.id = 'sideL';
     ['btn-book', 'btn-story', 'voybtn', 'dial', 'keeper'].forEach(function (id) { const e = document.getElementById(id); if (e) R.appendChild(e); });
-    ['mini', 'btn-board'].forEach(function (id) { const e = document.getElementById(id); if (e) L.appendChild(e); });
+    ['mini', 'btn-board', 'lookchip'].forEach(function (id) { const e = document.getElementById(id); if (e) L.appendChild(e); });
+    if (BIG) { /* SHARE is for Uncle Tabs as much as for Ollie: it lives on the side, so his dock fits */
+      const sh = document.createElement('button'); sh.id = 'btn-share'; sh.type = 'button'; sh.className = 'side'; sh.setAttribute('aria-label', 'Share my island');
+      sh.textContent = '\uD83D\uDD17'; sh.setAttribute('data-w', 'SHARE'); sh.style.cssText = '';
+      sh.classList.add('share-side'); sh.addEventListener('click', function () { share(); });
+      sh.id = 'btn-share'; L.appendChild(sh);
+    }
+    /* a word under every picture button, for a boy who is still learning to read */
     document.body.appendChild(R); document.body.appendChild(L);
+    [['btn-story', 'STORY'], ['voybtn', 'VOYAGE'], ['home', 'HOME'], ['btn-board', 'CUPS'], ['lookchip', 'LOOK']].forEach(function (p) { const e = document.getElementById(p[0]); if (e) e.setAttribute('data-w', p[1]); });
+  })();
+  /* EVERY BUTTON ANSWERS. The moment a finger lands, the button squishes, so "nothing happens" never happens. */
+  (function pressFeedback() {
+    let pressedEl = null;
+    function up() { const e = pressedEl; pressedEl = null; if (e) setTimeout(function () { e.classList.remove('pressed'); }, 90); }
+    document.addEventListener('pointerdown', function (ev) {
+      const t = ev.target && ev.target.closest ? ev.target.closest('button, #pop') : null;
+      if (!t || t.disabled) return;
+      if (pressedEl && pressedEl !== t) pressedEl.classList.remove('pressed');
+      pressedEl = t; t.classList.add('pressed');
+    }, true);
+    ['pointerup', 'pointercancel'].forEach(function (k) { document.addEventListener(k, up, true); });
   })();
   let titleT = 0;
   document.getElementById('title-badge').addEventListener('click', function () {
@@ -3758,7 +3891,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function syncCargo() {
     const el = document.getElementById('cargo');
-    el.textContent = 'CARGO ' + world.ref.count + '/' + ISLE.MAX_BLOCKS;
+    el.textContent = 'BLOCKS ' + world.ref.count + '/' + ISLE.MAX_BLOCKS; /* Forge 11: CARGO is a grown-up word */
     el.classList.toggle('full', world.ref.count >= ISLE.MAX_BLOCKS);
   }
   let toastT = null;
@@ -4015,7 +4148,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function openPeople(i) {
     if (!islanders.length) { toast('Build a house with a DOOR and somebody moves in!'); return; }
-    ppIdx = i || 0; renderPeople();
+    closeSheets('people'); ppIdx = i || 0; renderPeople();
     document.getElementById('people').classList.add('on'); blip(760);
   }
   function closePeople() { document.getElementById('people').classList.remove('on'); }
@@ -4611,6 +4744,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function openLook() {
     const list = document.getElementById('lk-list');
     if (!list) return;
+    closeSheets('lookmenu');
     list.innerHTML = '';
     const sound = document.createElement('button');
     sound.id = 'lk-sound';
@@ -5402,7 +5536,7 @@ if (typeof module !== 'undefined' && module.exports) {
     } else html += '<div class="bnote">Open a friend\'s link and their numbers show here next to yours. Tap SHARE to send them yours.</div>';
     if (purse.trophies.length) html += '<div class="bhead">YOUR TROPHIES</div>' + purse.trophies.map(function (id) { const t = trophyById(id); return '<div class="brow" style="grid-template-columns:1fr"><span class="nm">' + t.name + '</span><span style="font-weight:600;font-size:13px;white-space:normal">' + t.line + '</span></div>'; }).join('');
     document.getElementById('boardbody').innerHTML = html;
-    document.getElementById('board').classList.add('on'); blip(520);
+    closeSheets('board'); document.getElementById('board').classList.add('on'); blip(520);
   }
   document.getElementById('btn-board').addEventListener('click', openBoard);
   document.getElementById('bdclose').addEventListener('click', function () { document.getElementById('board').classList.remove('on'); blip(400); });
@@ -5584,6 +5718,7 @@ if (typeof module !== 'undefined' && module.exports) {
     toast('SOCCER PITCH PLAN! Build into the glowing shape, or hire the crew.');
   }
   function openGames() {
+    closeSheets('gamemenu');
     const menu = document.getElementById('gamemenu'), list = document.getElementById('gm-list');
     drawer.classList.remove('on'); list.innerHTML = '';
     function mk(title, sub, go) {
@@ -5603,7 +5738,7 @@ if (typeof module !== 'undefined' && module.exports) {
     CABINETS.forEach(function (nm, i) {
       mk('\uD83D\uDD79\uFE0F ' + nm, 'Play it right now. Points turn into coins.', function () { openCabinet(i, 0); });
     });
-    menu.classList.add('on'); closeDream(); blip(700);
+    closeDream(); menu.classList.add('on'); blip(700);
   }
   document.getElementById('gm-close').addEventListener('click', function () {
     document.getElementById('gamemenu').classList.remove('on'); blip(420);
@@ -5721,19 +5856,50 @@ if (typeof module !== 'undefined' && module.exports) {
   let dreamRec = null, dreamListening = false, dreamHeard = '';
   function speechCtor() { return window.SpeechRecognition || window.webkitSpeechRecognition || null; }
   function dreamProfile() { return PRO && typeof PRO.dream === 'number' ? PRO.dream : null; }
+  /* A picture on every dream, drawn by the engine from the dream's own blocks, so he picks by looking. */
+  function dreamThumb(cols, pitch) {
+    const c = document.createElement('canvas'); c.width = 264; c.height = 160;
+    const g = c.getContext('2d');
+    if (pitch) {
+      g.save(); g.translate(c.width / 2, c.height / 2 - 4); g.scale(0.62, 0.62); g.translate(-isoX(4.5, 3), -isoY(4.5, 3, -1) - ZH);
+      for (let y = 0; y < PITCH_H; y++) for (let x = 0; x < PITCH_W; x++) diamond(g, isoX(x, y), isoY(x, y, -1) + ZH, (x + y) % 2 ? '#3FA96B' : '#37955F', 'rgba(20,60,30,0.35)');
+      g.strokeStyle = '#FFF3E2'; g.lineWidth = 4; g.beginPath();
+      const L = function (x, y) { return [isoX(x, y), isoY(x, y, -1) + ZH]; };
+      const a = L(4.5, -0.5), b2 = L(4.5, PITCH_H - 0.5); g.moveTo(a[0], a[1]); g.lineTo(b2[0], b2[1]); g.stroke();
+      [[-0.5, 3], [PITCH_W - 0.5, 3]].forEach(function (q) { const p = L(q[0], q[1]); g.fillStyle = '#FFF3E2'; g.fillRect(p[0] - 5, p[1] - 26, 10, 26); });
+      const m = L(4.5, 3); g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(m[0], m[1] - 10, 10, 0, 6.29); g.fill(); g.strokeStyle = '#2A1B3D'; g.lineWidth = 2; g.stroke();
+      g.restore(); return c;
+    }
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    cols.forEach(function (q) { const zt = q.ids.length; x0 = Math.min(x0, isoX(q.dx, q.dy) - TW / 2); x1 = Math.max(x1, isoX(q.dx, q.dy) + TW / 2);
+      y0 = Math.min(y0, isoY(q.dx, q.dy, zt - 1) - TH / 2); y1 = Math.max(y1, isoY(q.dx, q.dy, -1) + ZH + TH / 2); });
+    const sc = Math.min(1.4, (c.width - 16) / (x1 - x0), (c.height - 12) / (y1 - y0));
+    g.save(); g.translate(c.width / 2, c.height / 2); g.scale(sc, sc); g.translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+    cols.slice().sort(function (a, b) { return (a.dx + a.dy) - (b.dx + b.dy); }).forEach(function (q) { q.ids.forEach(function (id, z) { prism(g, q.dx, q.dy, z, ISLE.TYPES[id]); }); });
+    g.restore(); return c;
+  }
+  function dreamTile(label, pic, go) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'dream-pick';
+    try { b.appendChild(pic()); } catch (e) {}
+    b.appendChild(document.createTextNode(label));
+    b.addEventListener('click', go);
+    return b;
+  }
   function fillDreamPicks() {
     const box = document.getElementById('dream-picks');
     if (!box || box.getAttribute('data-ready')) return;
+    /* Ollie: "Can you help me make the soccer pitch?" He could not find it. Now it is the first dream. */
+    box.appendChild(dreamTile('SOCCER PITCH', function () { return dreamThumb(null, true); }, function () {
+      closeDream(); blip(760);
+      const pp = pitchOf(world.ref);
+      if (pp) { centreOn(pp.x + PITCH_W / 2, pp.y + PITCH_H / 2); toast('YOUR PITCH IS RIGHT HERE! Tap the ball, drive at it, or walk into it.'); }
+      else layPitch();
+    }));
     PROFILE.DREAMS.forEach(function (d, i) {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'dream-pick'; b.textContent = d.name;
-      b.addEventListener('click', function () { applyDreamAct(dreamPickAct(i)); });
-      box.appendChild(b);
+      box.appendChild(dreamTile(d.name, function () { return dreamThumb(dreamRecipe(i)); }, function () { applyDreamAct(dreamPickAct(i)); }));
     });
-    const mb = document.createElement('button');
-    mb.type = 'button'; mb.className = 'dream-pick'; mb.textContent = 'MANSION';
-    mb.addEventListener('click', function () { applyDreamAct(dreamPickAct('MANSION')); });
-    box.appendChild(mb);
+    box.appendChild(dreamTile('MANSION', function () { return dreamThumb(mansionCols()); }, function () { applyDreamAct(dreamPickAct('MANSION')); }));
     box.setAttribute('data-ready', '1');
   }
   function stopHear(apply) {
@@ -5787,6 +5953,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (p) p.classList.remove('on');
   }
   function openDream() {
+    closeSheets('dreampanel');
     fillDreamPicks();
     drawer.classList.remove('on');
     document.getElementById('gamemenu').classList.remove('on');
@@ -6522,6 +6689,7 @@ if (typeof module !== 'undefined' && module.exports) {
       g.fillStyle = INK; g.font = 'bold 18px system-ui'; g.textAlign = 'center'; g.fillText('CLEO \u00B7 SHOW DOG \u00B7 KEEPER OF THE BOOK', 300, 330); g.textAlign = 'left';
     } });
   function openBook(idx) {
+    closeSheets(null);
     bookIdx = Math.max(0, Math.min(CARDS.length - 1, idx || 0));
     document.getElementById('book').classList.add('on');
     bookT0 = performance.now();
@@ -6603,7 +6771,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   (function () {
     const btn = document.getElementById('voybtn'), menu = document.getElementById('voymenu');
-    btn.addEventListener('click', function () { refreshVoyage(); menu.classList.add('on'); });
+    btn.addEventListener('click', function () { closeSheets('voymenu'); refreshVoyage(); menu.classList.add('on'); });
     document.getElementById('voy-close').addEventListener('click', function () { menu.classList.remove('on'); });
     menu.addEventListener('click', function (e) { if (e.target === menu) menu.classList.remove('on'); });
     setTimeout(refreshVoyage, 0); setInterval(refreshVoyage, 4000);

@@ -237,6 +237,30 @@ against live main (PLAY 84, DREAM 80). LOOK stays sand-side. Nothing new in `#i=
 Worst-case link stayed 1262. No lock. No sell. PR #11 merged. The LOOK punch is
 this brick. Do not merge from a sandbox.
 
+### Forge 11, 12 September 2026: the Captain's controls
+
+Every button, screen and sheet ask from the playtest, audited on his real screen sizes and rebuilt. Red first:
+`tests/test-forge11.js` (324 checks, pure `dockPlan`) and `tests/robot-forge11.py` (iPad portrait, iPad landscape,
+iPad mini, iPad Pro landscape, phone, everyone's edition), committed before the build.
+
+- **The dock fits his iPad.** The audit found DREAM, HELP and SHARE off the right edge of an 820 wide iPad and PLAY cut
+  in half. New pure `dockPlan(w, h, remixOn)` shrinks every dock button together until the whole dock fits with no
+  swiping, never under 60 for a tool, 88 for the block in his hand, 96 for PLAY and DREAM. HELP sits beside DREAM.
+  The phone keeps its measured sizes and still scrolls, honestly.
+- **SHARE and LOOK moved to the side.** SHARE is a side button on an iPad. LOOK is a small sun button with a word under
+  it, not a big chip he did not understand.
+- **A word under every picture button:** STORY, VOYAGE, HOME, CUPS, LOOK, SHARE.
+- **One help button.** The second question mark in the side column is gone; HELP beside DREAM is the one.
+- **One thing open at a time.** Sheets used to pile up to four deep, so the one he could see was not the one his finger
+  reached. `closeSheets` runs in every opener; a tap on the island closes whatever is open and never drops a block.
+- **Every button squishes the moment his finger lands** (`pressed` class on pointerdown), so "nothing happens" never happens.
+- **DREAM is pictures.** Every dream tile is drawn by the engine from its own blocks. SOCCER PITCH is the first dream
+  (he could not find it). The sheet says "Tap a picture. Your crew builds it."
+- **Kid words.** CARGO became BLOCKS on the counter; "CARGO HOLD FULL" became "YOUR ISLAND IS FULL". The CARGO STACK
+  game keeps its name.
+- **Games sheet sized for an iPad** (rows 76 tall, 20px names). Sheets never taller than 62 percent of the screen, so
+  the island always shows above them.
+
 ### Forge 10 part two, 11 to 12 September 2026: the morning present
 
 Red first: `tests/test-forge10b.js` (pure core) and `tests/robot-forge10b.py` (iPad portrait, iPad landscape,
@@ -266,6 +290,20 @@ phone, everyone's edition), committed before the build.
 ---
 
 ## 6. DEFECTS FOUND AND FIXED TODAY (ALL MINE)
+
+Forge 11:
+- The side-button words were first set while the side columns were detached from the page, so none appeared.
+- The words then landed under the wrong buttons (VOYAGE under LOG, LOOK under SHARE): older rules forced those
+  buttons static. Fixed with more specific rules.
+- The LOOK button then sat on the minimap: its old bottom offset applied once it was positioned relative. The robot
+  missed it because it only compared buttons with buttons; it now checks the map too, proven red on the bug.
+- My taller DREAM sheet covered the island so a tap could not close it; sheets are now capped at 62 percent.
+- Wrong tests taught: robot-chrome, robot-dock and robot-pretty required LOOK to be a 90px chip with its mode name
+  printed on it. Forge 11 changes that on purpose (Ollie: "I don't need this. What is this?"). They now require a
+  finger-sized side button with the word LOOK under it, and read the live look from its label. Night shows as a moon.
+- Wrong test taught: the phone dock scrolls by design, so a button clipped at its edge is the swipe hint, not a fault.
+- My own error: an unnecessary git stash round-trip on island.html while testing. Nothing was running; work intact.
+- Checked and not a defect: the tall box in the minimap is the "you are here" frame, not a missing glyph.
 
 Forge 10 part two:
 - The first sea gradient called `mixHex` on a non-hex colour, crashed the frame and blanked the screen. Now uses
