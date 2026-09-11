@@ -24,10 +24,27 @@ if (typeof dockPlan === 'function') {
       ok(tag + ': the total is honest', p.total === p.pad * 2 + p.items.reduce(function (a, i) { return a + i.w; }, 0) + (p.items.length - 1) * p.gap, p.total);
     });
   });
-  const ph = dockPlan(390, 844, false);
-  ok('the phone still says honestly that it scrolls', ph.scroll === true);
-  ok('the phone keeps its measured sizes', PHONE_CAP.TOOL_W === 76 && PHONE_CAP.PLAY_W === 120);
-  ok('a nonsense screen falls back to the phone plan', dockPlan(undefined, undefined, false).scroll === true);
+  // Taught 12 Sep 2026 (Forge 11b). Uncle Tabs: "The buttons are still too big... for mobile phone is not good enough."
+  // The phone used to keep 76 to 120 point buttons and scroll, so PLAY, DREAM and HELP hid behind a swipe.
+  const PHONES = [[360, 780], [375, 667], [375, 812], [390, 844], [393, 852], [412, 915], [430, 932], [844, 390], [932, 430]];
+  PHONES.forEach(function (s) {
+    [false, true].forEach(function (remix) {
+      const p = dockPlan(s[0], s[1], remix), tag = 'phone ' + s[0] + 'x' + s[1] + (remix ? ' visiting' : '');
+      const ids = p.items.map(function (i) { return i.id; });
+      const tools = p.items.filter(function (i) { return i.id !== 'cur' && i.id !== 'play' && i.id !== 'dream'; });
+      const cur = p.items.filter(function (i) { return i.id === 'cur'; })[0], play = p.items.filter(function (i) { return i.id === 'play'; })[0];
+      ok(tag + ': the whole dock fits, no swiping', p.scroll === false && p.total <= s[0], JSON.stringify({ scroll: p.scroll, total: p.total }));
+      ok(tag + ': phone buttons are phone sized, not iPad sized', tools.every(function (i) { return i.w >= 36 && i.w <= 60 && i.h >= 40 && i.h <= 66; }), JSON.stringify(tools));
+      ok(tag + ': PLAY and DREAM stay the biggest', play.w > cur.w && cur.w > tools[0].w, JSON.stringify([play, cur, tools[0]]));
+      ['undo', 'cur', 'erase', 'walk', 'drive', 'play', 'dream', 'help'].forEach(function (id) { ok(tag + ': ' + id + ' is on the dock', ids.indexOf(id) !== -1, ids.join()); });
+      ok(tag + ': HELP sits right beside DREAM', ids.indexOf('help') === ids.indexOf('dream') + 1, ids.join());
+      ok(tag + ': SHARE lives on the side', ids.indexOf('share') === -1, ids.join());
+      ok(tag + ': REMIX sits on the side on a phone, never on the dock', ids.indexOf('remix') === -1, ids.join());
+      ok(tag + ': the total is honest', p.total === p.pad * 2 + p.items.reduce(function (a, i) { return a + i.w; }, 0) + (p.items.length - 1) * p.gap, p.total);
+    });
+  });
+  ok('PHONE_CAP stays as the record of the old phone sizes', PHONE_CAP.TOOL_W === 76);
+  ok('a nonsense screen falls back to a small phone plan that fits 360', dockPlan(undefined, undefined, false).total <= 360);
 }
 
 console.log('test-forge11: ' + pass + ' passed, ' + fail + ' failed');

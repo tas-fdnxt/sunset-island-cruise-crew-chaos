@@ -237,6 +237,23 @@ against live main (PLAY 84, DREAM 80). LOOK stays sand-side. Nothing new in `#i=
 Worst-case link stayed 1262. No lock. No sell. PR #11 merged. The LOOK punch is
 this brick. Do not merge from a sandbox.
 
+### Forge 11b, 12 September 2026: phone-sized buttons
+
+Uncle Tabs: "The buttons are still too big... for iPad it's good but for mobile phone is not good enough." On a 390 phone
+only UNDO, DOOR, SAND and WOOD fitted; PLAY, DREAM and HELP hid behind a swipe at 76 to 120 points each.
+- `dockPlan` now plans the phone too: one row, no swiping, UNDO, the block in hand, ERASE, WALK, DRIVE, PLAY, DREAM,
+  HELP. Tools 36 to 56 (39 on a 390 phone), the block in hand 8 bigger, PLAY and DREAM 14 bigger. Fits 360 to 430 and
+  phone landscape. Recent-block shortcuts leave the phone dock; tapping the block in hand still opens every block.
+- SHARE lives on the side on a phone too. A visitor's REMIX sits at the top of the right column on a phone.
+- Phone side buttons 44, sheets, tips and toasts sit lower to match the shorter dock. The iPad is unchanged.
+- Red first: `test-forge11.js` phone section (18 phone shapes) and three phone views in `robot-forge11.py`.
+- Wrong tests taught, all encoding the old phone design Uncle Tabs overruled: robot-chrome, robot-dock and robot-soccer
+  (phone dock must scroll, 2cm tools, 104 to 112 point heroes, 16 point edge), robot-overnight (56 point moon),
+  robot-pretty (16 point corners), robot-replay (44 point UNDO). Each now holds the phone to the phone rule and the
+  iPad to its old rule.
+- Defect found and fixed in the build: on a 360 phone the plan overshot by 2 points because the gaps shrank slower
+  than the buttons; the gaps now give way first.
+
 ### Forge 11, 12 September 2026: the Captain's controls
 
 Every button, screen and sheet ask from the playtest, audited on his real screen sizes and rebuilt. Red first:

@@ -573,6 +573,29 @@
    #bottombar { justify-content:center; }
    #bottombar::before, #bottombar::after { display:none; } /* the plan counts every pixel; the spacers added two gaps it could not see */
  }
+ /* FORGE 11b: THE PHONE. The dock plan sizes every button, one row, no swiping. */
+ #bottombar.fit { overflow-x:hidden; justify-content:center; gap:var(--dg, 4px); padding:8px max(var(--dp, 8px), env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom,0px) + 8px) max(var(--dp, 8px), env(safe-area-inset-left, 0px)); scroll-snap-type:none; }
+ #bottombar.fit::before, #bottombar.fit::after { display:none; }
+ #bottombar.fit .dock { width:var(--dt, 44px); height:var(--dth, 50px); border-width:2px; border-radius:12px; font-size:9px; letter-spacing:0; padding:2px 1px 3px; gap:1px; box-shadow:0 3px 0 rgba(20,8,30,0.5); }
+ #bottombar.fit .dock .ic { font-size:calc(var(--dt, 44px) * 0.42); }
+ #bottombar.fit #cur { width:var(--dc, 52px); height:var(--dc, 52px); font-size:9px; }
+ #bottombar.fit #cur canvas { width:calc(var(--dc, 52px) * 0.56); height:calc(var(--dc, 52px) * 0.6); }
+ #bottombar.fit #cur .mode { font-size:8px; padding:1px 4px; top:2px; right:2px; }
+ #bottombar.fit #btn-play, #bottombar.fit #btn-dream { width:var(--dh, 58px); height:var(--dh, 58px); font-size:10px; border-width:3px; }
+ #bottombar.fit #btn-play { transform:translateY(-6px); }
+ #bottombar.fit #btn-dream { transform:translateY(-4px); }
+ #bottombar.fit #btn-play .ic, #bottombar.fit #btn-dream .ic { font-size:calc(var(--dh, 58px) * 0.4); }
+ #bottombar.fit #btn-remix { display:none; }
+ .remix-side { display:none; background:linear-gradient(180deg,#8FD8E8,#4E92B0); }
+ .remix-side.on { display:flex; }
+ @media (max-width:699.98px), (max-height:699.98px) and (max-width:999.98px) {
+   #sideR #btn-story { width:44px; height:44px; font-size:22px; }
+   #sideR, #sideL { gap:16px; }
+   #lookmenu, #drawer, #gamemenu, #dreampanel { bottom:calc(env(safe-area-inset-bottom,0px) + 96px); }
+   #modepop, #people { bottom:calc(env(safe-area-inset-bottom,0px) + 96px); }
+   #tip, #toast, #quest, #next { bottom:calc(env(safe-area-inset-bottom,0px) + 108px); }
+   #quest.on ~ #next.on { bottom:calc(env(safe-area-inset-bottom,0px) + 140px); }
+ }
 </style>
 </head>
 <body>
@@ -2199,18 +2222,28 @@ const PHONE_CAP = {
    his hand never goes under 88, PLAY and DREAM never under 96, a tool never under 60 (a six year old's finger).
    SHARE lives on the side, not on his dock. The phone keeps its measured sizes and scrolls, honestly. */
 function dockPlan(w, h, remixOn) {
-  const phone = !(isFinite(w) && isFinite(h)) || !bigScreen(w, h);
-  if (phone) {
-    const P = PHONE_CAP, t = { w: P.TOOL_W, h: P.TOOL_H };
-    const ids = ['undo', 'pin', 'pin', 'cur', 'erase'].concat(remixOn ? ['remix'] : [], ['walk', 'drive', 'play', 'dream', 'help', 'share']);
-    const items = ids.map(function (id) {
-      if (id === 'cur') return { id: id, w: P.CUR_W, h: P.CUR_W };
-      if (id === 'play') return { id: id, w: P.PLAY_W, h: P.PLAY_H };
-      if (id === 'dream') return { id: id, w: P.DREAM_W, h: P.DREAM_H };
-      return { id: id, w: t.w, h: t.h };
-    });
-    const total = P.DOCK_PAD * 2 + items.reduce(function (a, i) { return a + i.w; }, 0) + (items.length - 1) * P.DOCK_GAP;
-    return { scroll: true, items: items, pad: P.DOCK_PAD, gap: P.DOCK_GAP, total: total };
+  const bad = !(isFinite(w) && isFinite(h));
+  if (bad) { w = 360; h = 780; }
+  if (!bigScreen(w, h)) {
+    /* THE PHONE. Forge 11b, Uncle Tabs: "The buttons are still too big... for mobile phone is not good enough."
+       One row, no swiping: UNDO, the block in hand, ERASE, WALK, DRIVE, PLAY, DREAM, HELP. Tools 36 to 56,
+       PLAY and DREAM the biggest. SHARE and REMIX live on the side, so eight buttons fit a 360 phone. */
+    let lastP = null;
+    for (let s = 1; s >= 0.5 - 1e-9; s -= 0.02) {
+      const tw = Math.round(56 * s);
+      if (tw < 36) break;
+      const gap = Math.max(3, Math.round(8 * s - 2)), pad = Math.max(4, Math.round(12 * s - 4)); /* the gaps give way before the buttons do */
+      const items = ['undo', 'cur', 'erase', 'walk', 'drive', 'play', 'dream', 'help'].map(function (id) {
+        if (id === 'cur') return { id: id, w: tw + 8, h: tw + 8 };
+        if (id === 'play' || id === 'dream') return { id: id, w: tw + 14, h: tw + 14 };
+        return { id: id, w: tw, h: tw + 6 };
+      });
+      const total = pad * 2 + items.reduce(function (a, i) { return a + i.w; }, 0) + (items.length - 1) * gap;
+      lastP = { scroll: false, items: items, pad: pad, gap: gap, total: total, phone: true };
+      if (total <= w) return lastP;
+    }
+    lastP.scroll = lastP.total > w;
+    return lastP;
   }
   const pad = 18;
   const tries = [[2, 0.9], [1, 0.8], [0, 0.6]];
@@ -3681,14 +3714,17 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function renderDock() {
     bar.innerHTML = '';
-    const plan = BIG ? dockPlan(innerWidth, innerHeight, !!(builder && builder !== CREW)) : null;
+    const visiting = !!(builder && builder !== CREW);
+    const plan = dockPlan(innerWidth, innerHeight, visiting);
     let pinN = 2;
     if (plan) {
       const tl = plan.items.filter(function (i) { return i.id === 'undo'; })[0], cu = plan.items.filter(function (i) { return i.id === 'cur'; })[0], he = plan.items.filter(function (i) { return i.id === 'play'; })[0];
       bar.style.setProperty('--dt', tl.w + 'px'); bar.style.setProperty('--dth', tl.h + 'px'); bar.style.setProperty('--dc', cu.w + 'px');
-      bar.style.setProperty('--dh', he.w + 'px'); bar.style.setProperty('--dg', plan.gap + 'px');
+      bar.style.setProperty('--dh', he.w + 'px'); bar.style.setProperty('--dg', plan.gap + 'px'); bar.style.setProperty('--dp', plan.pad + 'px');
+      bar.classList.toggle('fit', !!plan.phone);
       pinN = plan.items.filter(function (i) { return i.id === 'pin'; }).length;
     }
+    const rs = document.getElementById('btn-remix-side'); if (rs) rs.classList.toggle('on', visiting);
     bar.appendChild(replayDockBtn());
     recent.filter(function (r) { return r !== tool; }).slice(0, pinN).forEach(function (id) {
       const b = document.createElement('button'); b.className = 'dock pin'; b.dataset.val = id; b.appendChild(iconFor(id)); b.appendChild(document.createTextNode(nameOf(id)));
@@ -3716,16 +3752,15 @@ if (typeof module !== 'undefined' && module.exports) {
     });
     bar.appendChild(cur);
     const er = dockBtn('btn-erase', 'ERASE', '\u2716', function () { setTool(-1); }); if (tool === -1) er.classList.add('sel'); bar.appendChild(er);
-    const rm = dockBtn('btn-remix', 'REMIX', '\u2728', function () { remix(); }); if (builder && builder !== CREW) rm.classList.add('on'); bar.appendChild(rm);
+    const rm = dockBtn('btn-remix', 'REMIX', '\u2728', function () { remix(); }); if (builder && builder !== CREW && !(plan && plan.phone)) rm.classList.add('on'); bar.appendChild(rm);
     bar.appendChild(dockBtn('btn-walk', 'WALK', '\uD83D\uDEB6', function () { setWalk(true); }));
     bar.appendChild(dockBtn('btn-drive', 'DRIVE', '\uD83C\uDFCE\uFE0F', function () { setDrive(true); blip(520); setTimeout(() => blip(700), 90); }));
     bar.appendChild(playDockBtn());
     bar.appendChild(dreamDockBtn());
     bar.appendChild(dockBtn('btn-help', 'HELP', '?', function () { openBook(0); blip(700); }));
-    if (!BIG) bar.appendChild(dockBtn('btn-share', 'SHARE', '\uD83D\uDD17', function () { share(); }));
   }
   let dockResizeT = 0;
-  addEventListener('resize', function () { clearTimeout(dockResizeT); dockResizeT = setTimeout(function () { if (BIG) renderDock(); }, 120); });
+  addEventListener('resize', function () { clearTimeout(dockResizeT); dockResizeT = setTimeout(renderDock, 120); });
   function renderDrawer() {
     drawer.innerHTML = '';
     GROUPS.forEach(function (grp) {
@@ -3766,7 +3801,13 @@ if (typeof module !== 'undefined' && module.exports) {
     const L = document.createElement('div'); L.id = 'sideL';
     ['btn-book', 'btn-story', 'voybtn', 'dial', 'keeper'].forEach(function (id) { const e = document.getElementById(id); if (e) R.appendChild(e); });
     ['mini', 'btn-board', 'lookchip'].forEach(function (id) { const e = document.getElementById(id); if (e) L.appendChild(e); });
-    if (BIG) { /* SHARE is for Uncle Tabs as much as for Ollie: it lives on the side, so his dock fits */
+    if (!BIG) { /* on a phone, a visitor's REMIX sits at the top of the right column, so the dock stays one row */
+      const rx = document.createElement('button'); rx.id = 'btn-remix-side'; rx.type = 'button'; rx.className = 'share-side remix-side';
+      rx.setAttribute('aria-label', 'Remix this island'); rx.setAttribute('data-w', 'REMIX'); rx.textContent = '\u2728';
+      rx.addEventListener('click', function () { remix(); }); R.insertBefore(rx, R.firstChild);
+      if (builder && builder !== CREW) rx.classList.add('on');
+    }
+    { /* SHARE is for Uncle Tabs as much as for Ollie: it lives on the side, so his dock fits */
       const sh = document.createElement('button'); sh.id = 'btn-share'; sh.type = 'button'; sh.className = 'side'; sh.setAttribute('aria-label', 'Share my island');
       sh.textContent = '\uD83D\uDD17'; sh.setAttribute('data-w', 'SHARE'); sh.style.cssText = '';
       sh.classList.add('share-side'); sh.addEventListener('click', function () { share(); });

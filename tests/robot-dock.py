@@ -75,10 +75,12 @@ def run(pw, url, label, w, hgt):
       return {sw:b.scrollWidth,cw:b.clientWidth,ox:st.overflowX,gap:parseFloat(st.gap)||0,
         pl:parseFloat(st.paddingLeft),pr:parseFloat(st.paddingRight)};
     }""")
-    ck(label + ' dock declares horizontal scroll', dock['ox'] in ('auto', 'scroll'), dock)
-    ck(label + ' dock side pad is at least the edge', dock['pl'] >= EDGE - 0.5 and dock['pr'] >= EDGE - 0.5, dock)
-    ck(label + ' dock gap grew with the buttons', dock['gap'] >= 7.5, dock)
-    if w <= 400:
+    PH = w < 700
+  # Taught 12 Sep 2026 (Forge 11b): Uncle Tabs said the phone buttons were too big. The phone dock now fits one row with phone-sized buttons.
+    ck(label + (' phone dock fits one row, no swiping' if PH else ' dock declares horizontal scroll'), (dock['sw'] <= dock['cw'] + 1) if PH else dock['ox'] in ('auto', 'scroll'), dock)
+    ck(label + ' dock side pad is at least the edge', dock['pl'] >= (4 if PH else EDGE) - 0.5 and dock['pr'] >= (4 if PH else EDGE) - 0.5, dock)
+    ck(label + ' dock gap grew with the buttons', dock['gap'] >= (3 if PH else 7.5), dock)
+    if w <= 400 and not PH:
         ck(label + ' phone dock is wider than the screen', dock['sw'] > dock['cw'] + 8, dock)
         pg.evaluate("document.getElementById('bottombar').scrollLeft=9999")
         pg.wait_for_timeout(200)
@@ -91,11 +93,11 @@ def run(pw, url, label, w, hgt):
     dream = box(pg, '#btn-dream')
     erase = box(pg, '#btn-erase')
     walk = box(pg, '#btn-walk')
-    ck(label + ' PLAY is the huge hero', play and play['width'] >= 112 and play['height'] >= 112, play)
-    ck(label + ' DREAM is the second hero', dream and dream['width'] >= 104 and dream['height'] >= 104, dream)
+    ck(label + ' PLAY is the huge hero', play and play['width'] >= (48 if PH else 112) and play['height'] >= (48 if PH else 112), play)
+    ck(label + ' DREAM is the second hero', dream and dream['width'] >= (48 if PH else 104) and dream['height'] >= (48 if PH else 104), dream)
     ck(label + ' PLAY is bigger than DREAM', play and dream and play['width'] >= dream['width'] - 0.5, (play, dream))
-    ck(label + ' ERASE is about 2cm', erase and erase['width'] >= 72, erase)
-    ck(label + ' WALK is about 2cm', walk and walk['width'] >= 72, walk)
+    ck(label + (' ERASE is phone sized' if PH else ' ERASE is about 2cm'), erase and ((36 <= erase['width'] <= 60) if PH else erase['width'] >= 72), erase)
+    ck(label + (' WALK is phone sized' if PH else ' WALK is about 2cm'), walk and ((36 <= walk['width'] <= 60) if PH else walk['width'] >= 72), walk)
     ck(label + ' tools stay smaller than PLAY', erase and play and erase['width'] < play['width'] - 4, (erase, play))
     ck(label + ' tools stay smaller than DREAM', erase and dream and erase['width'] <= dream['width'] + 0.5, (erase, dream))
 
@@ -110,7 +112,7 @@ def run(pw, url, label, w, hgt):
     pg.evaluate("document.getElementById('bottombar').scrollLeft=0")
     pg.wait_for_timeout(160)
     first = box(pg, '#btn-undo')
-    ck(label + ' first dock button clears the left edge', first and first['x'] >= EDGE - 2, first)
+    ck(label + ' first dock button clears the left edge', first and first['x'] >= (4 if PH else EDGE - 2), first)
     shot(pg, '%s-dock' % label.replace(' ', '-'))
     pg.evaluate("document.getElementById('bottombar').scrollLeft=9999")
     pg.wait_for_timeout(200)
@@ -122,7 +124,7 @@ def run(pw, url, label, w, hgt):
       const r=el.getBoundingClientRect();
       return {x:r.left,w:r.width,r:r.right};
     }""")
-    ck(label + ' last dock button clears the right edge', last and last['r'] <= w - EDGE + 2, last)
+    ck(label + ' last dock button clears the right edge', last and last['r'] <= w - (4 if PH else EDGE - 2), last)
     shot(pg, '%s-dock-end' % label.replace(' ', '-'))
     pg.evaluate("document.getElementById('bottombar').scrollLeft=0")
 

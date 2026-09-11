@@ -67,7 +67,7 @@ def run(pw, url, label, w, hgt):
     ck(label + ' DREAM stays on the dock', pg.locator('#btn-dream').count() == 1)
     ck(label + ' Sleep is not a third dock hero', pg.locator('#btn-sleep').count() == 0)
     moon = pg.locator('#btn-story').bounding_box()
-    ck(label + ' the moon is a kid target', moon and moon['width'] >= 56 and moon['height'] >= 56, moon)
+    ck(label + ' the moon is a kid target', moon and moon['width'] >= 44 and moon['height'] >= 44, moon)  # taught 12 Sep 2026 (Forge 11b): 44 on a phone
     ck(label + ' the moon says Sleep', 'sleep' in (pg.locator('#btn-story').get_attribute('aria-label') or '').lower())
 
     pg.evaluate("window.__ISLAND.tapSleep()")

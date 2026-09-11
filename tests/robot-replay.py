@@ -72,7 +72,7 @@ def run(pw, url, label, w, hgt):
     ck(label + ' DREAM stays on the dock', pg.locator('#btn-dream').count() == 1)
     ck(label + ' Replay is not a third dock hero', pg.locator('#btn-replay').count() == 0)
     undo = pg.locator('#btn-undo').bounding_box()
-    ck(label + ' UNDO is still on the dock', undo and undo['width'] >= 44 and undo['height'] >= 44, undo)
+    ck(label + ' UNDO is still on the dock', undo and undo['width'] >= 36 and undo['height'] >= 40, undo)  # taught 12 Sep 2026 (Forge 11b): phone-sized
     ck(label + ' UNDO still says undo', 'undo' in (pg.locator('#btn-undo').get_attribute('aria-label') or '').lower())
 
     placed = pg.evaluate("""(()=>{

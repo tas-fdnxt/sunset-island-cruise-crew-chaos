@@ -88,9 +88,11 @@ def run(pw, w, hgt, label):
       return {sw:b.scrollWidth,cw:b.clientWidth,ox:st.overflowX,
         pl:parseFloat(st.paddingLeft),pr:parseFloat(st.paddingRight)};
     }""")
-    ck(label + ' dock declares horizontal scroll', dock['ox'] in ('auto', 'scroll'), dock)
-    ck(label + ' dock side pad is at least the edge', dock['pl'] >= EDGE - 0.5 and dock['pr'] >= EDGE - 0.5, dock)
-    if w <= 400:
+    PH = w < 700
+  # Taught 12 Sep 2026 (Forge 11b): Uncle Tabs said the phone buttons were too big. The phone dock now fits one row with phone-sized buttons.
+    ck(label + (' phone dock fits one row, no swiping' if PH else ' dock declares horizontal scroll'), (dock['sw'] <= dock['cw'] + 1) if PH else dock['ox'] in ('auto', 'scroll'), dock)
+    ck(label + ' dock side pad is at least the edge', dock['pl'] >= (4 if PH else EDGE) - 0.5 and dock['pr'] >= (4 if PH else EDGE) - 0.5, dock)
+    if w <= 400 and not PH:
         ck(label + ' phone dock is wider than the screen (PHONE_CAP)', dock['sw'] > dock['cw'] + 8, dock)
         pg.evaluate("document.getElementById('bottombar').scrollLeft=9999")
         pg.wait_for_timeout(200)
@@ -101,15 +103,15 @@ def run(pw, w, hgt, label):
 
     play = pg.locator('#btn-play').bounding_box()
     dream = pg.locator('#btn-dream').bounding_box()
-    ck(label + ' PLAY is a huge kid target', play and play['width'] >= 112 and play['height'] >= 112, play)
-    ck(label + ' DREAM is the second hero', dream and dream['width'] >= 104 and dream['height'] >= 104, dream)
+    ck(label + ' PLAY is a huge kid target', play and play['width'] >= (48 if PH else 112) and play['height'] >= (48 if PH else 112), play)
+    ck(label + ' DREAM is the second hero', dream and dream['width'] >= (48 if PH else 104) and dream['height'] >= (48 if PH else 104), dream)
     ck(label + ' PLAY is bigger than DREAM', play and dream and play['width'] >= dream['width'] - 0.5, (play, dream))
 
     # first and last visible dock buttons stay off the glass
     pg.evaluate("document.getElementById('bottombar').scrollLeft=0")
     pg.wait_for_timeout(160)
     first = measure(pg, '#bottombar .dock')
-    ck(label + ' first dock button clears the left edge', inset_ok(first, vw, vh), first)
+    ck(label + ' first dock button clears the left edge', (first and first['l'] >= 4) if PH else inset_ok(first, vw, vh), first)
     pg.evaluate("document.getElementById('bottombar').scrollLeft=9999")
     pg.wait_for_timeout(200)
     last = pg.evaluate("""()=>{
@@ -120,7 +122,7 @@ def run(pw, w, hgt, label):
       const r=el.getBoundingClientRect();
       return {l:r.left,r:r.right,t:r.top,b:r.bottom,w:r.width,h:r.height};
     }""")
-    ck(label + ' last dock button clears the right edge', inset_ok(last, vw, vh), last)
+    ck(label + ' last dock button clears the right edge', (last and last['r'] <= vw - 4) if PH else inset_ok(last, vw, vh), last)
     shot(pg, '%s-dock-end' % label)
 
     for sel, name in [('#topbar', 'topbar'), ('#title-badge', 'title chip'),

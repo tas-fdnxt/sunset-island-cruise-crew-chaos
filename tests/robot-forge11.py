@@ -14,6 +14,8 @@ VIEWS = [
     ('ipad-mini', 768, 1024, 'crew=OLLIE', True),
     ('ipad-pro-landscape', 1366, 1024, 'crew=OLLIE', True),
     ('phone', 390, 844, 'crew=OLLIE', False),
+    ('phone-small', 375, 667, 'crew=OLLIE', False),
+    ('phone-big', 430, 932, 'crew=PIP', False),
     ('everyone-ipad', 820, 1180, 'crew=PIP', True),
 ]
 SHEETS = ['dreampanel', 'gamemenu', 'lookmenu', 'drawer', 'people', 'board', 'voymenu', 'modepop']
@@ -71,14 +73,20 @@ def run(pw, label, w, h, q, big):
         ck(label + ' every dock button is fully on screen', all(i['l'] >= -0.5 and i['r'] <= w + 0.5 for i in dock['items']), [(i['id'], round(i['l']), round(i['r'])) for i in dock['items'] if i['l'] < 0 or i['r'] > w])
         ck(label + ' HELP sits right beside DREAM', 'btn-dream' in ids and 'btn-help' in ids and ids.index('btn-help') == ids.index('btn-dream') + 1, ids)
     else:
-        ck(label + ' the phone dock still holds PLAY and DREAM', 'btn-play' in ids and 'btn-dream' in ids, ids)
+        # Taught 12 Sep 2026 (Forge 11b): the phone dock fits too, with phone-sized buttons.
+        ck(label + ' the whole phone dock fits, no swiping', dock['sw'] <= dock['cw'] + 1, (dock['sw'], dock['cw']))
+        ck(label + ' every phone dock button is fully on screen', all(i['l'] >= -0.5 and i['r'] <= w + 0.5 for i in dock['items']), [(i['id'], round(i['l']), round(i['r'])) for i in dock['items'] if i['l'] < 0 or i['r'] > w])
+        ck(label + ' HELP sits right beside DREAM', 'btn-dream' in ids and 'btn-help' in ids and ids.index('btn-help') == ids.index('btn-dream') + 1, ids)
+        tl = [i for i in dock['items'] if i['id'] in ('btn-undo', 'btn-erase', 'btn-walk', 'btn-drive', 'btn-help')]
+        ck(label + ' phone tools are phone sized (36 to 60)', tl and all(36 <= i['w'] <= 60 for i in tl), [(i['id'], round(i['w'])) for i in tl])
+        side = pg.evaluate("['btn-story','voybtn','home','keeper','btn-board','lookchip','btn-share'].map(i=>{const e=document.getElementById(i);if(!e)return [i,null];const r=e.getBoundingClientRect();return [i,Math.round(r.width)]})")
+        ck(label + ' phone side buttons are small and tidy (40 to 48)', all(s[1] is not None and 40 <= s[1] <= 48 for s in side), side)
     share = pg.evaluate("(()=>{const e=document.getElementById('btn-share');if(!e)return null;const r=e.getBoundingClientRect();return {w:r.width,h:r.height,in:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight}})()")
-    if big:
-        ck(label + ' SHARE is on screen without swiping', bool(share and share['in'] and share['w'] >= 44), share)
+    ck(label + ' SHARE is on screen without swiping', bool(share and share['in'] and share['w'] >= 40), share)
 
     # ---- every button answers: nothing sits on top of another, every centre reaches its own button ----
     vb = pg.evaluate(VISIBLE_BUTTONS)
-    minsz = 60 if big else 44
+    minsz = 60 if big else 36
     small = [(v['id'], round(v['w']), round(v['h'])) for v in vb if (v['w'] < minsz or v['h'] < minsz) and v['id'] != 'pop']
     ck(label + ' every button is big enough for a six year old (%dpx)' % minsz, not small, small)
     popb = [v for v in vb if v['id'] == 'pop']

@@ -74,7 +74,7 @@ def run(pw, url, label, w, hgt):
     rad = pg.evaluate("parseFloat(getComputedStyle(document.getElementById('lookchip')).borderRadius)")
     ck(label + ' LOOK has a soft corner', rad >= 18, rad)
     dock_rad = pg.evaluate("parseFloat(getComputedStyle(document.querySelector('#bottombar .dock')).borderRadius)")
-    ck(label + ' dock corners are soft', dock_rad >= 16, dock_rad)
+    ck(label + ' dock corners are soft', dock_rad >= (10 if w < 700 else 16), dock_rad)  # taught 12 Sep 2026 (Forge 11b): smaller phone buttons, smaller corners
     # Taught 12 Sep 2026 (Forge 11): the chip is a sun button with the word LOOK under it; the live look rides in its label.
     chip_txt = (pg.evaluate("document.getElementById('lookchip').getAttribute('aria-label')") or '').upper()
     ck(label + ' LOOK is labeled LOOK', 'LOOK' in chip_txt and pg.evaluate("document.getElementById('lookchip').getAttribute('data-w')") == 'LOOK', chip_txt)
