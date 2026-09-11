@@ -184,7 +184,7 @@ def run(pw, url, label, w, hgt):
 
 with sync_playwright() as pw:
     run(pw, BASE + '?crew=OLLIE', 'ollie 390', 390, 844)
-    run(pw, BASE + '?p=CLEO', 'crew 820', 820, 1180)
+    run(pw, BASE + '?crew=PIP', 'crew 820', 820, 1180)
 print('\nCHECKS %d   FAILED %d' % (n, len(fails)))
 for f in fails: print('  FAILED: ' + f)
 sys.exit(1 if fails else 0)

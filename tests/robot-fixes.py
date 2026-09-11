@@ -16,8 +16,8 @@ VIEWS = [  # Ollie's edition on every iPad shape, then everyone's edition (Cleo)
     ('ipad-pro', 1024, 1366, 'crew=OLLIE'),
     ('ipad-mini', 768, 1024, 'crew=OLLIE'),
     ('phone', 390, 844, 'crew=OLLIE'),
-    ('everyone-ipad', 820, 1180, 'p=CLEO'),
-    ('everyone-phone', 390, 844, 'p=CLEO'),
+    ('everyone-ipad', 820, 1180, 'crew=PIP'),
+    ('everyone-phone', 390, 844, 'crew=PIP'),
 ]
 
 def ck(name, ok, got=''):

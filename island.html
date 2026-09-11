@@ -142,6 +142,39 @@
   #title-badge.pill .tb-rest { display:none; }
   #title-badge.pill.open { max-width:none; }
   #title-badge.pill.open .tb-rest { display:inline; }
+  #pop { pointer-events:auto; cursor:pointer; }
+  /* MANSION. DONE. The morning card. */
+  #gift { position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; background:rgba(42,27,61,0.62); padding:16px; }
+  #gift.on { display:flex; }
+  #gift .giftcard { width:min(100%, 440px); background:var(--cream); color:var(--ink); border:5px solid var(--ink); border-radius:30px; padding:20px 20px 16px;
+    box-shadow:0 10px 0 rgba(20,8,30,0.5), 0 0 0 6px var(--yellow); text-align:center; box-sizing:border-box; }
+  #gift .kick { font:900 12px system-ui; letter-spacing:0.22em; color:#C74744; }
+  #gift h3 { margin:6px 0 4px; font:900 38px/1 system-ui; letter-spacing:0.02em; }
+  #gift p { margin:6px 0 10px; font:700 16px/1.4 system-ui; }
+  #gift canvas { width:100%; max-width:360px; height:auto; display:block; margin:0 auto 10px; }
+  #gift button { display:block; width:100%; font:900 20px system-ui; padding:16px; border-radius:20px; border:4px solid var(--ink); cursor:pointer; margin-top:10px; }
+  #gift #gift-go { background:var(--yellow); color:var(--ink); box-shadow:0 5px 0 rgba(20,8,30,0.45); }
+  #gift #gift-later { background:#FFFFFF; color:var(--ink); font-size:15px; padding:10px; }
+  /* THE PEOPLE. A card for every islander. */
+  #people { position:fixed; left:var(--pad-l); right:var(--pad-r); bottom:calc(env(safe-area-inset-bottom,0px) + 150px); z-index:32; display:none; justify-content:center; }
+  #people.on { display:flex; }
+  #people .ppcard { position:relative; width:min(100%, 460px); background:var(--cream); color:var(--ink); border:4px solid var(--ink); border-radius:26px; padding:16px;
+    box-shadow:0 8px 0 rgba(20,8,30,0.45); display:grid; grid-template-columns:96px 1fr; gap:4px 14px; box-sizing:border-box; }
+  #people canvas { width:96px; height:96px; grid-row:span 2; border-radius:20px; background:#8FD8E8; border:3px solid var(--ink); }
+  #people h3 { margin:2px 0 0; font:900 22px system-ui; }
+  #pp-title { font:900 12px system-ui; letter-spacing:0.14em; color:#C74744; }
+  #people dl { grid-column:1 / -1; margin:6px 0 0; display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font:700 15px/1.35 system-ui; }
+  #people dt { font:900 11px system-ui; letter-spacing:0.14em; padding-top:3px; opacity:0.7; }
+  #people dd { margin:0; }
+  #people .ppnav { grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
+  #people .ppnav button { flex:1; font:900 17px system-ui; padding:12px; border-radius:16px; border:3px solid var(--ink); background:var(--yellow); color:var(--ink); cursor:pointer; }
+  #pp-count { font:900 13px system-ui; min-width:44px; text-align:center; }
+  #pp-close { position:absolute; top:8px; right:8px; width:40px; height:40px; border-radius:50%; border:3px solid var(--ink); background:#FFFFFF; font:900 18px system-ui; cursor:pointer; }
+  /* BACKGROUNDS on the LOOK sheet */
+  #lk-bg { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin:4px 0 10px; }
+  #lk-bg button { min-height:60px; border-radius:18px; border:3px solid var(--ink); color:#FFFFFF; font:900 16px system-ui; letter-spacing:0.06em; cursor:pointer; text-shadow:0 2px 0 rgba(20,8,30,0.6); }
+  #lk-bg button.on { box-shadow:0 0 0 4px var(--yellow); }
+  #lookmenu { max-height:calc(100vh - 190px); overflow-y:auto; }
   #cur canvas, .tool canvas, .pin canvas { width:40px; height:42px; image-rendering:auto; }
   #cur canvas { width:52px; height:54px; }
   .pin { width:76px; height:82px; font-size:10px; }
@@ -518,10 +551,13 @@
 <button id="lookchip" type="button" aria-label="LOOK SUNSET"><small>LOOK</small><b>SUNSET</b></button>
 <div id="lookmenu">
   <div class="gm-hd">PICK A LOOK</div>
+  <div id="lk-bg"></div>
   <div id="lk-list"></div>
   <button id="lk-close" type="button">BACK TO THE ISLAND</button>
 </div>
 <div id="modepop" role="dialog" aria-label="How do you build?"><h4>HOW DO YOU BUILD?</h4><button id="mode-one" type="button">ONE AT A TIME<small>tap, tap, tap</small></button><button id="mode-lots" type="button">LOTS<small>drag your finger to lay a line</small></button></div>
+<div id="gift" role="dialog" aria-label="Mansion. Done."><div class="giftcard"><div class="kick">A PROMISE KEPT</div><h3>MANSION. DONE.</h3><canvas id="gift-cv" width="360" height="230"></canvas><p id="gift-line"></p><button id="gift-go" type="button">BUILD MY MANSION</button><button id="gift-later" type="button">LATER</button></div></div>
+<div id="people" role="dialog" aria-label="The islanders"><div class="ppcard"><button id="pp-close" type="button" aria-label="Close">&#10005;</button><canvas id="pp-face" width="192" height="192"></canvas><h3 id="pp-name"></h3><div id="pp-title"></div><dl><dt>JOB</dt><dd id="pp-job"></dd><dt>STORY</dt><dd id="pp-story"></dd><dt>LOVES</dt><dd id="pp-love"></dd><dt>RIGHT NOW</dt><dd id="pp-now"></dd><dt>REMEMBERS</dt><dd id="pp-mem"></dd></dl><div class="ppnav"><button id="pp-prev" type="button">BACK</button><span id="pp-count"></span><button id="pp-next" type="button">NEXT</button></div></div></div>
 <div id="quest"></div>
 <div id="bpbar"></div>
 <div id="bpmenu"></div>
@@ -967,7 +1003,31 @@ function dreamRecipe(key) {
     { dx: 0, dy: 1, ids: [1] }, { dx: 1, dy: 1, ids: [1] }, { dx: 2, dy: 1, ids: [1] }, { dx: 3, dy: 1, ids: [1] }, { dx: 4, dy: 1, ids: [1] },
     { dx: 1, dy: 2, ids: [12] }, { dx: 3, dy: 2, ids: [12] },
   ];
+  if (key === 7) return mansionCols(); /* MANSION: not a profile dream, so profile links stay the same */
   return dreamHouseCols(0, 0); /* SECRET HIDEOUT, and the safest default */
+}
+/* THE MANSION. Promised out loud on 11 Sep 2026. Two storeys: brick below, wood above, windows on both
+   floors, a roof all the way round, a grass courtyard inside, a door at the front, and a garden with two
+   palms and a little blue pool (window blocks laid flat) either side of a sand path. 138 blocks. */
+function mansionCols() {
+  const cols = [];
+  const W = 7, D = 6;
+  for (let dy = 0; dy < D; dy++) for (let dx = 0; dx < W; dx++) {
+    const edge = dx === 0 || dx === W - 1 || dy === 0 || dy === D - 1;
+    if (!edge) { cols.push({ dx: dx, dy: dy, ids: [1] }); continue; }
+    let ids = [4, 4, 3, 3, 7];
+    const frontWin = dy === D - 1 && (dx === 1 || dx === 5);
+    const sideWin = (dx === 0 || dx === W - 1) && (dy === 2 || dy === 3);
+    const backWin = dy === 0 && (dx === 2 || dx === 4);
+    if (frontWin || sideWin) ids = [4, 5, 3, 5, 7];
+    if (backWin) ids = [4, 4, 3, 5, 7];
+    if (dy === D - 1 && dx === 3) ids = [6, 4, 3, 5, 7];
+    cols.push({ dx: dx, dy: dy, ids: ids });
+  }
+  cols.push({ dx: 0, dy: 6, ids: [8] }, { dx: 6, dy: 6, ids: [8] });
+  cols.push({ dx: 3, dy: 6, ids: [2] }, { dx: 3, dy: 7, ids: [2] });
+  cols.push({ dx: 4, dy: 6, ids: [5] }, { dx: 5, dy: 6, ids: [5] }, { dx: 4, dy: 7, ids: [5] }, { dx: 5, dy: 7, ids: [5] });
+  return cols;
 }
 function dreamMatch(dreamTextOrIndex) {
   if (typeof dreamTextOrIndex === 'number' && isFinite(dreamTextOrIndex)) {
@@ -978,6 +1038,7 @@ function dreamMatch(dreamTextOrIndex) {
   if (/^[0-6]$/.test(raw)) return parseInt(raw, 10);
   const t = raw.toUpperCase();
   for (let i = 0; i < PROFILE.DREAMS.length; i++) if (t.indexOf(PROFILE.DREAMS[i].name) !== -1) return i;
+  if (/MANSION|BIG HOUSE/.test(t)) return 7; /* Ollie: "Our house is like a big mansion." Uncle Tabs: "Mansion. Done." */
   if (/CASTLE|KEEP|FORT|PALACE|TOWER/.test(t) && !/LAUNCH|ROCKET/.test(t)) return 0;
   if (/ZOO|ANIMAL|CAGE/.test(t)) return 1;
   if (/RACE|TRACK|CIRCUIT|LAP/.test(t)) return 2;
@@ -2071,7 +2132,7 @@ function cellLine(a, b) {
 /* THE SCREEN. One test decides the tablet layout. The CSS media query says the same thing in its own
    language, and if one is ever changed without the other the layout suite fails. */
 function bigScreen(w, h) { return (w >= 700 && h >= 700) || w >= 1000; }
-function zoomsFor(w, h) { return bigScreen(w, h) ? { whole: 0.40, build: 1.60, close: 2.60 } : { whole: 0.28, build: 0.90, close: 1.80 }; }
+function zoomsFor(w, h) { return bigScreen(w, h) ? { whole: 0.22, build: 1.60, close: 2.60 } : { whole: 0.17, build: 0.90, close: 1.80 }; } /* 11 Sep 2026: whole shows the island sitting in its sea */
 function zoomCapFor(w, h) { return bigScreen(w, h) ? 3.4 : 2.6; }
 /* A cell must be big enough for a child's finger. Apple asks for 44 points. */
 function cellSizeAt(zoom) { return { w: 44 * zoom, h: 22 * zoom }; }
@@ -2449,6 +2510,39 @@ function pickColumn(w, ax, ay, tw, th, zh) {
    builds out of control." */
 const BUILD_MODES = ['one', 'lots'];
 function buildModeOf(m) { return m === 'lots' ? 'lots' : 'one'; }
+/* BACKGROUNDS. Ollie, 11 Sep 2026: "I want a different background." Uncle Tabs: "The water needs to look bigger."
+   Four seas to pick on the LOOK sheet. Each one colours the open water, the sea squares around the island and the
+   sky. It lives on the device, never in the share link. */
+const BACKDROPS = [
+  { id: 'sunset', name: 'SUNSET', sea: ['#2B8FC4', '#155A86'], tile: ['#1F8FD0', '#1A83C2'], sky: null },
+  { id: 'lagoon', name: 'LAGOON', sea: ['#1FD0E0', '#0C98B8'], tile: ['#16C9DE', '#10BAD2'], sky: ['#C8F4EE', '#86DCE3'] },
+  { id: 'ocean', name: 'OCEAN', sea: ['#1A66E0', '#0A3284'], tile: ['#1868E6', '#135CD6'], sky: ['#A9D8FF', '#62A9EA'] },
+  { id: 'space', name: 'SPACE', sea: ['#3A1FA8', '#110838'], tile: ['#4726B8', '#3D1FA6'], sky: ['#070519', '#1C1348'], stars: true }
+];
+function backdropOf(id) { for (let i = 0; i < BACKDROPS.length; i++) if (BACKDROPS[i].id === id) return id; return 'sunset'; }
+/* THE ISLANDERS' CARDS. Uncle Tabs: "We should be able to see all the different people. What their name is, what
+   their story is, what they are doing, what their purpose is." One card for each of the eight islanders. */
+const ISLANDER_CARDS = {
+  'COCO': { title: 'BOOK KEEPER', story: 'Writes down everything the Captain builds, so none of it is ever forgotten.', love: 'A fresh page and a sharp pencil' },
+  'BARNACLE BOB': { title: 'BOAT FIXER', story: 'Once fixed a boat with a banana and some string. It still floats.', love: 'The sound of a hammer' },
+  'PEARL': { title: 'SHELL DIVER', story: 'Can hold her breath longer than a whale can hum. She is still practising.', love: 'Shiny shells' },
+  'MANGO': { title: 'FRUIT GROWER', story: 'Planted the very first seed on this island and says good morning to every tree.', love: 'Mango smoothies' },
+  'SALTY SAM': { title: 'WAVE WATCHER', story: 'Knows every wave in the sea by name, and waves back at each one.', love: 'Big splashes' },
+  'CAPTAIN CRUMB': { title: 'BAKER', story: 'Bakes a cake for every new house, so the whole island smells like dinner.', love: 'Chocolate cake' },
+  'SHELLY': { title: 'DOOR PAINTER', story: 'Paints every door a different colour so nobody ever gets lost going home.', love: 'Bright paint' },
+  'BISCUIT': { title: 'SEAGULL FEEDER', story: 'Feeds the seagulls every morning, which is why there are so many.', love: 'Crunchy biscuits' }
+};
+/* THE CAR FACES WHERE IT DRIVES. The old car was a flat side-on picture that never turned. These are the four
+   ground corners of the car: front left, front right, back right, back left. */
+function carCorners(x, y, h, len, wid) {
+  const c = Math.cos(h), s = Math.sin(h), L = len / 2, Wd = wid / 2;
+  const at = function (u, v) { return { x: x + c * u - s * v, y: y + s * u + c * v }; };
+  return [at(L, -Wd), at(L, Wd), at(-L, Wd), at(-L, -Wd)];
+}
+/* THE SEA. Ollie: "I don't want it to just stop on the water." The cars can drive into the sea now. RED ROCKET
+   and SAND BUGGY splash and slow right down. SEA CRUISER floats and keeps its speed. */
+const CAR_SEA = { sports: 0.4, buggy: 0.45, truck: 1 };
+function seaSpeedCap(shape) { return Object.prototype.hasOwnProperty.call(CAR_SEA, shape) ? CAR_SEA[shape] : 0.4; }
 function ballBlocked(w, x, y) {
   const cx = Math.floor(x), cy = Math.floor(y);
   if (!inBounds(cx, cy)) return true;
@@ -2521,7 +2615,7 @@ function walkKick(walker, b, inp) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pitchGoals, pitchOf, ballStart, goalScored, stepBall, kickTowardGoal, ballNudge, walkKick, BALL_CAR_REACH, BALL_WALK_REACH, BALL_TAP_SPEED, BALL_WALK_HIT, PITCH_W, PITCH_H, challengeLine, posterText, voyageFor, voyageProgress, voyageGlyphs, voyageNo, VOYAGE_GOALS,
   tripDest, tripLine, COINS, coinsFor, TROPHIES, trophyById, trophiesEarned, trophyMask, trophiesFromMask, CHASE, newChase, chaseStep, chaseLow, chaseCatch, boardRows, CABINETS, cabinetGame, coinsForScore, whaleSeq, bonkUpTime, stackLand, WALK, floorAt, footprintFloor, walkStep, walkSpawn, buildWalkMesh, hexRGB, ISLE, makeWorld, place, erase, undo, encode, decode, isLand, isBeach, shoreR, linkLength, skyAt, weatherAt, tideAt, routineAt, dayHash, mixHex, topZ, idx, inBounds, houses, flags, arcades, factories, factorySpot, giftFactory, fmtLap, sanitizeName, parseHash, buildHash, worldStats, pickQuest, questMet, questTable, chapter, PROFILE, buildProfile, parseProfile, dreamScript, applyDream, dreamMatch, hearDream, DREAM_HOLD_MS, DREAM_LONG_MS, dreamPressKind, dreamPressAct, dreamPickAct, dreamLastOf, rememberDream, runDreamAct, PLAY_HOLD_MS, PLAY_LONG_MS, PLAY_IDS, PLAY_NAMES, PLAY_ICONS, playPressKind, playPressAct, playLastOf, playNextOf, playCabinetOf, rememberPlay, runPlayAct, playKickVel, NPC_NAMES, NPC_KINDS, NPC_MEM_VER, NPC_MEM_MAX, SLEEP_HOLD_MS, SLEEP_LONG_MS, sleepPressKind, sleepPressAct, runSleepAct, encodeNpcMem, decodeNpcMem, npcRemember, npcRememberedNames, npcTalkLine, overnightLine, emptyNpcMem, dayKey, daysBetween, symmetry, bookAdd, bedtimeQuestion, parentSummary, nextThing, cleoFact, coatLevel, CLEO_FACTS, LADDERS, LADDER_NAMES, newMastery, ladderStep, ladderQuest, masteryLines, compassOf, compassStats, WORDS, wordOfDay, wordQuestion, isPlant, plantStage, grow, seedSpot, VISITORS, boatAt, boatGift, boatLine,
-    BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot, bpRectFree, pickColumn, BUILD_MODES, buildModeOf, dreamWhyLine, dreamSizeOf,
+    BLUEPRINTS, blueprintById, scrollFor, bpBlocks, bpPrice, bpSize, bpLaid, bpRemaining, bpNext, bpDone, bpSpot, bpRectFree, pickColumn, BUILD_MODES, buildModeOf, dreamWhyLine, dreamSizeOf, dreamRecipe, mansionCols, BACKDROPS, backdropOf, ISLANDER_CARDS, carCorners, CAR_SEA, seaSpeedCap,
     paintable, cellLine, bigScreen, zoomsFor, zoomCapFor, cellSizeAt,
     PHONE_CAP, chromeEdge, chromeCorner, dockSpan, dockFitsPhone, warmRgb,
     PRETTY_HOLD_MS, PRETTY_LONG_MS, PRETTY_IDS, PRETTY_NAMES, PRETTY_DEFAULT, prettyPressKind, prettyPressAct, runPrettyAct,
@@ -2793,8 +2887,17 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   /* The world cache is split into bands of diagonals (x + y). Each band is its own canvas, drawn in order, so the
      isometric overlap stays right across band edges and a single placed block only redraws its own band. */
+  let backdrop = 'sunset';
+  try { backdrop = backdropOf(localStorage.getItem('captains-island-bg-v1')); } catch (e) { backdrop = 'sunset'; }
+  function BD() { for (let i = 0; i < BACKDROPS.length; i++) if (BACKDROPS[i].id === backdrop) return BACKDROPS[i]; return BACKDROPS[0]; }
+  function setBackdrop(id) {
+    backdrop = backdropOf(id);
+    try { localStorage.setItem('captains-island-bg-v1', backdrop); } catch (e) {}
+    redrawWorld();
+    return backdrop;
+  }
   function groundColour(x, y) {
-    if (!isLand(x, y)) return [(x + y) % 2 ? '#3F8AA3' : '#3A7E95', 'rgba(255,243,226,0.14)'];
+    if (!isLand(x, y)) { const tl = BD().tile; return [(x + y) % 2 ? tl[0] : tl[1], 'rgba(255,243,226,0.14)']; }
     if (isBeach(x, y)) return [(x + y) % 2 ? '#FFEDBF' : '#FFF3CC', 'rgba(200,160,90,0.28)'];
     return [(x + y) % 2 ? '#F5D98E' : '#FFE49E', 'rgba(200,160,90,0.35)'];
   }
@@ -2805,6 +2908,11 @@ if (typeof module !== 'undefined' && module.exports) {
       for (let x = Math.max(0, s - ISLE.N + 1); x <= Math.min(s, ISLE.N - 1); x++) {
         const y = s - x, gc = groundColour(x, y);
         diamond(g, isoX(x, y), isoY(x, y, -1) + ZH, gc[0], gc[1]);
+        if (!isLand(x, y) && (isLand(x - 1, y) || isLand(x, y - 1) || isLand(x + 1, y) || isLand(x, y + 1))) {
+          const fx = isoX(x, y), fy = isoY(x, y, -1) + ZH;
+          g.strokeStyle = 'rgba(255,250,240,0.75)'; g.lineWidth = 3; g.beginPath();
+          g.moveTo(fx - TW / 2 + 4, fy); g.lineTo(fx, fy - TH / 2 + 2); g.lineTo(fx + TW / 2 - 4, fy); g.stroke();
+        }
         if (!isLand(x, y) && (x * 7 + y * 3) % 5 === 0) { g.strokeStyle = 'rgba(255,243,226,0.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(isoX(x, y) - 9, isoY(x, y, -1) + ZH + 1); g.quadraticCurveTo(isoX(x, y), isoY(x, y, -1) + ZH - 3, isoX(x, y) + 9, isoY(x, y, -1) + ZH + 1); g.stroke(); }
       }
     }
@@ -2879,6 +2987,22 @@ if (typeof module !== 'undefined' && module.exports) {
     });
     ctx.restore();
   }
+  /* THE WATER MOVES. Little white wave caps ride over every bit of sea on the screen, and never over sand. */
+  function drawSeaGlints(t) {
+    const step = 58, ox = (t * 9) % step;
+    ctx.save(); ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+    for (let gy = -step; gy < H + step; gy += step * 0.62) for (let gx = -step; gx < W + step; gx += step) {
+      const k = Math.floor(gx / step) * 31 + Math.floor(gy / step) * 17;
+      const sx = gx + ox + ((k * 13) % 23), sy = gy + ((k * 7) % 19) + Math.sin(t * 1.7 + k) * 3;
+      const c = groundAt(sx, sy);
+      if (inBounds(c.x, c.y) && isLand(c.x, c.y)) continue;
+      const a = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.3 + k));
+      ctx.strokeStyle = 'rgba(255,250,240,' + a.toFixed(3) + ')';
+      const r = 6 + (k % 5);
+      ctx.beginPath(); ctx.arc(sx, sy, r * cam.zoom * 0.6 + 3, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+    }
+    ctx.restore();
+  }
   let t0 = performance.now(), tPrev = 0;
   function frame(now) {
     const t = (now - t0) / 1000;
@@ -2903,13 +3027,28 @@ if (typeof module !== 'undefined' && module.exports) {
     if (SKY.moon) { ctx.fillStyle = '#FFF3E2'; ctx.beginPath(); ctx.arc(W * SKY.moon.x, H * SKY.moon.y, SKY.night > 0.45 ? 36 : 26, 0, 6.29); ctx.fill(); ctx.fillStyle = SKY.top; ctx.beginPath(); ctx.arc(W * SKY.moon.x + (SKY.night > 0.45 ? 12 : 10), H * SKY.moon.y - (SKY.night > 0.45 ? 8 : 6), SKY.night > 0.45 ? 28 : 22, 0, 6.29); ctx.fill(); }
     if (WX.kind === 'rain') { ctx.fillStyle = 'rgba(60,70,110,0.35)'; ctx.fillRect(0, 0, W, H); }
     if (WX.kind === 'rainbow') { ctx.save(); ctx.lineWidth = 6; ['#FF6E6C', '#FFB067', '#FFD447', '#3FA96B', '#8FD8E8', '#8C5BC9'].forEach(function (c, i) { ctx.strokeStyle = c; ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.arc(W * 0.5, H * 0.62, W * 0.62 - i * 7, Math.PI, 0); ctx.stroke(); }); ctx.restore(); }
-    const sea = ctx.createLinearGradient(0, H * 0.3, 0, H);
-    sea.addColorStop(0, SKY.sea); sea.addColorStop(0.5, mixHex('#3A6E82', '#1B3C52', SKY.night)); sea.addColorStop(1, mixHex('#1F4E5F', '#0E2634', SKY.night));
-    ctx.fillStyle = sea; ctx.fillRect(0, H * 0.3, W, H * 0.7);
+    const bd = BD(), seaTop = H * 0.2;
+    if (bd.sky) { /* a picked background repaints the sky, and SPACE gets a planet and a sky full of stars */
+      const sk = ctx.createLinearGradient(0, 0, 0, seaTop);
+      sk.addColorStop(0, bd.sky[0]); sk.addColorStop(1, bd.sky[1]);
+      ctx.fillStyle = sk; ctx.fillRect(0, 0, W, seaTop + 2);
+      if (bd.stars) {
+        for (let i = 0; i < 70; i++) { ctx.fillStyle = 'rgba(255,243,226,' + (0.6 + 0.4 * Math.sin(t * 2 + i)) + ')'; ctx.beginPath(); ctx.arc(((i * 97) % 101) / 101 * W, ((i * 53) % 89) / 89 * seaTop, i % 7 ? 1.3 : 2.4, 0, 6.29); ctx.fill(); }
+        ctx.fillStyle = '#FFB067'; ctx.beginPath(); ctx.arc(W * 0.8, seaTop * 0.45, 26, 0, 6.29); ctx.fill();
+        ctx.strokeStyle = '#FFD447'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(W * 0.8, seaTop * 0.45, 44, 11, -0.3, 0, 6.29); ctx.stroke();
+      }
+    }
+    /* the sea starts high and fills the rest of the screen, so the island sits in water, not in the sky */
+    const sea = ctx.createLinearGradient(0, seaTop, 0, H);
+    /* the open water matches the sea squares around the island, so the island never looks cut out of the sky */
+    sea.addColorStop(0, mixHex(bd.sea[0], '#0E2634', SKY.night * 0.6));
+    sea.addColorStop(0.35, mixHex(bd.tile[0], '#0E2634', SKY.night * 0.6));
+    sea.addColorStop(1, mixHex(bd.sea[1], '#050814', SKY.night * 0.6));
+    ctx.fillStyle = sea; ctx.fillRect(0, seaTop, W, H - seaTop);
     drawSeaLife(t, hour);
     ctx.strokeStyle = 'rgba(255,243,226,0.35)'; ctx.lineWidth = 2;
-    for (let i = 0; i < 6; i++) {
-      const wy = H * 0.36 + i * H * 0.1 + Math.sin(t * 1.3 + i) * 4;
+    for (let i = 0; i < 8; i++) {
+      const wy = seaTop + H * 0.04 + i * H * 0.1 + Math.sin(t * 1.3 + i) * 4;
       ctx.beginPath(); ctx.moveTo(0, wy); ctx.quadraticCurveTo(W / 2, wy + 8, W, wy); ctx.stroke();
     }
     ctx.save();
@@ -2920,6 +3059,7 @@ if (typeof module !== 'undefined' && module.exports) {
       ctx.drawImage(c.canvas, 0, c.top);
     }
     ctx.restore();
+    drawSeaGlints(t);
     drawCompass();
     drawTide(hour);
     drawBoat(t, hour);
@@ -2946,6 +3086,7 @@ if (typeof module !== 'undefined' && module.exports) {
     drawPreview();
     drawSkids();
     drawDust();
+    drawSplashes(dt);
     tripTick(dt);
     stepIslanders(dt, t);
     crewStep(dt);
@@ -2971,7 +3112,7 @@ if (typeof module !== 'undefined' && module.exports) {
      a home button and a minimap. Pans carry a little momentum and the island can never be dragged off the screen. */
   const ZOOMS = zoomsFor(innerWidth, innerHeight);
   const BIG = bigScreen(innerWidth, innerHeight);
-  const ZMIN = 0.22, ZMAXV = zoomCapFor(innerWidth, innerHeight);
+  const ZMIN = 0.14, ZMAXV = zoomCapFor(innerWidth, innerHeight);
   let vel = { x: 0, y: 0 }, target = null;
   function worldBounds() { return { x0: 0, y0: 0, x1: off.width, y1: off.height }; }
   function clampCam() {
@@ -3244,7 +3385,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const ch = cleoAt(sx, sy);
     if (ch) { talkToKeeper(ch); return; }
     const hit = islanderAt(sx, sy);
-    if (hit) { chat(hit); return; }
+    if (hit) { chat(hit); const pi = islanders.indexOf(hit.p); if (pi >= 0 && !hit.p.visitor) ppIdx = pi; return; }
     if (scrollAt(sx, sy)) { openBlueprint(); return; }
     if (tapKick(sx, sy)) return;
     const c = cellAt(sx, sy);
@@ -3800,7 +3941,88 @@ if (typeof module !== 'undefined' && module.exports) {
     refreshQuest();
     const cc = cellAt(innerWidth / 2, innerHeight / 2); if (cc) { cleo.x = cc.x + 0.5; cleo.y = cc.y + 0.5; }
     setTimeout(refreshNext, 200);
+    if (restored && giftDue()) setTimeout(openGift, seen ? 1600 : 2400);
   }
+  /* MANSION. DONE. On Ollie's own island, the first morning after it shipped, a card keeps the promise.
+     Only his edition, only an island he has already played, only once. */
+  function drawMansionPreview() {
+    const cv = document.getElementById('gift-cv'); if (!cv) return;
+    const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
+    const sky = g.createLinearGradient(0, 0, 0, cv.height); sky.addColorStop(0, '#FFD9A0'); sky.addColorStop(1, '#8FD8E8');
+    g.fillStyle = sky; g.fillRect(0, 0, cv.width, cv.height);
+    const cols = mansionCols().slice().sort(function (a, b) { return (a.dx + a.dy) - (b.dx + b.dy); });
+    g.save(); g.translate(cv.width / 2, cv.height * 0.62); g.scale(0.62, 0.62); g.translate(-isoX(3, 3.5), -isoY(3, 3.5, 0));
+    for (let yy = -2; yy <= 9; yy++) for (let xx = -2; xx <= 8; xx++) diamond(g, isoX(xx, yy), isoY(xx, yy, -1) + ZH, (xx + yy) % 2 ? '#F5D98E' : '#FFE49E', 'rgba(200,160,90,0.35)');
+    cols.forEach(function (c) { c.ids.forEach(function (id, z) { prism(g, c.dx, c.dy, z, ISLE.TYPES[id]); }); });
+    g.restore();
+  }
+  function giftDue() { return OWNER && canSave() && world.ref && world.ref.count > 0 && !journal.giftMansion; }
+  function openGift() {
+    const blocked = ['book', 'story', 'morning'].some(function (id) { const e = document.getElementById(id); return e && e.classList.contains('on'); });
+    if (blocked) { setTimeout(openGift, 700); return; }
+    if (!giftDue()) return;
+    document.getElementById('gift-line').textContent = 'Uncle Tabs said it, so here it is, ' + TITLE + ' ' + CREW + '. Two floors, big windows, a courtyard, palm trees and a pool out the front. Tap and your crew builds it on clear sand.';
+    drawMansionPreview();
+    document.getElementById('gift').classList.add('on');
+    blip(660); setTimeout(function () { blip(880); }, 120); setTimeout(function () { blip(1180); }, 240);
+  }
+  function closeGift(why) {
+    journal.giftMansion = why || 'seen'; saveJournal(journal);
+    document.getElementById('gift').classList.remove('on');
+  }
+  document.getElementById('gift-go').addEventListener('click', function () {
+    closeGift(today());
+    const r = applyDreamAct(dreamPickAct('MANSION'));
+    if (r && r.placed) setTimeout(function () { toast('MANSION. DONE. Somebody is moving in already!'); }, 1400);
+  });
+  document.getElementById('gift-later').addEventListener('click', function () { closeGift('later'); toast('It is waiting in DREAM whenever you want it. Tap MANSION.'); });
+  /* THE PEOPLE. Tap an islander, or the islander count, and their card opens. BACK and NEXT go round everyone. */
+  let ppIdx = 0;
+  function nowLine(p) {
+    if (p.rider) return 'Riding in your car';
+    if (p.asleep) return 'Fast asleep';
+    if (p.play) return 'Playing a game';
+    if (p.cheer > 0) return 'Cheering for you';
+    if (p.wait > 0.6) return 'Having a little rest';
+    return 'Going for a walk';
+  }
+  function drawFace(p) {
+    const cv = document.getElementById('pp-face'), g = cv.getContext('2d'), w = cv.width;
+    g.clearRect(0, 0, w, w);
+    g.fillStyle = '#8FD8E8'; g.fillRect(0, 0, w, w);
+    g.fillStyle = '#FFE49E'; g.fillRect(0, w * 0.74, w, w * 0.26);
+    g.fillStyle = p.col || '#FF6E6C'; g.beginPath(); g.ellipse(w / 2, w * 0.86, w * 0.3, w * 0.24, 0, Math.PI, 0); g.fill();
+    g.fillStyle = '#F2C49B'; g.beginPath(); g.arc(w / 2, w * 0.46, w * 0.22, 0, 6.29); g.fill();
+    g.fillStyle = '#2A1B3D'; g.beginPath(); g.arc(w / 2 - w * 0.08, w * 0.44, w * 0.028, 0, 6.29); g.arc(w / 2 + w * 0.08, w * 0.44, w * 0.028, 0, 6.29); g.fill();
+    g.strokeStyle = '#2A1B3D'; g.lineWidth = w * 0.02; g.beginPath(); g.arc(w / 2, w * 0.5, w * 0.08, 0.2, Math.PI - 0.2); g.stroke();
+    g.fillStyle = p.col || '#FF6E6C'; g.beginPath(); g.ellipse(w / 2, w * 0.28, w * 0.24, w * 0.09, 0, 0, 6.29); g.fill();
+  }
+  function renderPeople() {
+    const n = islanders.length; if (!n) return;
+    ppIdx = ((ppIdx % n) + n) % n;
+    const p = islanders[ppIdx], card = ISLANDER_CARDS[p.name] || { title: 'ISLANDER', story: 'Lives here on your island.', love: 'Your island' };
+    document.getElementById('pp-name').textContent = p.name;
+    document.getElementById('pp-title').textContent = card.title;
+    document.getElementById('pp-job').textContent = jobOf(p.name);
+    document.getElementById('pp-story').textContent = card.story;
+    document.getElementById('pp-love').textContent = card.love;
+    document.getElementById('pp-now').textContent = nowLine(p);
+    const mem = npcTalkLine(npcMem[ppIdx], p.name, TITLE, CREW);
+    document.getElementById('pp-mem').textContent = mem || 'Nothing yet. Say hello!';
+    document.getElementById('pp-count').textContent = (ppIdx + 1) + ' / ' + n;
+    drawFace(p);
+    centreOn(p.x, p.y);
+  }
+  function openPeople(i) {
+    if (!islanders.length) { toast('Build a house with a DOOR and somebody moves in!'); return; }
+    ppIdx = i || 0; renderPeople();
+    document.getElementById('people').classList.add('on'); blip(760);
+  }
+  function closePeople() { document.getElementById('people').classList.remove('on'); }
+  document.getElementById('pp-next').addEventListener('click', function () { ppIdx++; renderPeople(); blip(820); });
+  document.getElementById('pp-prev').addEventListener('click', function () { ppIdx--; renderPeople(); blip(640); });
+  document.getElementById('pp-close').addEventListener('click', closePeople);
+  document.getElementById('pop').addEventListener('click', function () { if (document.getElementById('people').classList.contains('on')) closePeople(); else openPeople(ppIdx); });
   addEventListener('hashchange', () => {
     if (!location.hash.startsWith('#i=')) return;
     const hp = parseHash(location.hash);
@@ -4402,6 +4624,17 @@ if (typeof module !== 'undefined' && module.exports) {
       openLook();
     });
     list.appendChild(sound);
+    const bgBox = document.getElementById('lk-bg');
+    if (bgBox) {
+      bgBox.innerHTML = '';
+      BACKDROPS.forEach(function (d) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = d.name; b.className = backdrop === d.id ? 'on' : '';
+        b.style.background = 'linear-gradient(180deg,' + (d.sky ? d.sky[1] : '#FFB067') + ' 0%,' + d.sea[0] + ' 45%,' + d.sea[1] + ' 100%)';
+        b.addEventListener('click', function () { setBackdrop(d.id); playSfx('look'); toast(d.name + ' SEA'); openLook(); });
+        bgBox.appendChild(b);
+      });
+    }
     PRETTY_IDS.forEach(function (id) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -5497,6 +5730,10 @@ if (typeof module !== 'undefined' && module.exports) {
       b.addEventListener('click', function () { applyDreamAct(dreamPickAct(i)); });
       box.appendChild(b);
     });
+    const mb = document.createElement('button');
+    mb.type = 'button'; mb.className = 'dream-pick'; mb.textContent = 'MANSION';
+    mb.addEventListener('click', function () { applyDreamAct(dreamPickAct('MANSION')); });
+    box.appendChild(mb);
     box.setAttribute('data-ready', '1');
   }
   function stopHear(apply) {
@@ -5719,8 +5956,29 @@ if (typeof module !== 'undefined' && module.exports) {
   document.getElementById('ag-exit').addEventListener('click', closeCabinet);
   function agInput(i) { if (ag && !ag.over) GAMES[ag.game].input(ag, i, ag.k); }
   syncCoins();
-  const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0 };
-  let steerWant = 0, skids = [], dust = [];
+  const car = { x: 32, y: 32, h: 0, sp: 0, z: 0, vz: 0, steer: 0, bump: 0 };
+  let steerWant = 0, skids = [], dust = [], splashes = [], splashN = 0, carWet = false, bumpsEver = 0;
+  function splash(n, big) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 6.29, v = (big ? 2.2 : 1.1) * (0.5 + Math.random());
+      splashes.push({ x: car.x, y: car.y, vx: Math.cos(a) * v * 0.35, vy: Math.sin(a) * v * 0.35, vz: (big ? 3.4 : 2) * (0.6 + Math.random() * 0.6), z: 0.1, t0: performance.now() });
+    }
+    splashN += n;
+    if (splashes.length > 260) splashes.splice(0, splashes.length - 260);
+  }
+  function drawSplashes(dt) {
+    if (!splashes.length) return;
+    const keep = [];
+    for (let i = 0; i < splashes.length; i++) {
+      const d = splashes[i];
+      d.x += d.vx * dt; d.y += d.vy * dt; d.vz -= 9 * dt; d.z += d.vz * dt;
+      if (d.z < 0 && d.vz < 0) continue;
+      keep.push(d);
+      const sx = isoX(d.x, d.y) * cam.zoom + cam.x, sy = (isoY(d.x, d.y, 0) + ZH - d.z * ZH) * cam.zoom + cam.y;
+      ctx.fillStyle = 'rgba(235,250,255,0.9)'; ctx.beginPath(); ctx.arc(sx, sy, 2.6 * Math.max(0.8, cam.zoom), 0, 6.29); ctx.fill();
+    }
+    splashes = keep;
+  }
   function drawSkids() {
     if (!skids.length) return;
     const now = performance.now(), keep = [];
@@ -5764,6 +6022,12 @@ if (typeof module !== 'undefined' && module.exports) {
       blip(1040); setTimeout(() => blip(1320), 80); setTimeout(() => blip(1560), 160);
       noteLearned('Every arcade machine pays 20 points when you drive past it, so two machines pay 40.', 'arcade', 'counting');
     }
+  }
+  function bumpCar(sp) {
+    if (sp < 1.6 || car.bump > 0.3) return;
+    car.bump = 0.9; bumpsEver++;
+    tone(95, 0.18, 'square', 0.18, 60); hiss(0.12, 0.08, 1300);
+    for (let i = 0; i < 6; i++) dust.push({ x: car.x, y: car.y, t0: performance.now(), r: 3 + Math.random() * 4 });
   }
   function clearCell(x, y) {
     const cx = Math.floor(x), cy = Math.floor(y);
@@ -5922,10 +6186,24 @@ if (typeof module !== 'undefined' && module.exports) {
     const nx = car.x + Math.cos(car.h) * car.sp * dt;
     const ny = car.y + Math.sin(car.h) * car.sp * dt;
     const wasRamp = onRamp(car.x, car.y);
-    if (car.z > 0.05 || clearCell(nx, car.y)) car.x = nx; else { car.sp *= 0.35; car.h += 0.5; }
-    if (car.z > 0.05 || clearCell(car.x, ny)) car.y = ny; else { car.sp *= 0.35; car.h -= 0.5; }
+    const hit0 = car.sp;
+    if (car.z > 0.05 || clearCell(nx, car.y)) car.x = nx; else { car.sp *= 0.35; car.h += 0.5; bumpCar(hit0); }
+    if (car.z > 0.05 || clearCell(car.x, ny)) car.y = ny; else { car.sp *= 0.35; car.h -= 0.5; bumpCar(hit0); }
+    /* the edge of the sea turns the car round instead of freezing it in place */
+    if (car.x < 0.5 || car.x > ISLE.N - 0.5) { car.h = Math.PI - car.h; car.sp *= 0.6; }
+    if (car.y < 0.5 || car.y > ISLE.N - 0.5) { car.h = -car.h; car.sp *= 0.6; }
     car.x = Math.max(0.5, Math.min(ISLE.N - 0.5, car.x));
     car.y = Math.max(0.5, Math.min(ISLE.N - 0.5, car.y));
+    if (car.bump > 0) car.bump = Math.max(0, car.bump - dt);
+    const wetNow = car.z <= 0.05 && !isLand(Math.floor(car.x), Math.floor(car.y));
+    if (wetNow) {
+      const cap = CAR.TOP * seaSpeedCap(CARS[carIdx].shape);
+      if (car.sp > cap) car.sp = cap;
+      if (!carWet) { splash(18, true); hiss(0.35, 0.12, 900); tone(180, 0.25, 'triangle', 0.2, 90);
+        if (!journal.splashSaid) { journal.splashSaid = true; saveJournal(journal); toast(CARS[carIdx].shape === 'truck' ? 'SEA CRUISER FLOATS! Drive it on the water.' : 'SPLASH! The sea slows you right down. SEA CRUISER can float.'); } }
+      if (Math.random() < dt * (4 + car.sp * 3)) splash(CARS[carIdx].shape === 'truck' ? 2 : 3, false);
+    }
+    carWet = wetNow;
     arcadeCheck();
     deliveryCheck();
     if (chase) { chaseStep(chase, dt); if (chaseCatch(chase, car)) chaseWin(); else if (chase.gone) { endChase(); toast('The gull got away with it. Next drive, try again.'); } }
@@ -5965,34 +6243,89 @@ if (typeof module !== 'undefined' && module.exports) {
       lb.textContent = bestLap ? 'BEST ' + fmtLap(bestLap) : (ghostLap ? 'BEAT ' + fmtLap(ghostLap) : '');
     }
   }
+  /* THE CARS. Uncle Tabs, 11 Sep 2026: "That car looks terrible. We can do much better." A chunky toy car, built
+     from boxes in the island's own isometric view, so it turns the way it drives. RED ROCKET is low with a spoiler,
+     SAND BUGGY has a roll cage and fat tyres, SEA CRUISER sits high and floats. A bump pops the bonnet. */
+  const CAR_SCALE = 1.45; /* a chunky toy: a touch bigger than a block */
+  function carPt(u, v, z, sink) {
+    u *= CAR_SCALE; v *= CAR_SCALE; z *= CAR_SCALE;
+    const c = Math.cos(car.h), s2 = Math.sin(car.h), x = car.x + c * u - s2 * v, y = car.y + s2 * u + c * v;
+    return [isoX(x, y) * cam.zoom + cam.x, (isoY(x, y, 0) + ZH - (z + car.z - sink) * ZH) * cam.zoom + cam.y];
+  }
+  function carQuad(pts, fill) {
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill(); ctx.stroke();
+  }
+  function carBox(u0, u1, v0, v1, z0, z1, top, side, side2, sink) {
+    const c = Math.cos(car.h), s2 = Math.sin(car.h);
+    const faces = [
+      { a: [u1, v0], b: [u1, v1], vis: c + s2, col: side },
+      { a: [u0, v1], b: [u0, v0], vis: -(c + s2), col: side },
+      { a: [u1, v1], b: [u0, v1], vis: c - s2, col: side2 },
+      { a: [u0, v0], b: [u1, v0], vis: -(c - s2), col: side2 }
+    ];
+    faces.forEach(function (f) {
+      if (f.vis <= 0) return;
+      carQuad([carPt(f.a[0], f.a[1], z0, sink), carPt(f.b[0], f.b[1], z0, sink), carPt(f.b[0], f.b[1], z1, sink), carPt(f.a[0], f.a[1], z1, sink)], f.col);
+    });
+    carQuad([carPt(u0, v0, z1, sink), carPt(u1, v0, z1, sink), carPt(u1, v1, z1, sink), carPt(u0, v1, z1, sink)], top);
+  }
+  function carWheel(u, v, rz, sink) {
+    const p = carPt(u, v, rz, sink), r = rz * ZH * cam.zoom * CAR_SCALE;
+    ctx.fillStyle = '#2A1B3D'; ctx.beginPath(); ctx.ellipse(p[0], p[1], r * 0.8, r, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#C9C2D6'; ctx.beginPath(); ctx.ellipse(p[0], p[1], r * 0.34, r * 0.42, 0, 0, 6.29); ctx.fill();
+  }
   function drawCar() {
     if (!driving) return;
-    const wx = isoX(car.x, car.y), wy = isoY(car.x, car.y, 0) + ZH - car.z * ZH;
-    const sx = wx * cam.zoom + cam.x, sy = wy * cam.zoom + cam.y, s = Math.max(cam.zoom, 0.95);
-    ctx.fillStyle = 'rgba(42,27,61,0.3)';
-    ctx.beginPath(); ctx.ellipse(sx, isoY(car.x, car.y, 0) * cam.zoom + cam.y + ZH * cam.zoom + 2 * s, 12 * s, 5 * s, 0, 0, 6.29); ctx.fill();
-    ctx.save(); ctx.translate(sx, sy - 10 * s); ctx.rotate(car.steer * -0.13); ctx.scale(s, s);
-    const C = CARS[carIdx];
-    ctx.fillStyle = '#2A1B3D';
-    ctx.beginPath(); ctx.ellipse(-7, 6, 4, 3, 0, 0, 6.29); ctx.ellipse(7, 6, 4, 3, 0, 0, 6.29); ctx.fill();
-    ctx.strokeStyle = '#2A1B3D'; ctx.lineWidth = 2;
-    ctx.fillStyle = C.body;
-    if (C.shape === 'sports') {
-      ctx.beginPath(); ctx.roundRect(-16, -4, 32, 11, 5); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.roundRect(-6, -12, 13, 9, 3); ctx.fillStyle = C.trim; ctx.fill(); ctx.stroke();
-      ctx.fillStyle = C.body; ctx.beginPath(); ctx.roundRect(13, -11, 5, 7, 2); ctx.fill(); ctx.stroke();
-    } else if (C.shape === 'buggy') {
-      ctx.beginPath(); ctx.roundRect(-14, -6, 28, 13, 5); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.roundRect(-7, -14, 14, 10, 3); ctx.fillStyle = C.trim; ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = '#2A1B3D'; ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(-11, -20);
-      ctx.moveTo(8, -14); ctx.lineTo(11, -20); ctx.moveTo(-11, -20); ctx.lineTo(11, -20); ctx.stroke();
+    const C = CARS[carIdx], shape = C.shape, bob = carWet ? Math.sin(performance.now() / 180) * 0.05 : 0;
+    const sink = carWet ? (shape === 'truck' ? 0.05 - bob : 0.28 - bob) : 0;
+    const side = mixHex(C.body, '#2A1B3D', 0.2), side2 = mixHex(C.body, '#2A1B3D', 0.36);
+    const trim = C.trim, glass = '#BFE9F2', ink = '#2A1B3D';
+    const c = Math.cos(car.h), s2 = Math.sin(car.h);
+    // shadow on the ground, or a ring of water around the car in the sea
+    const g0 = carPt(0, 0, 0, 0);
+    ctx.fillStyle = carWet ? 'rgba(235,250,255,0.55)' : 'rgba(42,27,61,0.3)';
+    ctx.beginPath(); ctx.ellipse(g0[0], g0[1] + 2, 17 * cam.zoom * CAR_SCALE, 7 * cam.zoom * CAR_SCALE, 0, 0, 6.29); ctx.fill();
+    ctx.save(); ctx.strokeStyle = ink; ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
+    const L = shape === 'buggy' ? 0.46 : shape === 'truck' ? 0.56 : 0.54, Wd = shape === 'truck' ? 0.31 : 0.28;
+    const nearV = (c - s2) > 0 ? Wd : -Wd, farV = -nearV;
+    const wr = shape === 'buggy' ? 0.22 : 0.16;
+    // far wheels first, then the body, then the near wheels
+    carWheel(L * 0.62, farV, wr, sink); carWheel(-L * 0.62, farV, wr, sink);
+    if (shape === 'sports') {
+      carBox(-L, L, -Wd, Wd, 0.14, 0.44, C.body, side, side2, sink);
+      carBox(-0.2, 0.16, -Wd * 0.8, Wd * 0.8, 0.44, 0.7, glass, side, side2, sink);
+      carBox(-L - 0.02, -L + 0.1, -Wd, Wd, 0.62, 0.7, trim, side, side2, sink);
+      carBox(-L + 0.02, -L + 0.08, -0.05, 0.05, 0.44, 0.62, ink, ink, ink, sink);
+      carBox(0.2, L, -0.06, 0.06, 0.44, 0.46, '#FFF3E2', '#FFF3E2', '#FFF3E2', sink);
+    } else if (shape === 'buggy') {
+      carBox(-L, L, -Wd, Wd, 0.22, 0.46, C.body, side, side2, sink);
+      carBox(-0.22, 0.12, -Wd * 0.75, Wd * 0.75, 0.46, 0.52, trim, side, side2, sink);
+      ctx.lineWidth = 3 * Math.max(cam.zoom, 0.95) * 0.7;
+      [[-0.24, -Wd * 0.8], [-0.24, Wd * 0.8], [0.14, -Wd * 0.8], [0.14, Wd * 0.8]].forEach(function (q) {
+        const a = carPt(q[0], q[1], 0.46, sink), b = carPt(q[0] - 0.04, q[1], 1.02, sink);
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      });
+      const r1 = carPt(-0.28, -Wd * 0.8, 1.02, sink), r2 = carPt(-0.28, Wd * 0.8, 1.02, sink), r3 = carPt(0.1, Wd * 0.8, 1.02, sink), r4 = carPt(0.1, -Wd * 0.8, 1.02, sink);
+      ctx.beginPath(); ctx.moveTo(r1[0], r1[1]); ctx.lineTo(r2[0], r2[1]); ctx.lineTo(r3[0], r3[1]); ctx.lineTo(r4[0], r4[1]); ctx.closePath(); ctx.stroke();
+      ctx.lineWidth = 1.6;
     } else {
-      ctx.beginPath(); ctx.roundRect(-16, -7, 20, 14, 4); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.roundRect(4, -3, 13, 10, 3); ctx.fillStyle = C.trim; ctx.fill(); ctx.stroke();
-      ctx.fillStyle = C.body; ctx.beginPath(); ctx.roundRect(-13, -15, 12, 9, 3); ctx.fill(); ctx.stroke();
+      carBox(-L, L, -Wd, Wd, 0.1, 0.52, C.body, side, side2, sink);
+      carBox(0.02, L - 0.06, -Wd * 0.86, Wd * 0.86, 0.52, 0.92, trim, side, side2, sink);
+      carBox(0.1, L - 0.1, -Wd * 0.87, Wd * 0.87, 0.64, 0.84, glass, glass, glass, sink);
+      carBox(-L, -L + 0.34, -Wd * 0.9, Wd * 0.9, 0.52, 0.6, '#FFF3E2', side, side2, sink);
     }
-    ctx.fillStyle = '#FFD447';
-    ctx.beginPath(); ctx.arc(-12, -1, 2.2, 0, 6.29); ctx.arc(12, -1, 2.2, 0, 6.29); ctx.fill();
+    // the bonnet pops up after a bump, then settles back down
+    if (car.bump > 0 && shape !== 'buggy') {
+      const a = Math.min(1, car.bump / 0.35) * 1.05, hinge = shape === 'truck' ? L - 0.08 : 0.18, len = L - hinge + 0.02;
+      const top = shape === 'truck' ? 0.52 : 0.44, lift = Math.sin(a) * len * 2.6, reach = hinge + Math.cos(a) * len;
+      carQuad([carPt(hinge, -Wd, top, sink), carPt(hinge, Wd, top, sink), carPt(reach, Wd, top + lift, sink), carPt(reach, -Wd, top + lift, sink)], C.body);
+    }
+    // lights: yellow at the front, red at the back, on whichever end faces us
+    const lamp = function (u, v, z, col) { const p = carPt(u, v, z, sink); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(p[0], p[1], 1.9 * cam.zoom * CAR_SCALE, 0, 6.29); ctx.fill(); };
+    if (c + s2 > 0) { lamp(L + 0.01, -Wd * 0.6, 0.3, '#FFD447'); lamp(L + 0.01, Wd * 0.6, 0.3, '#FFD447'); }
+    else { lamp(-L - 0.01, -Wd * 0.6, 0.3, '#FF6E6C'); lamp(-L - 0.01, Wd * 0.6, 0.3, '#FF6E6C'); }
+    carWheel(L * 0.62, nearV, wr, sink); carWheel(-L * 0.62, nearV, wr, sink);
     ctx.restore();
   }
   function setDrive(on) {
@@ -6009,7 +6342,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const hs1 = houses(world.ref), st1 = hs1.length ? { x: hs1[0].x, y: hs1[0].y } : { x: ISLE.N / 2, y: ISLE.N / 2 };
       cam.x = W / 2 - isoX(st1.x, st1.y) * cam.zoom; cam.y = H * 0.5 - (isoY(st1.x, st1.y, 0) + ZH) * cam.zoom; clampCam(); syncDial();
     }
-    if (!on) { endChase(); engineOff(); steerWant = 0; skids = []; dust = []; }
+    if (!on) { endChase(); engineOff(); steerWant = 0; skids = []; dust = []; splashes = []; carWet = false; car.bump = 0; }
     if (on) {
       spawnCar(); engineOn(); steerWant = 0; skids = []; dust = [];
       if (cam.zoom < ZOOMS.build) { cam.zoom = ZOOMS.build; syncDial(); }
@@ -6698,6 +7031,7 @@ if (typeof module !== 'undefined' && module.exports) {
     trip: function () { return trip ? { name: trip.p.name, label: trip.label, x: trip.x, y: trip.y, kind: trip.dest.kind } : null; },
     warpCar: function (x, y) { car.x = x; car.y = y; car.sp = 0; },
     tripDest: tripDest, purse: purse,
+    carWet: () => carWet, splashCount: () => splashN, carBump: () => car.bump, bumpsEver: () => bumpsEver, backdrop: () => backdrop, setBackdrop, openPeople, closePeople, openGift, giftDue,
     bpMovable, putAwayBlueprint, buildMode: () => buildMode, setBuildMode: (m) => setBuildMode(m, true), openModePop, pickColumn,
     owner: OWNER, cleo, questStats, setTool, tool: () => tool, recent: () => recent.slice(), heightPop: () => heightPop, hover: (c) => { hoverCell = c; }, zoomAbout, centreOn, goHome, snapTo, ZOOMS, pointers: () => pts.size, target: () => target, vel: () => vel, drawMini, miniJump, setHour: (h) => { HOUR_OVERRIDE = h; }, hourNow, sky: () => skyAt(hourNow()), weather: () => weatherAt(today(), hourNow()), routine: () => routineAt(hourNow()), isLand, chunks: () => chunks.length, linkLength: () => linkLength(world.ref), compassStats: () => compassStats(world.ref), wordOfDay, startJob, deliveryCheck, dockCell, ladders: LADDERS, masteryLines: () => masteryLines(journal.mastery, CREW), cleoAt, talkToKeeper, nextThing: () => nextThing(adviceState(adviceTick)), ghost: () => ghost, showGhost, refreshNext, bp: () => journal.bp, bpInfo, scrollScreen, scrollWaiting, openBlueprint, hireCrew, crewStep, crewOn: () => crewOn, bpNextCells: () => { const b = journal.bp && blueprintById(journal.bp.id); return b ? bpNext(world.ref, b, journal.bp.x, journal.bp.y) : []; }, setHints: (b) => { hintOn = b; refreshNext(); }, coatLevel,
     openMorning, readChapter, answerBedtime, setDay: (d) => { DAY_OVERRIDE = d; }, today, storyEntry: () => storyEntry, storyMode: () => storyMode, keeperName, parentSummary: () => parentSummary(journal, today(), CREW), symmetry: () => symmetry(world.ref),

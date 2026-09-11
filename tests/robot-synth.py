@@ -132,10 +132,10 @@ with sync_playwright() as pw:
     root = BASE.split('/island.html')[0] if '/island.html' in BASE else BASE.rstrip('/')
     if BASE.endswith('.html') or '?crew=' in BASE or '?p=' in BASE:
         run(pw, BASE if 'crew=' in BASE or 'p=' in BASE else BASE + ('&' if '?' in BASE else '?') + 'crew=OLLIE', 'ollie 390', 390, 844)
-        run(pw, (BASE.split('?')[0] + '?p=CLEO') if 'island.html' in BASE else root + '/island.html?p=CLEO', 'crew 820', 820, 1180)
+        run(pw, (BASE.split('?')[0] + '?crew=PIP') if 'island.html' in BASE else root + '/island.html?crew=PIP', 'crew 820', 820, 1180)
     else:
         run(pw, root + '/island.html?crew=OLLIE', 'ollie 390', 390, 844)
-        run(pw, root + '/island.html?p=CLEO', 'crew 820', 820, 1180)
+        run(pw, root + '/island.html?crew=PIP', 'crew 820', 820, 1180)
 
 print('\nCHECKS %d   FAILED %d' % (n, len(fails)))
 for f in fails:

@@ -237,9 +237,52 @@ against live main (PLAY 84, DREAM 80). LOOK stays sand-side. Nothing new in `#i=
 Worst-case link stayed 1262. No lock. No sell. PR #11 merged. The LOOK punch is
 this brick. Do not merge from a sandbox.
 
+### Forge 10 part two, 11 to 12 September 2026: the morning present
+
+Red first: `tests/test-forge10b.js` (pure core) and `tests/robot-forge10b.py` (iPad portrait, iPad landscape,
+phone, everyone's edition), committed before the build.
+
+- **B5b MANSION.** "Our house is like a big mansion." "Mansion. Done." `dreamMatch` gives 7 for MANSION or BIG
+  HOUSE, `dreamRecipe(7)` is `mansionCols()`: 7x6, two storeys (brick under wood), windows on both floors, roof
+  ring, door, courtyard, two palms, a sand path and a pool. 138 blocks, tallest 5, a real house so somebody moves
+  in. MANSION button in the dream picker. A second mansion lands beside the first, never on it.
+- **The morning gift card** (`#gift`). Ollie's edition only, on his own saved island only, once only
+  (`journal.giftMansion`). Says MANSION. DONE. with a live drawn preview and BUILD MY MANSION. Everyone's edition
+  never sees it; a brand new island never sees it.
+- **B4 cars.** New `drawCar`: iso toy boxes that face where they drive (`carCorners`), spoiler on RED ROCKET, roll
+  cage on SAND BUGGY, tall cabin on SEA CRUISER, lights front and back, bonnet pops on a wall bump, bounce at the
+  world edge.
+- **B4 water.** Driving into the sea splashes (particles plus a one time toast). `CAR_SEA`: RED ROCKET 0.4 and SAND
+  BUGGY 0.45 speed in the sea, SEA CRUISER floats at full speed. The car sinks a little and bobs.
+- **B3 sea and backgrounds.** Whole zoom goes wider (0.22 tablet, 0.17 phone, ZMIN 0.14) so the island sits in a
+  big sea, with shore foam and moving wave caps. `BACKDROPS`: SUNSET, LAGOON, OCEAN, SPACE (stars), picked on the
+  LOOK sheet (`#lk-bg`), remembered on the device (`captains-island-bg-v1`), never in the link.
+- **B5 islander cards** (`#people`). Name, face, title, JOB, STORY, LOVES, RIGHT NOW, REMEMBERS, BACK and NEXT.
+  Opened from the islander count badge, on whoever was tapped last. Tapping an islander still gives the three
+  orders, unchanged.
+- **B6 carousel ten** (`ollie-update-10.html`). Twelve cards, pictures drawn live in canvas, only his real quotes
+  from the recordings, ends at `island.html?crew=OLLIE`. `tests/robot-carousel10.py` guards it.
+
 ---
 
 ## 6. DEFECTS FOUND AND FIXED TODAY (ALL MINE)
+
+Forge 10 part two:
+- The first sea gradient called `mixHex` on a non-hex colour, crashed the frame and blanked the screen. Now uses
+  the backdrop's own hex stops.
+- First car drawing: wheels too big and floating. Fixed with `CAR_SCALE` and wheels sized in block units.
+- Islander cards first opened on every islander tap, and the card sat over the orders, so GO OUTSIDE could not be
+  tapped. `robot-cast` caught it (a real regression, not a wrong test). Tap gives orders again; the card opens
+  from the islander count badge.
+- Wrong tests taught, a big one: eight robots (dock, fixes, overnight, pretty, replay, soccer, synth and the new
+  forge10b) opened "everyone's edition" with `?p=CLEO`. That is not a valid profile code, so `parseProfile` returned
+  null and they were all quietly running Ollie's edition. Now `?crew=PIP`, and forge10b asserts the edition it is on.
+  All seven older robots pass on the real everyone's edition.
+- Wrong test taught: `robot-sync` signed run restores Ollie's saved island, so the one time gift card now
+  (correctly) covers the screen; its dismiss list did not know `#gift-later`. Proven by passing on the pushed
+  bytes and on the new bytes once taught.
+- Wrong test taught: `robot-carousel10` counted only warm pixels as "drawn", so the green tree picture failed.
+  It now counts green too.
 
 Forge 10, 11 September 2026:
 
@@ -274,9 +317,8 @@ Earlier:
 
 ## 7. WHAT IS NOT BUILT
 
-- **Forge 10 bricks still to come:** B3 (wider sea with waves, background picker), B4 (cars redrawn, water
-  splash and SEA CRUISER floats), B5 (islander cards), B5b (the mansion, promised to Ollie out loud), B6
-  carousel ten. See `claude/forge-10-plan.md` in the project.
+- **Forge 10 is complete.** Still not built from the playtest (Sprint 11 and 12 in the debrief): jobs, the coin
+  shop, spa, pet shop, water park and slide, the World map, level crossing, juice bar.
 - **Robot ports.** `robot-carousel` needs a server on 8231 and `robot-trips` on 8233, as well as 8099, 8234,
   8235 and 8240. Start them all or those robots fail to navigate and it looks like a code fault.
 

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Captain Ollie: you told us, we built it</title>
+<meta name="theme-color" content="#2A1B3D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta property="og:title" content="Captain Ollie: you told us, we built it">
+<meta property="og:description" content="The mansion, higher towers, new cars that splash in the sea, four seas to pick, and a card for every islander.">
+<meta property="og:image" content="https://tas-fdnxt.github.io/sunset-island-cruise-crew-chaos/og-island.png">
+<style>
+ :root{--ink:#2A1B3D;--cream:#FFF3E2;--coral:#FF6E6C;--peach:#FFB067;--yellow:#FFD447;--green:#3FA96B;--dusk:#5C3A6E}
+ *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+ html,body{height:100%;overflow:hidden;background:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+ #sky{position:fixed;inset:0;background:linear-gradient(180deg,#FF9A6B 0%,#FFB067 32%,#FFD79B 55%,#8FD8E8 100%)}
+ #rail{position:fixed;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 0 104px}
+ #rail::-webkit-scrollbar{display:none}
+ .card{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 20px 8px;gap:12px;overflow-y:auto}
+ .badge{background:var(--ink);color:var(--yellow);font:900 11px system-ui;letter-spacing:.16em;padding:8px 16px;border-radius:999px}
+ .badge.alt{background:var(--coral);color:var(--cream)}
+ h1{font-size:clamp(30px,9vw,52px);line-height:1.02;letter-spacing:.02em}
+ h1 span{color:var(--cream);-webkit-text-stroke:2px var(--ink)}
+ h2{font-size:clamp(20px,5.4vw,32px);line-height:1.1;letter-spacing:.02em;max-width:560px}
+ .lead{font-size:clamp(14px,3.7vw,19px);font-weight:600;line-height:1.45;max-width:520px;color:#3C2954}
+ .said{font-size:clamp(15px,4vw,20px);font-weight:900;color:var(--ink);background:var(--cream);border:3px solid var(--ink);border-radius:18px;padding:10px 16px;max-width:500px}
+ .said small{display:block;font:900 10px system-ui;letter-spacing:.16em;color:var(--dusk);margin-bottom:2px}
+ .tip{font-size:clamp(12px,3.2vw,16px);font-weight:900;color:var(--dusk);max-width:480px}
+ .by{font-size:13px;font-weight:900;color:var(--dusk);letter-spacing:.1em}
+ canvas.pic{width:min(84vw,420px);height:auto;aspect-ratio:4/3;border:4px solid var(--ink);border-radius:22px;background:#8FD8E8;box-shadow:0 8px 0 rgba(20,8,30,.35)}
+ .drawn{font:900 10px system-ui;letter-spacing:.14em;color:var(--dusk)}
+ .big{font-size:clamp(52px,15vw,92px);font-weight:900;text-shadow:0 6px 0 rgba(255,243,226,.7);line-height:1}
+ .seas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:min(84vw,420px)}
+ .seas div{height:74px;border:4px solid var(--ink);border-radius:18px;color:#fff;font:900 17px system-ui;letter-spacing:.08em;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;text-shadow:0 2px 0 rgba(20,8,30,.6)}
+ .go{display:inline-block;text-decoration:none;border:4px solid var(--ink);border-radius:22px;padding:18px 34px;font:900 clamp(17px,4.6vw,22px) system-ui;letter-spacing:.06em;box-shadow:0 7px 0 rgba(20,8,30,.5);background:var(--green);color:var(--cream)}
+ .go:active{transform:translateY(4px);box-shadow:0 3px 0 rgba(20,8,30,.5)}
+ #nav{position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(180deg,rgba(143,216,232,0),rgba(143,216,232,.85))}
+ #nav button{width:74px;height:74px;border-radius:50%;border:4px solid var(--ink);background:var(--cream);font:900 30px system-ui;color:var(--ink);box-shadow:0 5px 0 rgba(20,8,30,.5);cursor:pointer}
+ #nav button:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(20,8,30,.5)}
+ #nav button:disabled{opacity:.32}
+ #dots{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+ #dots i{width:11px;height:11px;border-radius:50%;background:rgba(42,27,61,.3);border:2px solid var(--ink);display:block}
+ #dots i.on{background:var(--yellow);transform:scale(1.3)}
+ @media (min-width:700px) and (min-height:700px){
+  .card{gap:16px;padding-top:calc(env(safe-area-inset-top,0px) + 36px)}
+  canvas.pic{width:min(70vw,520px)}
+  #nav button{width:88px;height:88px;font-size:36px}
+ }
+</style>
+</head>
+<body>
+<div id="sky"></div>
+<div id="rail">
+<section class="card"><div class="badge">FOR CAPTAIN OLLIE</div>
+<h1>YOU TOLD US.<br><span>WE BUILT IT.</span></h1>
+<p class="lead">You played the island with Uncle Tabs and told us everything that was wrong and everything you wanted. Swipe to see what changed.</p>
+<div class="big">&#9875;</div></section>
+
+<section class="card"><div class="badge alt">A PROMISE KEPT</div>
+<h2>MANSION. DONE.</h2>
+<canvas class="pic" id="c-mansion" width="480" height="360"></canvas>
+<div class="drawn">drawn by the island's own blocks</div>
+<div class="said"><small>YOU SAID</small>"Our house is like a big mansion."</div>
+<p class="lead">Two floors, big windows, a courtyard in the middle, palm trees and a pool out the front. Somebody moves in straight away. Tap DREAM, then MANSION.</p></section>
+
+<section class="card"><div class="badge alt">BUILD HIGHER</div>
+<h2>TAP THE TOP. IT GROWS.</h2>
+<canvas class="pic" id="c-tower" width="480" height="360"></canvas>
+<div class="said"><small>YOU SAID</small>"I try to build higher... It doesn't really work."</div>
+<p class="lead">It was the island's fault, not yours. Now a tap on the top of a tower puts the next block on that tower, all the way up to eight.</p></section>
+
+<section class="card"><div class="badge alt">ONE OR LOTS</div>
+<h2>ONE BLOCK AT A TIME</h2><div class="big">&#9757;</div>
+<p class="lead">A tap puts down one block. Dragging your finger moves the island around. Want a whole wall in one go? Hold the block in your hand and pick LOTS.</p></section>
+
+<section class="card"><div class="badge alt">DREAM</div>
+<h2>THE DREAM ALWAYS FINDS SAND</h2><div class="big">&#127908;</div>
+<p class="lead">No more "could not find land". Every dream lands on clear sand next to what you already built, so you can dream again and again.</p></section>
+
+<section class="card"><div class="badge alt">MOVE THE PLAN</div>
+<h2>HOLD THE YELLOW PART AND DRAG</h2><div class="big">&#9917;</div>
+<p class="lead">The soccer pitch never lands on your buildings now. Before you build it, hold the yellow shape and drag it wherever you want. Green means it fits.</p></section>
+
+<section class="card"><div class="badge alt">NEW CARS</div>
+<h2>THREE NEW CARS</h2>
+<canvas class="pic" id="c-cars" width="480" height="360"></canvas>
+<div class="said"><small>YOU SAID</small>"Can you put new cars on?"</div>
+<p class="lead">RED ROCKET with a spoiler. SAND BUGGY with a roll cage and fat tyres. SEA CRUISER up high. They turn the way you steer, and if you crash, the bonnet pops up.</p></section>
+
+<section class="card"><div class="badge alt">SPLASH</div>
+<h2>DRIVE INTO THE SEA</h2><div class="big">&#127754;</div>
+<p class="lead">The car does not stop at the water any more. Drive in and it splashes. RED ROCKET and SAND BUGGY slow right down. SEA CRUISER floats and keeps going.</p></section>
+
+<section class="card"><div class="badge alt">PICK YOUR SEA</div>
+<h2>FOUR SEAS</h2>
+<div class="seas"><div style="background:linear-gradient(180deg,#FFB067,#2B8FC4 55%,#155A86)">SUNSET</div><div style="background:linear-gradient(180deg,#86DCE3,#1FD0E0 55%,#0C98B8)">LAGOON</div><div style="background:linear-gradient(180deg,#62A9EA,#1A66E0 55%,#0A3284)">OCEAN</div><div style="background:linear-gradient(180deg,#1C1348,#3A1FA8 55%,#110838)">SPACE</div></div>
+<div class="said"><small>YOU SAID</small>"I want a different background."</div>
+<p class="lead">Open LOOK and pick a sea. SPACE has stars and a planet. Zoom right out and your whole island sits in the water.</p></section>
+
+<section class="card"><div class="badge alt">MEET EVERYONE</div>
+<h2>A CARD FOR EVERY ISLANDER</h2><div class="big">&#128101;</div>
+<p class="lead">Tap the little person at the top of the screen and see their name, their job, their story, what they love and what they are doing right now. NEXT goes to the next person.</p></section>
+
+<section class="card"><div class="badge alt">GREEN TREES</div>
+<h2>NO MORE PINK TREES</h2>
+<canvas class="pic" id="c-tree" width="480" height="360"></canvas>
+<div class="said"><small>YOU SAID</small>"The trees are pink and green. I don't want that."</div>
+<p class="lead">You were right. It was a mistake in the drawing. The trees are green now, with little gold fruit.</p></section>
+
+<section class="card"><div class="badge">GO ON THEN</div>
+<h2>YOUR ISLAND IS WAITING</h2><div class="big">&#127965;</div>
+<p class="lead">Nothing is locked. You never have to buy anything.</p>
+<p><a class="go" href="island.html?crew=OLLIE">GO TO MY ISLAND</a></p>
+<p class="tip">Then tell Uncle Tabs what to build next.</p><p class="by">Uncle Tabs</p></section>
+</div>
+<div id="nav"><button id="prev" aria-label="Back">&#9664;</button><div id="dots"></div><button id="next" aria-label="Next">&#9654;</button></div>
+<script>
+(function(){
+ var rail=document.getElementById('rail'),cards=rail.querySelectorAll('.card'),dots=document.getElementById('dots');
+ var prev=document.getElementById('prev'),next=document.getElementById('next'),cur=0;
+ for(var i=0;i<cards.length;i++){dots.appendChild(document.createElement('i'));}
+ var pips=dots.querySelectorAll('i');
+ function sync(){var n=Math.round(rail.scrollLeft/rail.clientWidth);if(n<0)n=0;if(n>cards.length-1)n=cards.length-1;cur=n;paint(n);}
+ function paint(n){for(var i=0;i<pips.length;i++){pips[i].className=(i===n)?'on':'';}prev.disabled=(n===0);next.disabled=(n===cards.length-1);}
+ function go(n){if(n<0||n>cards.length-1)return;cur=n;paint(n);rail.scrollTo({left:n*rail.clientWidth,behavior:'smooth'});}
+ prev.addEventListener('click',function(){go(cur-1);});
+ next.addEventListener('click',function(){go(cur+1);});
+ rail.addEventListener('scroll',function(){clearTimeout(sync.t);sync.t=setTimeout(sync,70);});
+ addEventListener('resize',function(){go(cur);});
+ addEventListener('keydown',function(e){if(e.key==='ArrowRight')go(cur+1);else if(e.key==='ArrowLeft')go(cur-1);});
+ sync();
+
+ /* The pictures are drawn live with the island's own block colours and the island's own mansion plan. No photos. */
+ var TW=44,TH=22,ZH=18;
+ var T={1:['#3FA96B','#2F8354','#37955F'],2:['#FFE49E','#D8B970','#E8C97E'],3:['#C9834E','#96602F','#B06E3C'],4:['#FF6E6C','#C74744','#D95552'],
+  5:['#8FD8E8','#4E92B0','#5FA8C8'],6:['#5C3A6E','#3E2650','#4A2E58'],7:['#C75B82','#94405E','#A84568'],8:['#3FA96B','#96602F','#B06E3C']};
+ function ix(x,y){return (x-y)*TW/2;} function iy(x,y,z){return (x+y)*TH/2-z*ZH;}
+ function dia(g,cx,cy,f){g.beginPath();g.moveTo(cx,cy-TH/2);g.lineTo(cx+TW/2,cy);g.lineTo(cx,cy+TH/2);g.lineTo(cx-TW/2,cy);g.closePath();g.fillStyle=f;g.fill();g.strokeStyle='rgba(42,27,61,0.5)';g.lineWidth=1.2;g.stroke();}
+ function prism(g,x,y,z,id){var c=T[id],cx=ix(x,y),cy=iy(x,y,z);
+  if(id===8){g.fillStyle=c[1];g.fillRect(cx-3,cy-26,6,30);g.fillStyle=c[0];for(var k=0;k<5;k++){g.beginPath();g.ellipse(cx+Math.cos(k*1.26)*11,cy-28+Math.sin(k*1.26)*5,12,5,k*1.26,0,6.29);g.fill();}return;}
+  g.beginPath();g.moveTo(cx-TW/2,cy);g.lineTo(cx,cy+TH/2);g.lineTo(cx,cy+TH/2+ZH);g.lineTo(cx-TW/2,cy+ZH);g.closePath();g.fillStyle=c[1];g.fill();
+  g.beginPath();g.moveTo(cx+TW/2,cy);g.lineTo(cx,cy+TH/2);g.lineTo(cx,cy+TH/2+ZH);g.lineTo(cx+TW/2,cy+ZH);g.closePath();g.fillStyle=c[2];g.fill();
+  dia(g,cx,cy,c[0]);
+  if(id===5){g.fillStyle='rgba(42,27,61,0.85)';g.fillRect(cx-12,cy+4,10,ZH-6);g.fillRect(cx+3,cy+4,10,ZH-6);}
+  if(id===6){g.fillStyle='rgba(42,27,61,0.9)';g.fillRect(cx-9,cy+2,8,ZH);}
+ }
+ function ground(g,x0,x1,y0,y1){for(var y=y0;y<=y1;y++)for(var x=x0;x<=x1;x++)dia(g,ix(x,y),iy(x,y,-1)+ZH,(x+y)%2?'#F5D98E':'#FFE49E');}
+ function scene(id,build,sc,fx,fy){var cv=document.getElementById(id);if(!cv)return;var g=cv.getContext('2d');
+  var sky=g.createLinearGradient(0,0,0,cv.height);sky.addColorStop(0,'#FFD9A0');sky.addColorStop(1,'#8FD8E8');g.fillStyle=sky;g.fillRect(0,0,cv.width,cv.height);
+  g.save();g.translate(cv.width/2,cv.height*0.62);g.scale(sc,sc);g.translate(-ix(fx,fy),-iy(fx,fy,0));build(g);g.restore();}
+ function mansion(){var c=[],W=7,D=6;for(var dy=0;dy<D;dy++)for(var dx=0;dx<W;dx++){var e=dx===0||dx===W-1||dy===0||dy===D-1;
+  if(!e){c.push([dx,dy,[1]]);continue;}var ids=[4,4,3,3,7];
+  if((dy===D-1&&(dx===1||dx===5))||((dx===0||dx===W-1)&&(dy===2||dy===3)))ids=[4,5,3,5,7];
+  if(dy===0&&(dx===2||dx===4))ids=[4,4,3,5,7];if(dy===D-1&&dx===3)ids=[6,4,3,5,7];c.push([dx,dy,ids]);}
+  c.push([0,6,[8]],[6,6,[8]],[3,6,[2]],[3,7,[2]],[4,6,[5]],[5,6,[5]],[4,7,[5]],[5,7,[5]]);return c;}
+ function draw(g,cols){cols.sort(function(a,b){return (a[0]+a[1])-(b[0]+b[1]);});cols.forEach(function(c){c[2].forEach(function(id,z){prism(g,c[0],c[1],z,id);});});}
+ scene('c-mansion',function(g){ground(g,-2,8,-2,9);draw(g,mansion());},0.95,3,3.6);
+ scene('c-tower',function(g){ground(g,-2,4,-2,4);draw(g,[[1,1,[3,3,3,3,3,3]],[0,2,[4,4]],[2,0,[3]]]);
+  var cx=ix(1,1),cy=iy(1,1,6);g.fillStyle='#FFD447';g.strokeStyle='#2A1B3D';g.lineWidth=3;g.beginPath();g.arc(cx,cy-38,14,0,6.29);g.fill();g.stroke();
+  g.fillStyle='#2A1B3D';g.font='900 18px system-ui';g.textAlign='center';g.fillText('7',cx,cy-32);},1.15,1,-0.6);
+ scene('c-tree',function(g){ground(g,-2,4,-2,4);
+  [[0,0],[2,1],[1,3]].forEach(function(p){var cx=ix(p[0],p[1]),by=iy(p[0],p[1],0)+TH/2+ZH-2;
+   g.fillStyle='#96602F';g.fillRect(cx-3,by-24,6,24);g.fillStyle='#2F8354';g.beginPath();g.arc(cx,by-32,15,0,6.29);g.fill();
+   g.beginPath();g.arc(cx-10,by-25,10,0,6.29);g.moveTo(cx+20,by-25);g.arc(cx+10,by-25,10,0,6.29);g.fill();
+   g.fillStyle='#3FA96B';g.beginPath();g.arc(cx-4,by-36,8,0,6.29);g.fill();
+   g.fillStyle='#FFD447';[[6,-30],[-9,-22],[1,-40]].forEach(function(f){g.beginPath();g.arc(cx+f[0],by+f[1],2.6,0,6.29);g.fill();});});},1.6,1,1.5);
+ /* the three cars as chunky toy boxes, the same way the island draws them now */
+ function car(g,x,y,h,body,trim,shape){var cs=Math.cos(h),sn=Math.sin(h),K=1.45;
+  function P(u,v,z){u*=K;v*=K;z*=K;var wx=x+cs*u-sn*v,wy=y+sn*u+cs*v;return [ix(wx,wy),iy(wx,wy,0)+ZH-z*ZH];}
+  function q(p,f){g.beginPath();g.moveTo(p[0][0],p[0][1]);for(var i=1;i<p.length;i++)g.lineTo(p[i][0],p[i][1]);g.closePath();g.fillStyle=f;g.fill();g.stroke();}
+  function box(u0,u1,v0,v1,z0,z1,t,s1,s2){[[u1,v0,u1,v1,cs+sn,s1],[u0,v1,u0,v0,-(cs+sn),s1],[u1,v1,u0,v1,cs-sn,s2],[u0,v0,u1,v0,-(cs-sn),s2]].forEach(function(f){if(f[4]<=0)return;
+   q([P(f[0],f[1],z0),P(f[2],f[3],z0),P(f[2],f[3],z1),P(f[0],f[1],z1)],f[5]);});q([P(u0,v0,z1),P(u1,v0,z1),P(u1,v1,z1),P(u0,v1,z1)],t);}
+  function wheel(u,v,rz){var p=P(u,v,rz),r=rz*ZH*K;g.fillStyle='#2A1B3D';g.beginPath();g.ellipse(p[0],p[1],r*0.8,r,0,0,6.29);g.fill();g.fillStyle='#C9C2D6';g.beginPath();g.ellipse(p[0],p[1],r*0.34,r*0.42,0,0,6.29);g.fill();}
+  g.strokeStyle='#2A1B3D';g.lineWidth=1.6;g.lineJoin='round';
+  var L=shape==='buggy'?0.46:shape==='truck'?0.56:0.54,Wd=shape==='truck'?0.31:0.28,nv=(cs-sn)>0?Wd:-Wd,wr=shape==='buggy'?0.22:0.16,s1=shade(body,0.8),s2=shade(body,0.64);
+  var gp=P(0,0,0);g.fillStyle='rgba(42,27,61,0.28)';g.beginPath();g.ellipse(gp[0],gp[1]+2,17*K,7*K,0,0,6.29);g.fill();
+  wheel(L*0.62,-nv,wr);wheel(-L*0.62,-nv,wr);
+  if(shape==='sports'){box(-L,L,-Wd,Wd,0.14,0.44,body,s1,s2);box(-0.2,0.16,-Wd*0.8,Wd*0.8,0.44,0.7,'#BFE9F2',s1,s2);box(-L-0.02,-L+0.1,-Wd,Wd,0.62,0.7,trim,s1,s2);box(-L+0.02,-L+0.08,-0.05,0.05,0.44,0.62,'#2A1B3D','#2A1B3D','#2A1B3D');}
+  else if(shape==='buggy'){box(-L,L,-Wd,Wd,0.22,0.46,body,s1,s2);g.lineWidth=2.4;[[-0.24,-Wd*0.8],[-0.24,Wd*0.8],[0.14,-Wd*0.8],[0.14,Wd*0.8]].forEach(function(o){var a=P(o[0],o[1],0.46),b=P(o[0]-0.04,o[1],1.02);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();});
+   var r1=P(-0.28,-Wd*0.8,1.02),r2=P(-0.28,Wd*0.8,1.02),r3=P(0.1,Wd*0.8,1.02),r4=P(0.1,-Wd*0.8,1.02);g.beginPath();g.moveTo(r1[0],r1[1]);g.lineTo(r2[0],r2[1]);g.lineTo(r3[0],r3[1]);g.lineTo(r4[0],r4[1]);g.closePath();g.stroke();g.lineWidth=1.6;}
+  else{box(-L,L,-Wd,Wd,0.1,0.52,body,s1,s2);box(0.02,L-0.06,-Wd*0.86,Wd*0.86,0.52,0.92,trim,s1,s2);box(0.1,L-0.1,-Wd*0.87,Wd*0.87,0.64,0.84,'#BFE9F2','#BFE9F2','#BFE9F2');}
+  wheel(L*0.62,nv,wr);wheel(-L*0.62,nv,wr);}
+ function shade(h,k){var r=parseInt(h.slice(1,3),16),gg=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return 'rgb('+Math.round(r*k)+','+Math.round(gg*k)+','+Math.round(b*k)+')';}
+ scene('c-cars',function(g){ground(g,-3,5,-3,5);car(g,-1,2.6,0.5,'#FF6E6C','#8FD8E8','sports');car(g,1.4,1.4,0.5,'#FFD447','#FFB067','buggy');car(g,3.4,-0.6,0.5,'#8FD8E8','#FFF3E2','truck');},2.1,1.3,1.1);
+})();
+</script>
+</body>
+</html>

@@ -19,7 +19,7 @@ srv = socketserver.TCPServer(('127.0.0.1', PORT), H)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 U = 'http://127.0.0.1:%d/' % PORT
 
-DIS = """() => { for (const s of ['#bclose','#sclose','#wclose','#bdclose','#ag-exit']) { const e=document.querySelector(s); if(e&&e.offsetParent!==null) e.click(); }
+DIS = """() => { for (const s of ['#bclose','#sclose','#wclose','#bdclose','#ag-exit','#gift-later']) { const e=document.querySelector(s); if(e&&e.offsetParent!==null) e.click(); }
   document.querySelectorAll('#book,#story,#win,#board,#agame').forEach(e=>e.classList.remove('on')); return true; }"""
 SESSION = {'access_token': 'tok-A', 'refresh_token': 'ref-A', 'expires_at': 4102444800, 'user_id': '11111111-1111-1111-1111-111111111111'}
 SAVEKEY = 'captains-island-save-v1-OLLIE'
